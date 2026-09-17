@@ -6,6 +6,7 @@
   <title>පාසල් පූර්ණ කාලසටහන් හා කාණ්ඩ විෂය සහන කළමනාකරණ පද්ධතිය</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- html2pdf.js for Generating PDF of Relief Slip -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     @media print {
@@ -14,51 +15,24 @@
       .print-target { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
       .no-print { display: none !important; }
 
-      /* 2 Teachers per A4 Page */
-      .teachers-2up-container {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 8mm !important;
-        width: 100% !important;
-        page-break-after: always;
-      }
-      .teacher-half-page {
-        border: 1px solid #334155 !important;
-        padding: 4mm !important;
-        height: 135mm !important;
-        box-sizing: border-box !important;
-      }
-
-      /* 3 Classes per A4 Page */
-      .classes-3up-container {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 5mm !important;
-        width: 100% !important;
-        page-break-after: always;
-      }
-      .class-third-page {
-        border: 1px solid #334155 !important;
-        padding: 3mm !important;
-        height: 88mm !important;
-        box-sizing: border-box !important;
-      }
-
-      /* 8 slips per A4 page */
       .slips-grid-container {
         display: grid !important;
         grid-template-columns: repeat(2, 1fr) !important;
         grid-auto-rows: 68mm !important;
         gap: 3mm !important;
         width: 100% !important;
+        margin: 0 auto !important;
+        page-break-after: always;
       }
       .relief-cut-slip {
         border: 1.5px dashed #475569 !important;
         padding: 2.5mm !important;
+        box-sizing: border-box !important;
         height: 67mm !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: space-between !important;
+        page-break-inside: avoid !important;
       }
     }
   </style>
@@ -72,7 +46,7 @@
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
           <i class="fa-solid fa-school text-amber-400"></i> පාසල් කාලසටහන් & සහන කළමනාකරණය
         </h1>
-        <p class="text-xs text-indigo-200 mt-0.5">A4 2-ගුරු මුද්‍රණය | A4 3-පන්ති මුද්‍රණය | Period Re-shuffle | Force Manual Relief</p>
+        <p class="text-xs text-indigo-200 mt-0.5">Relief PDF Export | ශ්‍රේණි Basket විෂයන් | WhatsApp Queue | ගුරු Portal</p>
       </div>
       
       <div class="flex flex-wrap items-center gap-2">
@@ -92,11 +66,11 @@
           <button onclick="openAdminLoginModal()" id="adminLoginBtn" class="bg-amber-500 hover:bg-amber-600 text-indigo-950 font-black text-xs px-3.5 py-2 rounded-lg shadow transition flex items-center gap-1.5">
             <i class="fa-solid fa-lock"></i> Admin Login
           </button>
-          <button onclick="openChangePasswordModal()" id="adminChangePwdBtn" class="hidden bg-indigo-700 hover:bg-indigo-600 text-white font-bold text-xs px-2.5 py-2 rounded-lg shadow transition">
-            <i class="fa-solid fa-key"></i>
-          </button>
-          <button onclick="adminLogout()" id="adminLogoutBtn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-3 py-2 rounded-lg shadow transition flex items-center gap-1.5">
+          <button onclick="adminLogout()" id="adminLogoutBtn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg shadow transition flex items-center gap-1.5">
             <i class="fa-solid fa-right-from-bracket"></i> Logout
+          </button>
+          <button onclick="resetSystemData()" title="පද්ධතියේ දත්ත දෝෂ ඇත්නම් Reset කරන්න" class="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs px-2 py-2 rounded-lg shadow transition">
+            <i class="fa-solid fa-rotate-left"></i>
           </button>
         </div>
       </div>
@@ -109,6 +83,7 @@
       <button onclick="switchTab('teacherPortalTab')" id="tab-teacherPortalTab" class="py-3 px-3.5 font-bold text-xs sm:text-sm border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-1.5 whitespace-nowrap bg-indigo-50/50">
         <i class="fa-solid fa-user-check text-indigo-600"></i> ගුරු Dashboard (View Only)
       </button>
+
       <button onclick="switchTab('gradeMasterTab')" id="tab-gradeMasterTab" class="py-3 px-3 font-bold text-xs sm:text-sm text-slate-500 hover:text-indigo-600 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
         <i class="fa-solid fa-sitemap"></i> ශ්‍රේණියේ කාලසටහන
       </button>
@@ -144,15 +119,17 @@
             <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
               <i class="fa-solid fa-user-check text-indigo-600"></i> ගුරු පෞද්ගලික දොරටුව (Teacher View Portal)
             </h2>
-            <p class="text-xs text-slate-500">ඔබගේ නම තෝරා සතිපතා කාලසටහන සහ අද දින සහන කාලච්ඡේද (Relief) පිරික්සන්න.</p>
+            <p class="text-xs text-slate-500">ඔබගේ නම තෝරා සතිපතා කාලසටහන සහ අද දින ඔබට හිමි සහන කාලච්ඡේද (Relief) පිරික්සන්න.</p>
           </div>
           <div class="flex items-center gap-2">
             <label class="text-xs font-bold text-slate-700">ගුරු නම තෝරන්න:</label>
             <select id="portalTeacherSelect" onchange="renderTeacherPortalView()" class="p-2.5 border rounded-xl font-bold text-xs sm:text-sm bg-indigo-50 border-indigo-300 outline-none cursor-pointer">
+              <!-- Populated by JS -->
             </select>
           </div>
         </div>
 
+        <!-- Today's Relief Display -->
         <div class="mt-4 p-4 rounded-xl border border-indigo-200 bg-indigo-50/40">
           <div class="flex justify-between items-center mb-2">
             <h3 class="text-sm font-bold text-indigo-950 flex items-center gap-2">
@@ -164,6 +141,7 @@
           </div>
         </div>
 
+        <!-- Teacher's Full Timetable Grid -->
         <div class="mt-6 pt-4 border-t border-slate-200">
           <div class="flex justify-between items-center mb-3">
             <h3 class="text-sm font-bold text-slate-700">සතිපතා පෞද්ගලික කාලසටහන (Weekly Schedule)</h3>
@@ -202,7 +180,7 @@
         <i class="fa-solid fa-lock"></i>
       </div>
       <h3 class="text-base font-bold text-slate-800">පරිපාලක පිවිසුම අවශ්‍ය වේ (Admin Access Only)</h3>
-      <p class="text-xs text-slate-500 max-w-md mx-auto">කාලසටහන් සංස්කරණය කිරීමට සහ WhatsApp Dispatcher ක්‍රියාත්මක කිරීමට Admin Login වන්න.</p>
+      <p class="text-xs text-slate-500 max-w-md mx-auto">කාලසටහන් සංස්කරණය කිරීමට සහ WhatsApp Dispatcher ක්‍රියාත්මක කිරීමට කරුණාකර Admin Login වන්න.</p>
       <button onclick="openAdminLoginModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow transition">
         Login Now
       </button>
@@ -250,28 +228,29 @@
       </div>
     </div>
 
-    <!-- ==================== TAB 2: CLASS TIMETABLE & RESHUFFLE & 3-UP PRINT ==================== -->
+    <!-- ==================== TAB 2: CLASS TIMETABLE ==================== -->
     <div id="classTimetableTab" class="hidden space-y-6 admin-tab">
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center pb-4 border-b border-slate-100 gap-3 no-print">
           <div>
             <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <i class="fa-solid fa-chalkboard text-indigo-600"></i> පන්තියේ කාලසටහන & Re-shuffle
+              <i class="fa-solid fa-chalkboard text-indigo-600"></i> පන්තියේ කාලසටහන & Print Slip
             </h2>
             <div class="flex items-center gap-3 mt-1">
-              <span class="text-xs text-slate-500">ඕනෑම කාලච්ඡේදයක් Re-shuffle (Swap) කිරීමට හෝ Edit කිරීමට හැක.</span>
+              <span class="text-xs text-slate-500">ශ්‍රේණියේ කාලසටහන සමමුහුර්ත වුවද, මෙහිදී ඕනෑම විෂයක් හා ගුරුවරයෙකු කැමති පරිදි වෙනස් (Override) කළ හැක.</span>
               <span class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full font-bold border border-indigo-200">
                 පන්තිභාර ගුරුතුමා: <span id="classMasterTeacherName">-</span>
               </span>
             </div>
           </div>
-
-          <div class="flex flex-wrap items-center gap-2">
+          <div class="flex flex-wrap items-center gap-3">
             <div>
+              <label class="text-xs font-bold text-slate-600 block mb-0.5">පන්තිය තෝරන්න:</label>
               <select id="activeClassSelect" onchange="renderClassTimetableGrid()" class="bg-slate-50 border border-slate-300 font-bold text-xs sm:text-sm rounded-lg p-2 outline-none">
               </select>
             </div>
             <div>
+              <label class="text-xs font-bold text-slate-600 block mb-0.5">පෙන්වන දිනය:</label>
               <select id="classViewDaySelect" onchange="renderClassTimetableGrid()" class="bg-slate-50 border border-slate-300 font-bold text-xs sm:text-sm rounded-lg p-2 outline-none">
                 <option value="Monday">සඳුදා</option>
                 <option value="Tuesday">අඟහරුවාදා</option>
@@ -280,21 +259,11 @@
                 <option value="Friday">සිකුරාදා</option>
               </select>
             </div>
-
-            <!-- RE-SHUFFLE PERIODS BUTTON -->
-            <button onclick="openReshuffleModal()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow transition flex items-center gap-1.5">
-              <i class="fa-solid fa-shuffle"></i> Periods Re-shuffle
-            </button>
-
-            <!-- SINGLE CLASS PRINT -->
-            <button onclick="printClassTimetableSlip()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow transition flex items-center gap-1.5">
-              <i class="fa-solid fa-print"></i> පන්තිය Print
-            </button>
-
-            <!-- 3 CLASSES PER A4 PRINT BUTTON (NEW FEATURE) -->
-            <button onclick="print3ClassesPerA4()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs py-2 px-3.5 rounded-xl shadow transition flex items-center gap-1.5">
-              <i class="fa-solid fa-file-invoice"></i> A4 එකට පන්ති 3ක් Print
-            </button>
+            <div class="pt-4 sm:pt-0">
+              <button onclick="printClassTimetableSlip()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-4 rounded-xl shadow transition flex items-center gap-1.5">
+                <i class="fa-solid fa-print"></i> පන්ති කාලසටහන Print කරන්න
+              </button>
+            </div>
           </div>
         </div>
 
@@ -304,29 +273,29 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-4 no-print" id="classPeriodSlotsContainer">
         </div>
 
-        <!-- Printable Single Class Target -->
         <div id="printableClassArea" class="mt-4 p-4 border border-slate-200 rounded-xl bg-white hidden print:block">
-          <div class="text-center pb-3 border-b border-slate-300 mb-3">
-            <h3 class="text-base font-black text-slate-900 uppercase">පන්ති සතිපතා කාලසටහන</h3>
-            <div class="flex justify-between items-center text-xs mt-1 text-slate-700 font-semibold max-w-2xl mx-auto px-2">
+          <div class="text-center pb-4 border-b border-slate-300 mb-4">
+            <h3 class="text-base sm:text-lg font-black text-slate-900 uppercase tracking-wide">පන්ති සතිපතා කාලසටහන</h3>
+            <div class="flex justify-between items-center text-xs mt-2 text-slate-700 font-semibold max-w-2xl mx-auto px-2">
               <span>පන්තිය: <b id="slipClassName" class="text-indigo-900 text-sm">-</b></span>
               <span>අංශය: <b id="slipClassSection">-</b></span>
-              <span>පන්තිභාර ගුරුතුමා: <b id="slipClassTeacher" class="text-indigo-800">-</b></span>
+              <span>පන්තිභාර ගුරුතුමා / ගුරුතුමිය: <b id="slipClassTeacher" class="text-indigo-800">-</b></span>
             </div>
           </div>
+
           <div class="overflow-x-auto">
             <table class="w-full text-xs text-center border-collapse border border-slate-300">
               <thead class="bg-slate-100 font-bold text-slate-800">
                 <tr>
-                  <th class="p-2 border border-slate-300">දිනය</th>
-                  <th class="p-2 border border-slate-300">P1</th>
-                  <th class="p-2 border border-slate-300">P2</th>
-                  <th class="p-2 border border-slate-300">P3</th>
-                  <th class="p-2 border border-slate-300">P4</th>
-                  <th class="p-2 border border-slate-300">P5</th>
-                  <th class="p-2 border border-slate-300">P6</th>
-                  <th class="p-2 border border-slate-300">P7</th>
-                  <th class="p-2 border border-slate-300">P8</th>
+                  <th class="p-2.5 border border-slate-300">දිනය</th>
+                  <th class="p-2.5 border border-slate-300">P1</th>
+                  <th class="p-2.5 border border-slate-300">P2</th>
+                  <th class="p-2.5 border border-slate-300">P3</th>
+                  <th class="p-2.5 border border-slate-300">P4</th>
+                  <th class="p-2.5 border border-slate-300">P5</th>
+                  <th class="p-2.5 border border-slate-300">P6</th>
+                  <th class="p-2.5 border border-slate-300">P7</th>
+                  <th class="p-2.5 border border-slate-300">P8</th>
                 </tr>
               </thead>
               <tbody id="individualClassPrintGridBody">
@@ -337,27 +306,23 @@
       </div>
     </div>
 
-    <!-- ==================== TAB 3: TEACHER SCHEDULES & 2-UP PRINT ==================== -->
+    <!-- ==================== TAB 3: TEACHER SCHEDULES & ADMIN WHATSAPP ==================== -->
     <div id="teacherScheduleTab" class="hidden space-y-6 admin-tab">
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b border-slate-100 gap-3 no-print">
           <div>
             <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <i class="fa-solid fa-id-badge text-indigo-600"></i> ගුරු කාලසටහන් & A4 2-ගුරු මුද්‍රණය
+              <i class="fa-solid fa-id-badge text-indigo-600"></i> ගුරු කාලසටහන් & Admin WhatsApp Dispatcher
             </h2>
-            <p class="text-xs text-slate-500">ගුරුවරුන් දෙදෙනෙකුගේ කාලසටහන් එක් A4 පිටුවකට එන සේ සකසා මුද්‍රණය කළ හැක.</p>
+            <p class="text-xs text-slate-500">සියලු දෙනාගේ පෞද්ගලික කාලසටහන් Queue Box එක හරහා පිළිවෙළින් WhatsApp යවන්න.</p>
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
-            <!-- 2 TEACHERS PER A4 PRINT BUTTON (NEW FEATURE) -->
-            <button onclick="print2TeachersPerA4()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
-              <i class="fa-solid fa-users-rectangle"></i> A4 එකට ගුරුවරුන් 2ක් Print
-            </button>
             <button onclick="adminOpenTimetablesQueue()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
-              <i class="fa-brands fa-whatsapp text-sm"></i> 📲 කාලසටහන් Queue
+              <i class="fa-brands fa-whatsapp text-sm"></i> 📲 සියලු දෙනාටම කාලසටහන් යවන්න (Queue)
             </button>
             <button onclick="printTeacherSlipFromAdmin()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
-              <i class="fa-solid fa-print"></i> තනි Slip එකක් Print
+              <i class="fa-solid fa-print"></i> Print Slip
             </button>
           </div>
         </div>
@@ -403,7 +368,7 @@
       </div>
     </div>
 
-    <!-- ==================== TAB 4: DAILY RELIEF & FORCE OVERRIDE ==================== -->
+    <!-- ==================== TAB 4: DAILY RELIEF & BROADCAST & PDF EXPORT ==================== -->
     <div id="reliefTab" class="hidden space-y-6 admin-tab">
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-3 border-b border-slate-100 gap-2">
@@ -411,13 +376,14 @@
             <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
               <i class="fa-solid fa-bolt text-amber-500"></i> අද දින පැමිණීම, Relief & Dispatcher (<span id="reliefDayLabel" class="text-indigo-600 font-bold">සඳුදා</span>)
             </h2>
-            <p class="text-xs text-slate-500">නොපැමිණි අයගේ Tick එක ඉවත් කර 'සහන කාලසටහන සකසන්න' ඔබන්න. අවශ්‍ය නම් Force Override Edit කරන්න.</p>
+            <p class="text-xs text-slate-500">නොපැමිණි අයගේ Tick එක ඉවත් කර 'සහන කාලසටහන සකසන්න' ඔබන්න. අවශ්‍ය නම් Edit කරන්න.</p>
           </div>
           <button onclick="runAutoReliefEngine()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold py-2.5 px-4 rounded-xl shadow transition flex items-center gap-2">
             <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> සහන කාලසටහන සකසන්න
           </button>
         </div>
 
+        <!-- Attendance Grid -->
         <div id="reliefAttendanceList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-4">
         </div>
 
@@ -427,7 +393,7 @@
             <i class="fa-solid fa-triangle-exclamation text-red-600"></i>
             <span>රිලීෆ් යෙදීමට නොහැකි වූ පන්ති හා විෂයන් ලැයිස්තුව (Unassigned Relief Sessions)</span>
           </div>
-          <p class="text-[11px] text-red-700 mb-3">ස්වයංක්‍රීයව ආදේශක නොලැබුණු පන්ති පහත දැක්වේ. වගුවේ ඇති Edit බොත්තමෙන් Force Override මඟින් ඕනෑම ගුරුවරයෙකු ආදේශ කළ හැක:</p>
+          <p class="text-[11px] text-red-700 mb-3">සියලු ගුරුවරුන් කාර්යබහුල වීම හෝ කාලච්ඡේද 7 සීමාව ඉක්මවීම නිසා ආදේශක ගුරුවරුන් නොලැබුණු පන්ති මෙසේය:</p>
           <div class="overflow-x-auto">
             <table class="w-full text-xs text-left bg-white border border-red-200 rounded-lg">
               <thead class="bg-red-100 text-red-900 font-bold">
@@ -451,22 +417,26 @@
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
             <div>
               <h3 class="text-sm font-bold text-slate-800">වෙන් කළ සහන කාලච්ඡේද ලැයිස්තුව</h3>
-              <p class="text-[11px] text-slate-500">ඕනෑම පේළියක Edit ඔබා අවශ්‍ය නම් වෙනත් පන්තියක සිටින අයෙකු වුවද Force Override කර ආදේශ කළ හැක.</p>
+              <p class="text-[11px] text-slate-500">Staff Group එකට PDF ගොනුවක් ලෙස යැවීමට හෝ බාගත කිරීමට පහත බොත්තම භාවිතා කරන්න.</p>
             </div>
             
             <div class="flex flex-wrap gap-2">
               <button onclick="downloadReliefPDFForStaffGroup()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
-                <i class="fa-solid fa-file-pdf text-sm"></i> 📄 Staff Group PDF
+                <i class="fa-solid fa-file-pdf text-sm"></i> 📄 Staff Group සඳහා PDF බාගත කරන්න
               </button>
+
               <button onclick="printReliefSlip()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
                 <i class="fa-solid fa-print text-sm"></i> 🖨️ සහන ලැයිස්තුව Print
               </button>
+
               <button onclick="printTeacherCutSlipsA4()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
                 <i class="fa-solid fa-scissors text-sm"></i> 🎟️ ගුරු පත්‍රිකා (A4 එකට 8ක්)
               </button>
+
               <button onclick="adminOpenReliefQueue()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
                 <i class="fa-brands fa-whatsapp text-sm"></i> 📲 Relief Queue
               </button>
+
               <button onclick="adminBroadcastReliefToSchoolGroup()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
                 <i class="fa-solid fa-users text-sm"></i> 📢 Staff Group (Text)
               </button>
@@ -484,7 +454,7 @@
                   <th class="p-2.5">නොපැමිණි ගුරුවරයා</th>
                   <th class="p-2.5">පැවරූ සහන ගුරුවරයා</th>
                   <th class="p-2.5">තත්ත්වය / ප්‍රමුඛතාවය</th>
-                  <th class="p-2.5 text-center">වෙනස් කිරීම් (Manual)</th>
+                  <th class="p-2.5 text-center">ක්‍රියාමාර්ග (Manual)</th>
                 </tr>
               </thead>
               <tbody id="reliefResultsTableBody" class="divide-y divide-slate-100">
@@ -712,7 +682,7 @@
 
   </main>
 
-  <!-- ==================== PRINTABLE TARGET 1: FULL TABLE RELIEF SLIP ==================== -->
+  <!-- ==================== PRINT TARGET 1: FULL TABLE RELIEF SLIP ==================== -->
   <div id="printableReliefArea" class="hidden p-6 bg-white">
     <div class="text-center pb-3 border-b-2 border-slate-800 mb-4">
       <h2 class="text-lg font-black uppercase text-slate-900 tracking-wider">පාසල් දෛනික සහන කාලසටහන (Daily Teacher Relief Slip)</h2>
@@ -761,178 +731,6 @@
     </div>
   </div>
 
-  <!-- ==================== PRINT TARGET 3: 2 TEACHERS PER A4 PAGE (NEW FEATURE) ==================== -->
-  <div id="printable2TeachersArea" class="hidden p-4 bg-white">
-    <div id="teachers2UpContainer" class="teachers-2up-container">
-    </div>
-  </div>
-
-  <!-- ==================== PRINT TARGET 4: 3 CLASSES PER A4 PAGE (NEW FEATURE) ==================== -->
-  <div id="printable3ClassesArea" class="hidden p-4 bg-white">
-    <div id="classes3UpContainer" class="classes-3up-container">
-    </div>
-  </div>
-
-  <!-- ==================== RESHUFFLE PERIODS MODAL (NEW FEATURE) ==================== -->
-  <div id="reshuffleModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
-      <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
-        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-          <i class="fa-solid fa-shuffle text-amber-600"></i> කාලච්ඡේද මාරු කිරීම (Periods Re-shuffle)
-        </h3>
-        <button onclick="closeReshuffleModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
-      </div>
-
-      <div class="bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs text-amber-900 mb-4">
-        පන්තිය: <b id="reshuffleClassLabel">10-A</b> | දිනය: <b id="reshuffleDayLabel">සඳුදා</b>
-        <p class="text-[11px] text-amber-700 mt-1">තෝරාගත් කාලච්ඡේද දෙකෙහි ඇති විෂයන් සහ ගුරුවරුන් අන්‍යෝන්‍ය වශයෙන් මාරු (Swap) වේ.</p>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3 mb-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">මාරු කරන කාලච්ඡේදය 1:</label>
-          <select id="reshufflePeriod1Select" class="w-full p-2 border rounded-xl text-xs bg-white font-bold">
-            <option value="1">Period 1</option>
-            <option value="2">Period 2</option>
-            <option value="3">Period 3</option>
-            <option value="4">Period 4</option>
-            <option value="5">Period 5</option>
-            <option value="6">Period 6</option>
-            <option value="7">Period 7</option>
-            <option value="8">Period 8</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">මාරු කරන කාලච්ඡේදය 2:</label>
-          <select id="reshufflePeriod2Select" class="w-full p-2 border rounded-xl text-xs bg-white font-bold">
-            <option value="1">Period 1</option>
-            <option value="2">Period 2</option>
-            <option value="3" selected>Period 3</option>
-            <option value="4">Period 4</option>
-            <option value="5">Period 5</option>
-            <option value="6">Period 6</option>
-            <option value="7">Period 7</option>
-            <option value="8">Period 8</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="flex gap-2">
-        <button onclick="executePeriodReshuffle()" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition">
-          <i class="fa-solid fa-shuffle"></i> මාරු කරන්න (Swap Periods)
-        </button>
-        <button onclick="closeReshuffleModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs transition">
-          අවලංගු
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== MANUAL RELIEF OVERRIDE MODAL (FORCE OVERRIDE SUPPORT) ==================== -->
-  <div id="manualReliefModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
-      <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
-        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-          <i class="fa-solid fa-user-pen text-indigo-600"></i> සහන ගුරුවරයා ආදේශය (Manual Relief)
-        </h3>
-        <button onclick="closeManualReliefModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
-      </div>
-
-      <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1 text-xs text-slate-700 mb-3">
-        <div><b>කාලච්ඡේදය:</b> Period <span id="manualModalPeriod" class="font-black text-indigo-700"></span></div>
-        <div><b>පන්තිය:</b> <span id="manualModalClass" class="font-bold"></span> (<span id="manualModalSection"></span>)</div>
-        <div><b>විෂය:</b> <span id="manualModalSubject" class="font-semibold text-emerald-800"></span></div>
-        <div><b>නොපැමිණි ගුරුතුමා:</b> <span id="manualModalAbsentTeacher" class="font-bold text-red-600"></span></div>
-      </div>
-
-      <!-- FORCE OVERRIDE CHECKBOX -->
-      <div class="p-2 bg-amber-50 rounded-lg border border-amber-200 mb-3">
-        <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-amber-900">
-          <input type="checkbox" id="chkForceOverrideTeachers" onchange="populateManualReliefDropdown()" class="w-4 h-4 text-amber-600 rounded">
-          <span>කිසිදු නිදහස් ගුරුවරයෙකු නැත - සියලුම ගුරුවරුන් පෙන්වන්න (Force Override)</span>
-        </label>
-      </div>
-
-      <div class="mb-4">
-        <label class="block text-xs font-bold text-slate-700 mb-1">ආදේශක ගුරුවරයා තෝරන්න:</label>
-        <select id="manualModalTeacherSelect" class="w-full p-2.5 border rounded-xl text-xs bg-white font-semibold outline-none focus:ring-2 focus:ring-indigo-400">
-        </select>
-      </div>
-
-      <div class="flex gap-2">
-        <button onclick="saveManualReliefSelection()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition">
-          සුරකින්න (Save)
-        </button>
-        <button onclick="clearManualReliefSelection()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-2 px-3 rounded-xl text-xs transition">
-          හිස් කරන්න (Unassign)
-        </button>
-        <button onclick="closeManualReliefModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs transition">
-          අවලංගු
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== CHANGE ADMIN PASSWORD MODAL ==================== -->
-  <div id="changePasswordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-200">
-      <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
-        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-          <i class="fa-solid fa-key text-indigo-600"></i> Admin Password වෙනස් කිරීම
-        </h3>
-        <button onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
-      </div>
-
-      <form onsubmit="handleAdminChangePassword(event)" class="space-y-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">දැනට පවතින Password එක:</label>
-          <input type="password" id="currentAdminPwdInput" required class="w-full p-2 border rounded-xl text-xs bg-slate-50 outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">නව Password එක:</label>
-          <input type="password" id="newAdminPwdInput" required class="w-full p-2 border rounded-xl text-xs bg-slate-50 outline-none">
-        </div>
-        <div class="flex gap-2 pt-2">
-          <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition">
-            Save Password
-          </button>
-          <button type="button" onclick="closeChangePasswordModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-4 rounded-xl text-xs transition">
-            අවලංගු
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- ==================== ADMIN LOGIN MODAL ==================== -->
-  <div id="adminLoginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-200">
-      <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
-        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-          <i class="fa-solid fa-shield-halved text-indigo-600"></i> Admin Login (පරිපාලක)
-        </h3>
-        <button onclick="closeAdminLoginModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
-      </div>
-
-      <form onsubmit="handleAdminLoginSubmit(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Admin Password ඇතුළත් කරන්න:</label>
-          <input type="password" id="adminPasswordInput" placeholder="මුරපදය (Default: admin123)" required class="w-full p-2.5 border rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-400">
-          <p class="text-[10px] text-slate-400 mt-1">පෙරනිමි මුරපදය: <b>admin123</b></p>
-        </div>
-
-        <div class="flex gap-2">
-          <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition">
-            Login
-          </button>
-          <button type="button" onclick="closeAdminLoginModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-4 rounded-xl text-xs transition">
-            අවලංගු
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <!-- ==================== GRADE MASTER PERIOD SLOT MODAL ==================== -->
   <div id="gradeSlotModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
@@ -962,7 +760,7 @@
 
       <div id="gradeModalBasketSection" class="hidden space-y-3 mb-4 text-xs">
         <p class="text-[11px] text-indigo-700 bg-indigo-50 p-2 rounded-lg">
-          <i class="fa-solid fa-circle-info"></i> මෙම කාලච්ඡේදයේ ශ්‍රේණියේ එකවර පැවැත්වෙන කාණ්ඩ විෂයන් තෝරන්න.
+          <i class="fa-solid fa-circle-info"></i> මෙම කාලච්ඡේදයේ ශ්‍රේණියේ එකවර පැවැත්වෙන කාණ්ඩ විෂයන් තෝරන්න (උදා: සෞන්දර්ය - Music, Art, Dancing).
         </p>
         <div id="gradeBasketCheckboxesContainer" class="grid grid-cols-2 gap-2 p-2 border rounded-lg max-h-40 overflow-y-auto">
         </div>
@@ -997,7 +795,7 @@
 
       <div class="my-4 p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex flex-col sm:flex-row justify-between items-center gap-3">
         <div>
-          <span class="text-xs font-bold text-emerald-950 block">ප්‍රගතිය: <span id="queueProgressText">0 / 0 Sent</span></span>
+          <span class="text-xs font-bold text-emerald-950 block">ප්‍රගතිය (Progress): <span id="queueProgressText">0 / 0 Sent</span></span>
           <span class="text-[11px] text-emerald-800" id="queueCurrentTargetLabel">ඊළඟට යැවිය යුතු: -</span>
         </div>
         <button onclick="dispatchNextQueueItem()" id="btnQueueNext" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow transition flex items-center gap-2">
@@ -1013,6 +811,77 @@
           වසන්න (Close Queue)
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ==================== MANUAL RELIEF OVERRIDE MODAL ==================== -->
+  <div id="manualReliefModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-user-pen text-indigo-600"></i> සහන ගුරුවරයා අතින් වෙනස් කිරීම (Manual Relief)
+        </h3>
+        <button onclick="closeManualReliefModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+
+      <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5 text-xs text-slate-700 mb-4">
+        <div><b>කාලච්ඡේදය:</b> Period <span id="manualModalPeriod" class="font-black text-indigo-700"></span></div>
+        <div><b>පන්තිය සහ අංශය:</b> <span id="manualModalClass" class="font-bold"></span> (<span id="manualModalSection"></span>)</div>
+        <div><b>විෂය:</b> <span id="manualModalSubject" class="font-semibold text-emerald-800"></span></div>
+        <div><b>නොපැමිණි ගුරුතුමා:</b> <span id="manualModalAbsentTeacher" class="font-bold text-red-600"></span></div>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-slate-700 mb-1">
+          ආදේශක ගුරුවරයා තෝරන්න (<span class="text-emerald-700 font-black">මෙම කාලච්ඡේදයේ නිදහස් අය පමණි</span>):
+        </label>
+        <select id="manualModalTeacherSelect" class="w-full p-2.5 border rounded-xl text-xs bg-white font-semibold outline-none focus:ring-2 focus:ring-indigo-400">
+        </select>
+        <p class="text-[10px] text-slate-400 mt-1.5">
+          * මෙම කාලච්ඡේදයේ වෙනත් කිසිදු පන්තියක සාමාන්‍ය විෂයක්, Basket විෂයක් හෝ වෙනත් Relief එකක් නොමැති ගුරුවරුන් පමණක් මෙහි පෙන්වයි.
+        </p>
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="saveManualReliefSelection()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition">
+          සුරකින්න (Save)
+        </button>
+        <button onclick="clearManualReliefSelection()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-2 px-3 rounded-xl text-xs transition">
+          හිස් කරන්න (Unassign)
+        </button>
+        <button onclick="closeManualReliefModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs transition">
+          අවලංගු
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ADMIN LOGIN MODAL ==================== -->
+  <div id="adminLoginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-200">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-shield-halved text-indigo-600"></i> Admin Login (පරිපාලක)
+        </h3>
+        <button onclick="closeAdminLoginModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+
+      <form onsubmit="handleAdminLoginSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Admin Password ඇතුළත් කරන්න:</label>
+          <input type="password" id="adminPasswordInput" placeholder="මුරපදය (Default: admin123)" required class="w-full p-2.5 border rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-400">
+          <p class="text-[10px] text-slate-400 mt-1">පෙරනිමි මුරපදය: <b>admin123</b></p>
+        </div>
+
+        <div class="flex gap-2">
+          <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition">
+            Login
+          </button>
+          <button type="button" onclick="closeAdminLoginModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-4 rounded-xl text-xs transition">
+            අවලංගු
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -1089,7 +958,7 @@
 
   <script>
     // =========================================================================
-    // 1. DATA STATE & INITIALIZATION
+    // 1. DATA STATE & STORAGE (WITH SAFE ERROR HANDLING)
     // =========================================================================
     const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
     const DAY_LABELS = {
@@ -1201,27 +1070,27 @@
 
     function saveAllToStorage() {
       try {
-        localStorage.setItem("sch_v20_grades", JSON.stringify(gradeSettings));
-        localStorage.setItem("sch_v20_classes", JSON.stringify(schoolClasses));
-        localStorage.setItem("sch_v20_curriculum", JSON.stringify(curriculumSubjects));
-        localStorage.setItem("sch_v20_grademaster", JSON.stringify(gradeMasterSchedule));
-        localStorage.setItem("sch_v20_teachers", JSON.stringify(teachers));
-        localStorage.setItem("sch_v20_schedule", JSON.stringify(masterSchedule));
-        localStorage.setItem("sch_v20_admin_pwd", adminStoredPassword);
+        localStorage.setItem("sch_v19_grades", JSON.stringify(gradeSettings));
+        localStorage.setItem("sch_v19_classes", JSON.stringify(schoolClasses));
+        localStorage.setItem("sch_v19_curriculum", JSON.stringify(curriculumSubjects));
+        localStorage.setItem("sch_v19_grademaster", JSON.stringify(gradeMasterSchedule));
+        localStorage.setItem("sch_v19_teachers", JSON.stringify(teachers));
+        localStorage.setItem("sch_v19_schedule", JSON.stringify(masterSchedule));
+        localStorage.setItem("sch_v19_admin_pwd", adminStoredPassword);
       } catch (err) {
-        console.error("Save error:", err);
+        console.error("Storage save failed:", err);
       }
     }
 
     function loadAllFromStorage() {
       try {
-        const g = localStorage.getItem("sch_v20_grades");
-        const c = localStorage.getItem("sch_v20_classes");
-        const cur = localStorage.getItem("sch_v20_curriculum");
-        const gm = localStorage.getItem("sch_v20_grademaster");
-        const t = localStorage.getItem("sch_v20_teachers");
-        const m = localStorage.getItem("sch_v20_schedule");
-        const pwd = localStorage.getItem("sch_v20_admin_pwd");
+        const g = localStorage.getItem("sch_v19_grades");
+        const c = localStorage.getItem("sch_v19_classes");
+        const cur = localStorage.getItem("sch_v19_curriculum");
+        const gm = localStorage.getItem("sch_v19_grademaster");
+        const t = localStorage.getItem("sch_v19_teachers");
+        const m = localStorage.getItem("sch_v19_schedule");
+        const pwd = localStorage.getItem("sch_v19_admin_pwd");
 
         if (g) gradeSettings = JSON.parse(g);
         if (c) schoolClasses = JSON.parse(c);
@@ -1231,7 +1100,20 @@
         if (m) masterSchedule = JSON.parse(m);
         if (pwd) adminStoredPassword = pwd;
       } catch (err) {
-        console.warn("Storage fallback.", err);
+        console.warn("Storage parse issue, falling back to default memory data.", err);
+      }
+
+      // STRICT VALIDATION
+      if (!Array.isArray(teachers) || teachers.length === 0) {
+        teachers = [
+          { id: "T01", name: "කමල් පෙරේරා", phone: "0712345671", subject: "ICT", sections: ["8-11"], isPresent: true, isExempt: false, allowOver35: false },
+          { id: "T02", name: "සුනිල් ශාන්ත", phone: "0712345672", subject: "Music", sections: ["6-7", "8-11"], isPresent: false, isExempt: false, allowOver35: false },
+          { id: "T03", name: "මාලිනී ෆොන්සේකා", phone: "0712345673", subject: "Science", sections: ["6-7"], isPresent: true, isExempt: false, allowOver35: false },
+          { id: "T04", name: "චන්ද්‍රිකා සිරිවර්ධන", phone: "0712345674", subject: "Dancing", sections: ["6-7", "8-11"], isPresent: true, isExempt: false, allowOver35: false },
+          { id: "T05", name: "නිමල් සිල්වා", phone: "0712345675", subject: "Science", sections: ["8-11", "12-13"], isPresent: true, isExempt: false, allowOver35: false },
+          { id: "T06", name: "රංජිත් ප්‍රනාන්දු", phone: "0712345676", subject: "Mathematics", sections: ["8-11", "12-13"], isPresent: true, isExempt: false, allowOver35: false },
+          { id: "T07", name: "විදුහල්පතිතුමා", phone: "0712345677", subject: "Administration", sections: ["All"], isPresent: true, isExempt: true, allowOver35: true }
+        ];
       }
 
       teachers.forEach(teacher => {
@@ -1244,6 +1126,12 @@
         if (typeof teacher.isPresent === "undefined") teacher.isPresent = true;
         if (typeof teacher.isExempt === "undefined") teacher.isExempt = false;
       });
+    }
+
+    function resetSystemData() {
+      if (!confirm("පද්ධතියේ පැරණි දත්ත සියල්ල මකා නැවත මුල් තත්ත්වයට (Default Sample Data) පත් කිරීමට අවශ්‍ය බව තහවුරු කරන්න?")) return;
+      localStorage.clear();
+      location.reload();
     }
 
     function getSectionOfGrade(gradeNum) {
@@ -1323,7 +1211,7 @@
     }
 
     // =========================================================================
-    // 2. ADMIN AUTH & PASSWORD CHANGE
+    // 2. ADMIN AUTHENTICATION
     // =========================================================================
     function openAdminLoginModal() {
       document.getElementById("adminPasswordInput").value = "";
@@ -1343,38 +1231,8 @@
         updateAdminAuthUI();
         alert("Admin Login සාර්ථකයි! පරිපාලන අංශ වෙත පිවිසිය හැක.");
       } else {
-        alert("මුරපදය වැරදියි!");
+        alert("මුරපදය වැරදියි! පෙරනිමි මුරපදය: admin123");
       }
-    }
-
-    function openChangePasswordModal() {
-      document.getElementById("currentAdminPwdInput").value = "";
-      document.getElementById("newAdminPwdInput").value = "";
-      document.getElementById("changePasswordModal").classList.remove("hidden");
-    }
-
-    function closeChangePasswordModal() {
-      document.getElementById("changePasswordModal").classList.add("hidden");
-    }
-
-    function handleAdminChangePassword(e) {
-      e.preventDefault();
-      const currentPwd = document.getElementById("currentAdminPwdInput").value.trim();
-      const newPwd = document.getElementById("newAdminPwdInput").value.trim();
-
-      if (currentPwd !== adminStoredPassword) {
-        alert("දැනට පවතින Password එක වැරදියි!");
-        return;
-      }
-      if (!newPwd || newPwd.length < 4) {
-        alert("නව Password එක සඳහා අවම වශයෙන් අකුරු 4ක් තිබිය යුතුය.");
-        return;
-      }
-
-      adminStoredPassword = newPwd;
-      saveAllToStorage();
-      closeChangePasswordModal();
-      alert("Admin Password එක සාර්ථකව වෙනස් විය!");
     }
 
     function adminLogout() {
@@ -1387,228 +1245,75 @@
     function updateAdminAuthUI() {
       const loginBtn = document.getElementById("adminLoginBtn");
       const logoutBtn = document.getElementById("adminLogoutBtn");
-      const changePwdBtn = document.getElementById("adminChangePwdBtn");
-
       if (isAdminLoggedIn) {
         loginBtn.classList.add("hidden");
         logoutBtn.classList.remove("hidden");
-        changePwdBtn.classList.remove("hidden");
         document.getElementById("adminLockedBanner").classList.add("hidden");
       } else {
         loginBtn.classList.remove("hidden");
         logoutBtn.classList.add("hidden");
-        changePwdBtn.classList.add("hidden");
       }
     }
 
     // =========================================================================
-    // 3. PERIODS RE-SHUFFLE (SWAP) LOGIC
+    // 3. STAFF GROUP RELIEF PDF DOWNLOAD & EXPORT
     // =========================================================================
-    function openReshuffleModal() {
-      document.getElementById("reshuffleClassLabel").innerText = activeClass;
-      document.getElementById("reshuffleDayLabel").innerText = DAY_LABELS[activeDay];
-      document.getElementById("reshuffleModal").classList.remove("hidden");
-    }
-
-    function closeReshuffleModal() {
-      document.getElementById("reshuffleModal").classList.add("hidden");
-    }
-
-    function executePeriodReshuffle() {
-      const p1 = parseInt(document.getElementById("reshufflePeriod1Select").value);
-      const p2 = parseInt(document.getElementById("reshufflePeriod2Select").value);
-
-      if (p1 === p2) {
-        alert("කරුණාකර වෙනස් කාලච්ඡේද දෙකක් තෝරන්න.");
+    function downloadReliefPDFForStaffGroup() {
+      if (generatedReliefResults.length === 0) {
+        alert("PDF එකක් සෑදීමට සහන කාලසටහනක් (Relief) සකසා නොමැත. කරුණාකර පළමුව 'සහන කාලසටහන සකසන්න' ඔබන්න.");
         return;
       }
 
-      const slot1Index = masterSchedule.findIndex(s => s.classId === activeClass && s.day === activeDay && s.period === p1);
-      const slot2Index = masterSchedule.findIndex(s => s.classId === activeClass && s.day === activeDay && s.period === p2);
+      document.getElementById("printReliefSlipDay").innerText = DAY_LABELS[activeDay];
+      document.getElementById("printReliefSlipTotalCount").innerText = generatedReliefResults.length;
 
-      const slot1 = slot1Index !== -1 ? masterSchedule[slot1Index] : null;
-      const slot2 = slot2Index !== -1 ? masterSchedule[slot2Index] : null;
+      const tbody = document.getElementById("printableReliefSlipTableBody");
+      tbody.innerHTML = "";
 
-      if (!slot1 && !slot2) {
-        alert("තෝරාගත් කාලච්ඡේද දෙකම හිස්ය.");
-        return;
-      }
+      generatedReliefResults.forEach((r) => {
+        tbody.innerHTML += `
+          <tr class="border-b border-slate-300">
+            <td class="p-2 border border-slate-400 font-bold">Period ${r.period}</td>
+            <td class="p-2 border border-slate-400 font-bold">${r.classId} (${r.section})</td>
+            <td class="p-2 border border-slate-400 font-semibold">${r.subject}</td>
+            <td class="p-2 border border-slate-400 text-red-800 font-bold">${r.absentTeacherName}</td>
+            <td class="p-2 border border-slate-400 font-black text-slate-900">${r.assignedName}</td>
+            <td class="p-2 border border-slate-400 text-[10px]">${r.status}</td>
+            <td class="p-2 border border-slate-400 text-center"></td>
+          </tr>
+        `;
+      });
 
-      if (slot1) slot1.period = p2;
-      if (slot2) slot2.period = p1;
+      const element = document.getElementById("printableReliefArea");
+      element.classList.remove("hidden");
 
-      saveAllToStorage();
-      closeReshuffleModal();
-      renderClassTimetableGrid();
-      alert(`Period ${p1} සහ Period ${p2} සාර්ථකව මාරු (Swap) කරන ලදි!`);
+      const opt = {
+        margin:       10,
+        filename:     `Relief_Schedule_${activeDay}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save().then(() => {
+        element.classList.add("hidden");
+        alert("Staff Group සඳහා වූ Relief PDF ගොනුව සාර්ථකව බාගත විය!");
+      }).catch(err => {
+        console.error("PDF generation failed:", err);
+        element.classList.add("hidden");
+        alert("PDF සාදා ගැනීමට නොහැකි විය. කරුණාකර Print බොත්තම මඟින් 'Save as PDF' තෝරන්න.");
+      });
     }
 
     // =========================================================================
-    // 4. PRINT SLIPS DISPATCHER (2 TEACHERS & 3 CLASSES PER A4 PAGE)
+    // 4. PRINT SLIPS DISPATCHER
     // =========================================================================
-
-    // PRINT: 2 Teachers per A4 page
-    function print2TeachersPerA4() {
-      const container = document.getElementById("teachers2UpContainer");
-      container.innerHTML = "";
-
-      for (let i = 0; i < teachers.length; i += 2) {
-        const pair = [teachers[i], teachers[i + 1]].filter(Boolean);
-        let pairHtml = `<div class="teachers-2up-container">`;
-
-        pair.forEach(teacher => {
-          const totalLoad = calculateTeacherWeeklyWorkload(teacher.id);
-          let rowsHtml = "";
-
-          DAYS.forEach(day => {
-            let dailyCount = 0;
-            let cellsHtml = "";
-            for (let p = 1; p <= 8; p++) {
-              const slot = masterSchedule.find(s => s.day === day && s.period === p && (
-                (!s.isBasket && s.teacherId === teacher.id) || (s.isBasket && s.basketItems && s.basketItems.some(b => b.teacherId === teacher.id))
-              ));
-              if (slot) {
-                dailyCount++;
-                const cls = slot.isCombined && slot.combinedWithClasses ? [slot.classId, ...slot.combinedWithClasses].join('+') : slot.classId;
-                const sub = !slot.isBasket ? slot.subject : (slot.basketItems.find(b => b.teacherId === teacher.id)?.subject || "Basket");
-                cellsHtml += `<td class="p-1 border border-slate-300 font-bold bg-indigo-50/40 text-[9px]"><div class="text-indigo-950">${cls}</div><div class="text-[8px] text-slate-500">${sub}</div></td>`;
-              } else {
-                cellsHtml += `<td class="p-1 border border-slate-300 text-[9px] text-slate-300">-</td>`;
-              }
-            }
-            rowsHtml += `
-              <tr class="border-b border-slate-300">
-                <td class="p-1 border border-slate-300 font-bold bg-slate-50 text-[9px]">${DAY_LABELS[day]}</td>
-                ${cellsHtml}
-                <td class="p-1 border border-slate-300 font-black text-indigo-800 text-[9px]">${dailyCount}</td>
-              </tr>
-            `;
-          });
-
-          pairHtml += `
-            <div class="teacher-half-page">
-              <div style="text-align: center; border-bottom: 1px solid #334155; padding-bottom: 2px; margin-bottom: 3px;">
-                <h4 style="font-weight: 900; font-size: 10pt; text-transform: uppercase;">ගුරු පෞද්ගලික සතිපතා කාලසටහන</h4>
-                <div style="display: flex; justify-content: space-between; font-size: 8pt; font-weight: bold; margin-top: 2px;">
-                  <span>නම: <b>${teacher.name}</b></span>
-                  <span>විෂය: ${teacher.subject} [${(teacher.sections||[]).join(', ')}]</span>
-                  <span>කාලච්ඡේද: <b>${totalLoad} / 35</b></span>
-                </div>
-              </div>
-              <table style="width: 100%; text-align: center; border-collapse: collapse; font-size: 8pt;">
-                <thead style="background: #f1f5f9; font-weight: bold;">
-                  <tr>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">දිනය</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P1</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P2</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P3</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P4</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P5</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P6</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P7</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P8</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">එකතුව</th>
-                  </tr>
-                </thead>
-                <tbody>${rowsHtml}</tbody>
-              </table>
-            </div>
-          `;
-        });
-
-        pairHtml += `</div>`;
-        container.innerHTML += pairHtml;
-      }
-
-      clearAllPrintTargets();
-      const target = document.getElementById("printable2TeachersArea");
-      target.classList.add("print-target");
-      window.print();
-      target.classList.remove("print-target");
-    }
-
-    // PRINT: 3 Classes per A4 page
-    function print3ClassesPerA4() {
-      const container = document.getElementById("classes3UpContainer");
-      container.innerHTML = "";
-
-      for (let i = 0; i < schoolClasses.length; i += 3) {
-        const trio = [schoolClasses[i], schoolClasses[i + 1], schoolClasses[i + 2]].filter(Boolean);
-        let trioHtml = `<div class="classes-3up-container">`;
-
-        trio.forEach(cls => {
-          const teacher = teachers.find(t => t.id === cls.classTeacherId);
-          let rowsHtml = "";
-
-          DAYS.forEach(day => {
-            let cellsHtml = "";
-            for (let p = 1; p <= 8; p++) {
-              const slot = masterSchedule.find(s => s.classId === cls.id && s.day === day && s.period === p);
-              if (slot) {
-                if (slot.isBasket) {
-                  const subs = (slot.basketItems || []).map(b => b.subject).join(',');
-                  cellsHtml += `<td class="p-1 border border-slate-300 font-bold bg-purple-50 text-[8.5px]"><div class="text-purple-950">${subs}</div></td>`;
-                } else {
-                  const t = teachers.find(x => x.id === slot.teacherId);
-                  cellsHtml += `<td class="p-1 border border-slate-300 bg-indigo-50/40 text-[8.5px]"><div class="font-bold text-indigo-950">${slot.subject}</div><div class="text-[7.5px] text-slate-500">${t ? t.name : '-'}</div></td>`;
-                }
-              } else {
-                cellsHtml += `<td class="p-1 border border-slate-300 text-[8.5px] text-slate-300">-</td>`;
-              }
-            }
-            rowsHtml += `
-              <tr class="border-b border-slate-300">
-                <td class="p-1 border border-slate-300 font-bold bg-slate-50 text-[8.5px]">${DAY_LABELS[day]}</td>
-                ${cellsHtml}
-              </tr>
-            `;
-          });
-
-          trioHtml += `
-            <div class="class-third-page">
-              <div style="text-align: center; border-bottom: 1px solid #334155; padding-bottom: 2px; margin-bottom: 3px;">
-                <h4 style="font-weight: 900; font-size: 9.5pt; text-transform: uppercase;">පන්ති සතිපතා කාලසටහන - ${cls.name}</h4>
-                <div style="display: flex; justify-content: space-between; font-size: 7.5pt; font-weight: bold; margin-top: 1px;">
-                  <span>ශ්‍රේණිය: Grade ${cls.grade} (${getSectionOfGrade(cls.grade)})</span>
-                  <span>පන්තිභාර ගුරුතුමා: <b>${teacher ? teacher.name : 'පත් කර නැත'}</b></span>
-                </div>
-              </div>
-              <table style="width: 100%; text-align: center; border-collapse: collapse; font-size: 7.5pt;">
-                <thead style="background: #f1f5f9; font-weight: bold;">
-                  <tr>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">දිනය</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P1</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P2</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P3</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P4</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P5</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P6</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P7</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P8</th>
-                  </tr>
-                </thead>
-                <tbody>${rowsHtml}</tbody>
-              </table>
-            </div>
-          `;
-        });
-
-        trioHtml += `</div>`;
-        container.innerHTML += trioHtml;
-      }
-
-      clearAllPrintTargets();
-      const target = document.getElementById("printable3ClassesArea");
-      target.classList.add("print-target");
-      window.print();
-      target.classList.remove("print-target");
-    }
-
     function printReliefSlip() {
       if (generatedReliefResults.length === 0) {
-        alert("ප්‍රින්ට් කිරීමට සහන කාලසටහනක් සකසා නොමැත.");
+        alert("ප්‍රින්ට් කිරීමට සහන කාලසටහනක් (Relief) සකසා නොමැත. කරුණාකර පළමුව 'සහන කාලසටහන සකසන්න' ඔබන්න.");
         return;
       }
+
       document.getElementById("printReliefSlipDay").innerText = DAY_LABELS[activeDay];
       document.getElementById("printReliefSlipTotalCount").innerText = generatedReliefResults.length;
 
@@ -1639,7 +1344,7 @@
     function printTeacherCutSlipsA4() {
       const assignedReliefs = generatedReliefResults.filter(r => r.assignedId !== null);
       if (assignedReliefs.length === 0) {
-        alert("ප්‍රින්ට් කිරීමට සහන ලැබූ ගුරුවරුන් නොමැත.");
+        alert("ප්‍රින්ට් කිරීමට සහන ලැබූ ගුරුවරුන් නොමැත. කරුණාකර පළමුව 'සහන කාලසටහන සකසන්න' ඔබන්න.");
         return;
       }
 
@@ -1652,7 +1357,9 @@
       const container = document.getElementById("slipsGridContainer");
       container.innerHTML = "";
 
-      Object.keys(reliefsByTeacher).forEach(tId => {
+      const teacherIds = Object.keys(reliefsByTeacher);
+
+      teacherIds.forEach(tId => {
         const teacher = teachers.find(t => t.id === tId);
         const myReliefs = reliefsByTeacher[tId];
 
@@ -1670,20 +1377,28 @@
         slipCard.innerHTML = `
           <div>
             <div style="text-align: center; border-bottom: 1px solid #334155; padding-bottom: 2px; margin-bottom: 3px;">
-              <div style="font-weight: 900; font-size: 9pt; text-transform: uppercase;">සහන කාලච්ඡේද පත්‍රිකාව</div>
+              <div style="font-weight: 900; font-size: 9pt; text-transform: uppercase;">සහන කාලච්ඡේද පත්‍රිකාව (Relief Slip)</div>
               <div style="display: flex; justify-content: space-between; font-size: 7.5pt; font-weight: bold; margin-top: 2px;">
                 <span>දිනය: ${DAY_LABELS[activeDay]}</span>
-                <span>පෙ.ව. 07:50 - 01:30</span>
+                <span>කාලය: පෙ.ව. 07:50 - 01:30</span>
               </div>
             </div>
-            <div style="margin-bottom: 3px; font-size: 8pt;">ගුරු භවතා: <b style="font-size: 9pt;">${teacher ? teacher.name : 'Unknown'}</b></div>
-            <div style="border-top: 0.5px solid #cbd5e1; padding-top: 3px;">${periodsListHtml}</div>
+
+            <div style="margin-bottom: 3px; font-size: 8pt;">
+              ගුරු භවතා: <b style="font-size: 9pt;">${teacher ? teacher.name : 'Unknown'}</b>
+            </div>
+
+            <div style="border-top: 0.5px solid #cbd5e1; padding-top: 3px;">
+              ${periodsListHtml}
+            </div>
           </div>
+
           <div style="border-top: 1px dashed #64748b; padding-top: 3px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 7pt; font-weight: bold;">
-            <span>විදුහල්පතිතුමා</span>
+            <span>විදුහල්පති / නියෝජ්‍ය විදුහල්පති</span>
             <span>අත්සන: ........................</span>
           </div>
         `;
+
         container.appendChild(slipCard);
       });
 
@@ -1716,7 +1431,7 @@
           if (slot) {
             if (slot.isBasket) {
               const subs = (slot.basketItems || []).map(b => b.subject).join(', ');
-              rowHtml += `<td class="p-2 border border-slate-300 bg-purple-50/50"><div class="font-bold text-purple-900">${subs}</div></td>`;
+              rowHtml += `<td class="p-2 border border-slate-300 bg-purple-50/50"><div class="font-bold text-purple-900">${subs}</div><div class="text-[9px] text-slate-500">(Basket)</div></td>`;
             } else {
               const t = teachers.find(x => x.id === slot.teacherId);
               rowHtml += `<td class="p-2 border border-slate-300 bg-indigo-50/30"><div class="font-bold text-indigo-900">${slot.subject}</div><div class="text-[9px] text-slate-500">${t ? t.name : '-'}</div></td>`;
@@ -1757,115 +1472,12 @@
     }
 
     // =========================================================================
-    // 5. MANUAL RELIEF FORCE OVERRIDE DROPDOWN
-    // =========================================================================
-    function openManualReliefModal(index) {
-      currentManualReliefIndex = index;
-      const item = generatedReliefResults[index];
-
-      document.getElementById("manualModalPeriod").innerText = item.period;
-      document.getElementById("manualModalClass").innerText = item.classId;
-      document.getElementById("manualModalSection").innerText = item.section;
-      document.getElementById("manualModalSubject").innerText = item.subject;
-      document.getElementById("manualModalAbsentTeacher").innerText = item.absentTeacherName;
-      document.getElementById("chkForceOverrideTeachers").checked = false;
-
-      populateManualReliefDropdown();
-      document.getElementById("manualReliefModal").classList.remove("hidden");
-    }
-
-    function populateManualReliefDropdown() {
-      if (currentManualReliefIndex === null) return;
-      const item = generatedReliefResults[currentManualReliefIndex];
-      const select = document.getElementById("manualModalTeacherSelect");
-      const isForceOverride = document.getElementById("chkForceOverrideTeachers").checked;
-
-      select.innerHTML = '<option value="">-- ආදේශක ගුරුවරයෙකු තෝරන්න --</option>';
-
-      let eligibleTeachers = [];
-
-      if (isForceOverride) {
-        // FORCE OVERRIDE: SHOW ALL REGISTERED TEACHERS IN SCHOOL
-        eligibleTeachers = teachers;
-      } else {
-        // ONLY 100% FREE TEACHERS
-        eligibleTeachers = teachers.filter(t => {
-          if (!t.isPresent) return false;
-          return !isTeacherOccupiedInDayPeriod(t.id, activeDay, item.period, currentManualReliefIndex);
-        });
-      }
-
-      if (eligibleTeachers.length === 0) {
-        select.innerHTML = '<option value="">⚠️ මෙම කාලච්ඡේදයේ නිදහස් ගුරුවරුන් නැත (Force Override Tick කරන්න)</option>';
-      } else {
-        eligibleTeachers.forEach(t => {
-          const isSelected = t.id === item.assignedId;
-          const isBusy = isTeacherOccupiedInDayPeriod(t.id, activeDay, item.period, currentManualReliefIndex);
-          select.innerHTML += `
-            <option value="${t.id}" ${isSelected ? 'selected' : ''}>
-              ${t.name} (${t.subject}) ${isBusy ? ' - [දැනට පන්තියක සිටී/Busy]' : ' - [නිදහස්/Free]'}
-            </option>
-          `;
-        });
-      }
-    }
-
-    function closeManualReliefModal() {
-      document.getElementById("manualReliefModal").classList.add("hidden");
-      currentManualReliefIndex = null;
-    }
-
-    function saveManualReliefSelection() {
-      if (currentManualReliefIndex === null) return;
-      const select = document.getElementById("manualModalTeacherSelect");
-      const selectedId = select.value;
-
-      if (!selectedId) {
-        alert("කරුණාකර ගුරුවරයෙකු තෝරන්න.");
-        return;
-      }
-
-      const item = generatedReliefResults[currentManualReliefIndex];
-      const teacher = teachers.find(t => t.id === selectedId);
-
-      if (teacher) {
-        item.assignedId = teacher.id;
-        item.assignedName = teacher.name;
-        item.assignedSubject = teacher.subject;
-        item.assignedSections = (teacher.sections || []).join(', ');
-        item.status = "Manual Override";
-        item.badge = "bg-purple-100 text-purple-800 border-purple-200 font-bold";
-        item.isManual = true;
-
-        renderReliefTable();
-        closeManualReliefModal();
-        renderTeacherPortalView();
-      }
-    }
-
-    function clearManualReliefSelection() {
-      if (currentManualReliefIndex === null) return;
-      const item = generatedReliefResults[currentManualReliefIndex];
-
-      item.assignedId = null;
-      item.assignedName = "කිසිවෙකු නැත (None)";
-      item.assignedSubject = "-";
-      item.assignedSections = "-";
-      item.status = "Manual Cleared";
-      item.badge = "bg-red-100 text-red-800 border-red-200";
-      item.isManual = true;
-
-      renderReliefTable();
-      closeManualReliefModal();
-      renderTeacherPortalView();
-    }
-
-    // =========================================================================
-    // 6. WHATSAPP QUEUE & BROADCAST RUNNER
+    // 5. ON-DEMAND WHATSAPP QUEUE RUNNER
     // =========================================================================
     function openWhatsAppQueueModal(title, queueList) {
       currentWhatsAppQueue = queueList;
       currentQueueStep = 0;
+
       document.getElementById("queueModalTitle").innerText = title;
       renderQueueList();
       document.getElementById("whatsappQueueModal").classList.remove("hidden");
@@ -1891,7 +1503,7 @@
         document.getElementById("btnQueueNext").disabled = false;
         document.getElementById("btnQueueNext").classList.remove("opacity-50", "cursor-not-allowed");
       } else {
-        document.getElementById("queueCurrentTargetLabel").innerText = `සියලු පණිවිඩ යවා අවසන්!`;
+        document.getElementById("queueCurrentTargetLabel").innerText = `සියලු පණිවිඩ යවා අවසන්! (Completed)`;
         document.getElementById("btnQueueNext").disabled = true;
         document.getElementById("btnQueueNext").classList.add("opacity-50", "cursor-not-allowed");
       }
@@ -1951,8 +1563,8 @@
         msg += `═══════════════════════════\n`;
         msg += `👤 *ගුරුතුමා/ගුරුතුමිය:* ${t.name}\n`;
         msg += `📚 *ප්‍රධාන විෂය:* ${t.subject}\n`;
-        msg += `🏷️ *අංශ:* ${(t.sections || []).join(', ')}\n`;
-        msg += `⏱️ *කාලච්ඡේද:* ${calculateTeacherWeeklyWorkload(t.id)} / 35\n`;
+        msg += `🏷️ *අංශ (Sections):* ${(t.sections || []).join(', ')}\n`;
+        msg += `⏱️ *සතිපතා කාලච්ඡේද:* ${calculateTeacherWeeklyWorkload(t.id)} / 35\n`;
         msg += `═══════════════════════════\n\n`;
 
         DAYS.forEach(day => {
@@ -1962,17 +1574,31 @@
             const slot = masterSchedule.find(s => s.day === day && s.period === p && (
               (!s.isBasket && s.teacherId === t.id) || (s.isBasket && s.basketItems && s.basketItems.some(b => b.teacherId === t.id))
             ));
+
             if (slot) {
               const cls = slot.isCombined && slot.combinedWithClasses ? [slot.classId, ...slot.combinedWithClasses].join('+') : slot.classId;
               const sub = !slot.isBasket ? slot.subject : (slot.basketItems.find(b => b.teacherId === t.id)?.subject || "Basket");
               daySlots.push(`   └ P${p}: [${cls}] - ${sub}`);
             }
           }
-          msg += daySlots.length > 0 ? daySlots.join('\n') + `\n\n` : `   └ (නිදහස්)\n\n`;
+
+          if (daySlots.length > 0) {
+            msg += daySlots.join('\n') + `\n\n`;
+          } else {
+            msg += `   └ (නිදහස් දිනයකි)\n\n`;
+          }
         });
 
-        msg += `═══════════════════════════\n_ස්වයංක්‍රීය කාලසටහන් පද්ධතිය_`;
-        queue.push({ teacherName: t.name, phone: t.phone, description: `කාලසටහන (${calculateTeacherWeeklyWorkload(t.id)}/35)`, message: msg, sent: false });
+        msg += `═══════════════════════════\n`;
+        msg += `_ස්වයංක්‍රීය කාලසටහන් පද්ධතිය මඟින් නිකුත් කරන ලදී._`;
+
+        queue.push({
+          teacherName: t.name,
+          phone: t.phone,
+          description: `සතිපතා කාලසටහන (${calculateTeacherWeeklyWorkload(t.id)}/35)`,
+          message: msg,
+          sent: false
+        });
       });
 
       openWhatsAppQueueModal("කාලසටහන් WhatsApp Dispatch Queue", queue);
@@ -1986,7 +1612,7 @@
 
       const assignedReliefs = generatedReliefResults.filter(r => r.assignedId !== null);
       if (assignedReliefs.length === 0) {
-        alert("අද දින යැවීම සඳහා සහන කාලච්ඡේද (Relief) කිසිවක් සකස් කර නොමැත.");
+        alert("අද දින යැවීම සඳහා සහන කාලච්ඡේද (Relief) කිසිවක් සකස් කර නොමැත. කරුණාකර පළමුව 'සහන කාලසටහන සකසන්න' ඔබන්න.");
         return;
       }
 
@@ -2001,22 +1627,31 @@
         const teacher = teachers.find(t => t.id === tId);
         const myReliefs = reliefsByTeacher[tId];
 
-        let msg = `🔔 *පාසල් සහන කාලච්ඡේද දැනුම්දීම (Relief Notice)*\n`;
+        let msg = `🔔 *පාසල් සහන කාලච්ඡේද නිල දැනුම්දීම (Relief Notice)*\n`;
         msg += `═══════════════════════════\n`;
         msg += `👤 *ගුරුතුමා/ගුරුතුමිය:* ${teacher ? teacher.name : 'Unknown'}\n`;
         msg += `📅 *දිනය:* ${DAY_LABELS[activeDay]}\n`;
+        msg += `📌 *පැවරී ඇති මුළු සහන පන්ති:* ${myReliefs.length}\n`;
         msg += `═══════════════════════════\n\n`;
 
         myReliefs.forEach((r) => {
-          msg += `┌─── 🕒 *Period ${r.period}* ───\n`;
+          msg += `┌─── 🕒 *කාලච්ඡේදය: Period ${r.period}* ───\n`;
           msg += `│ 🏫 *පන්තිය:* ${r.classId} (${r.section})\n`;
           msg += `│ 📖 *විෂය:* ${r.subject}\n`;
-          msg += `│ ⚠️ *නොපැමිණි:* ${r.absentTeacherName}\n`;
+          msg += `│ ⚠️ *නොපැමිණි ගුරුතුමා:* ${r.absentTeacherName}\n`;
           msg += `└─── 🏷️ *තත්ත්වය:* ${r.status}\n\n`;
         });
 
-        msg += `═══════════════════════════\n_කරුණාකර නියමිත වේලාවට පන්ති වෙත සහභාගී වන්න._`;
-        queue.push({ teacherName: teacher ? teacher.name : 'Unknown', phone: teacher ? teacher.phone : '', description: `Relief පන්ති ${myReliefs.length} ක්`, message: msg, sent: false });
+        msg += `═══════════════════════════\n`;
+        msg += `⚠️ _කරුණාකර නියමිත වේලාවට අදාළ පන්ති වෙත සහභාගී වන්න._`;
+
+        queue.push({
+          teacherName: teacher ? teacher.name : 'Unknown',
+          phone: teacher ? teacher.phone : '',
+          description: `Relief පන්ති ${myReliefs.length} ක්`,
+          message: msg,
+          sent: false
+        });
       });
 
       openWhatsAppQueueModal("දෛනික Relief WhatsApp Dispatch Queue", queue);
@@ -2027,75 +1662,43 @@
         alert("මෙම පහසුකම භාවිතා කිරීමට Admin Login වන්න.");
         return;
       }
+
       if (generatedReliefResults.length === 0) {
-        alert("අද දින යැවීම සඳහා සහන කාලච්ඡේද සකසා නොමැත.");
+        alert("අද දින යැවීම සඳහා සහන කාලච්ඡේද (Relief) සකසා නොමැත. කරුණාකර පළමුව 'සහන කාලසටහන සකසන්න' ඔබන්න.");
         return;
       }
 
       let msg = `📢 *පාසල් දෛනික සහන කාලසටහන (Daily Relief Schedule)*\n`;
       msg += `══════════════════════════════\n`;
       msg += `📅 *දිනය:* ${DAY_LABELS[activeDay]}\n`;
+      msg += `🕒 *කාලය:* පෙ.ව. 07:50 - ප.ව. 01:30\n`;
       msg += `══════════════════════════════\n\n`;
 
       generatedReliefResults.forEach((r, idx) => {
         msg += `*${idx + 1}. Period ${r.period}* | *${r.classId}* (${r.section})\n`;
         msg += `   ├ 📖 විෂය: ${r.subject}\n`;
         msg += `   ├ ❌ නොපැමිණි: ${r.absentTeacherName}\n`;
-        msg += r.assignedId ? `   └ 👉 *සහන ගුරුතුමා:* *${r.assignedName}* [${r.status}]\n\n` : `   └ ⚠️ *සහන ගුරුතුමා:* *කිසිවෙකු නැත*\n\n`;
+        if (r.assignedId) {
+          msg += `   └ 👉 *සහන ගුරුතුමා:* *${r.assignedName}* [${r.status}]\n\n`;
+        } else {
+          msg += `   └ ⚠️ *සහන ගුරුතුමා:* *කිසිවෙකු නැත (No Relief)*\n\n`;
+        }
       });
 
-      msg += `══════════════════════════════\n_සියලුම ගුරුභවතුන්ගේ අවධානය පිණිසයි._`;
-      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
-    }
-
-    function downloadReliefPDFForStaffGroup() {
-      if (generatedReliefResults.length === 0) {
-        alert("PDF සෑදීමට සහන කාලසටහනක් සකසා නොමැත.");
-        return;
+      const unassigned = generatedReliefResults.filter(r => r.assignedId === null);
+      if (unassigned.length > 0) {
+        msg += `⚠️ *අවවාදයයි:* ඉහත පන්ති ${unassigned.length} ක් සඳහා ගුරුවරුන් කාර්යබහුල බැවින් ආදේශක යෙදිය නොහැකි විය.\n\n`;
       }
 
-      document.getElementById("printReliefSlipDay").innerText = DAY_LABELS[activeDay];
-      document.getElementById("printReliefSlipTotalCount").innerText = generatedReliefResults.length;
+      msg += `══════════════════════════════\n`;
+      msg += `_සියලුම ගුරුභවතුන්ගේ කාරුණික අවධානය සහ සහයෝගය පිණිසයි._`;
 
-      const tbody = document.getElementById("printableReliefSlipTableBody");
-      tbody.innerHTML = "";
-
-      generatedReliefResults.forEach((r) => {
-        tbody.innerHTML += `
-          <tr class="border-b border-slate-300">
-            <td class="p-2 border border-slate-400 font-bold">Period ${r.period}</td>
-            <td class="p-2 border border-slate-400 font-bold">${r.classId} (${r.section})</td>
-            <td class="p-2 border border-slate-400 font-semibold">${r.subject}</td>
-            <td class="p-2 border border-slate-400 text-red-800 font-bold">${r.absentTeacherName}</td>
-            <td class="p-2 border border-slate-400 font-black text-slate-900">${r.assignedName}</td>
-            <td class="p-2 border border-slate-400 text-[10px]">${r.status}</td>
-            <td class="p-2 border border-slate-400 text-center"></td>
-          </tr>
-        `;
-      });
-
-      const element = document.getElementById("printableReliefArea");
-      element.classList.remove("hidden");
-
-      const opt = {
-        margin:       10,
-        filename:     `Relief_Schedule_${activeDay}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-
-      html2pdf().set(opt).from(element).save().then(() => {
-        element.classList.add("hidden");
-        alert("Staff Group සඳහා වූ Relief PDF ගොනුව සාර්ථකව බාගත විය!");
-      }).catch(err => {
-        element.classList.add("hidden");
-        alert("PDF සෑදීමේ දෝෂයක්. කරුණාකර Print බොත්තම මඟින් Save as PDF තෝරන්න.");
-      });
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+      window.open(waUrl, "_blank");
     }
 
     // =========================================================================
-    // 7. REST OF CRUD & INTERFACE
+    // 6. TEACHER VIEW-ONLY PORTAL LOGIC (FIXED DROPDOWN)
     // =========================================================================
     function populatePortalTeacherDropdown() {
       const select = document.getElementById("portalTeacherSelect");
@@ -2103,13 +1706,18 @@
       const current = select.value;
       select.innerHTML = "";
 
+      if (teachers.length === 0) {
+        select.innerHTML = '<option value="">-- ගුරුවරුන් නැත --</option>';
+        return;
+      }
+
       teachers.forEach(t => {
         select.innerHTML += `<option value="${t.id}">${t.name} (${t.subject})</option>`;
       });
 
       if (current && teachers.some(t => t.id === current)) {
         select.value = current;
-      } else if (teachers.length > 0) {
+      } else {
         select.value = teachers[0].id;
       }
     }
@@ -2125,9 +1733,14 @@
       const noticeContainer = document.getElementById("portalReliefNoticeContainer");
       const tbody = document.getElementById("portalTeacherGridBody");
 
-      if (!tId) return;
+      if (!tId) {
+        if (noticeContainer) noticeContainer.innerHTML = '<div class="text-slate-400">ගුරුවරයෙකු තෝරා නැත.</div>';
+        if (tbody) tbody.innerHTML = '';
+        return;
+      }
 
       const teacher = teachers.find(t => t.id === tId);
+
       const myReliefs = generatedReliefResults.filter(r => r.assignedId === tId);
 
       if (noticeContainer) {
@@ -2191,6 +1804,9 @@
       }
     }
 
+    // =========================================================================
+    // 7. SAFE ATTENDANCE RENDERING & TOGGLING
+    // =========================================================================
     function renderReliefAttendance() {
       const dayLabel = document.getElementById("reliefDayLabel");
       if (dayLabel) dayLabel.innerText = DAY_LABELS[activeDay];
@@ -2249,6 +1865,9 @@
       }
     }
 
+    // =========================================================================
+    // 8. DAILY RELIEF AUTO ENGINE & MANUAL OVERRIDE
+    // =========================================================================
     function runAutoReliefEngine() {
       generatedReliefResults = [];
       const unassignedList = [];
@@ -2511,6 +2130,515 @@
       return false;
     }
 
+    function openManualReliefModal(index) {
+      currentManualReliefIndex = index;
+      const item = generatedReliefResults[index];
+
+      document.getElementById("manualModalPeriod").innerText = item.period;
+      document.getElementById("manualModalClass").innerText = item.classId;
+      document.getElementById("manualModalSection").innerText = item.section;
+      document.getElementById("manualModalSubject").innerText = item.subject;
+      document.getElementById("manualModalAbsentTeacher").innerText = item.absentTeacherName;
+
+      const select = document.getElementById("manualModalTeacherSelect");
+      select.innerHTML = '<option value="">-- ආදේශක ගුරුවරයෙකු තෝරන්න --</option>';
+
+      const freeTeachers = teachers.filter(t => {
+        if (!t.isPresent) return false;
+        return !isTeacherOccupiedInDayPeriod(t.id, activeDay, item.period, index);
+      });
+
+      if (freeTeachers.length === 0) {
+        select.innerHTML = '<option value="">⚠️ මෙම කාලච්ඡේදයේ නිදහස් කිසිදු ගුරුවරයෙකු නැත</option>';
+      } else {
+        const sameSec = freeTeachers.filter(t => isTeacherInTargetSection(t, item.section));
+        const otherSec = freeTeachers.filter(t => !isTeacherInTargetSection(t, item.section));
+
+        if (sameSec.length > 0) {
+          let grp = document.createElement("optgroup");
+          grp.label = `එම අංශයේ නිදහස් ගුරුවරුන් (${item.section})`;
+          sameSec.forEach(t => {
+            const isMatch = t.id === item.assignedId;
+            grp.innerHTML += `<option value="${t.id}" ${isMatch ? 'selected' : ''}>${t.name} (${t.subject})</option>`;
+          });
+          select.appendChild(grp);
+        }
+
+        if (otherSec.length > 0) {
+          let grp = document.createElement("optgroup");
+          grp.label = "වෙනත් අංශවල නිදහස් ගුරුවරුන්";
+          otherSec.forEach(t => {
+            const isMatch = t.id === item.assignedId;
+            grp.innerHTML += `<option value="${t.id}" ${isMatch ? 'selected' : ''}>${t.name} (${t.subject}) - [${(t.sections||[]).join(', ')}]</option>`;
+          });
+          select.appendChild(grp);
+        }
+      }
+
+      document.getElementById("manualReliefModal").classList.remove("hidden");
+    }
+
+    function closeManualReliefModal() {
+      document.getElementById("manualReliefModal").classList.add("hidden");
+      currentManualReliefIndex = null;
+    }
+
+    function saveManualReliefSelection() {
+      if (currentManualReliefIndex === null) return;
+      const select = document.getElementById("manualModalTeacherSelect");
+      const selectedId = select.value;
+
+      if (!selectedId) {
+        alert("කරුණාකර නිදහස් ගුරුවරයෙකු තෝරන්න.");
+        return;
+      }
+
+      const item = generatedReliefResults[currentManualReliefIndex];
+      const teacher = teachers.find(t => t.id === selectedId);
+
+      if (teacher) {
+        item.assignedId = teacher.id;
+        item.assignedName = teacher.name;
+        item.assignedSubject = teacher.subject;
+        item.assignedSections = (teacher.sections || []).join(', ');
+        item.status = "Manual Edit (අතින් තෝරාගත්)";
+        item.badge = "bg-purple-100 text-purple-800 border-purple-200 font-bold";
+        item.isManual = true;
+
+        renderReliefTable();
+        closeManualReliefModal();
+        renderTeacherPortalView();
+      }
+    }
+
+    function clearManualReliefSelection() {
+      if (currentManualReliefIndex === null) return;
+      const item = generatedReliefResults[currentManualReliefIndex];
+
+      item.assignedId = null;
+      item.assignedName = "කිසිවෙකු නැත (None)";
+      item.assignedSubject = "-";
+      item.assignedSections = "-";
+      item.status = "Manual Cleared (හිස් කරන ලදි)";
+      item.badge = "bg-red-100 text-red-800 border-red-200";
+      item.isManual = true;
+
+      renderReliefTable();
+      closeManualReliefModal();
+      renderTeacherPortalView();
+    }
+
+    // =========================================================================
+    // 9. GRADE & CLASS SETTINGS
+    // =========================================================================
+    function populateClassTeacherSelect(editClassId = null) {
+      const sel = document.getElementById("newClassTeacherSelect");
+      if (!sel) return;
+      const curVal = sel.value;
+      sel.innerHTML = '<option value="">-- පන්තිභාර ගුරුතුමා තෝරන්න --</option>';
+
+      teachers.forEach(t => {
+        const assignedCount = schoolClasses.filter(c => c.classTeacherId === t.id && c.id !== editClassId).length;
+        const isEligible = assignedCount === 0;
+
+        if (isEligible) {
+          sel.innerHTML += `<option value="${t.id}">${t.name} (${t.subject})</option>`;
+        } else {
+          const hasSecondClassPermission = schoolClasses.some(c => c.classTeacherId === t.id && c.allowSecondClass);
+          if (hasSecondClassPermission && assignedCount < 2) {
+            sel.innerHTML += `<option value="${t.id}">${t.name} (${t.subject}) [2 වන පන්තිය - විශේෂ අවසරය]</option>`;
+          }
+        }
+      });
+
+      if (curVal) sel.value = curVal;
+    }
+
+    function renderClassesList() {
+      const tbody = document.getElementById("classesListTableBody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      schoolClasses.forEach(c => {
+        const teacher = teachers.find(t => t.id === c.classTeacherId);
+
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50 border-b">
+            <td class="p-2.5 font-bold text-slate-800">${c.name}</td>
+            <td class="p-2.5 text-slate-600">Grade ${c.grade}</td>
+            <td class="p-2.5 font-bold text-indigo-700">${getSectionOfGrade(c.grade)}</td>
+            <td class="p-2.5 font-semibold text-slate-800">
+              ${teacher ? `<i class="fa-solid fa-user-tie text-indigo-600 mr-1"></i> ${teacher.name} (${teacher.subject})` : '<span class="text-slate-400 italic">පත් කර නොමැත</span>'}
+            </td>
+            <td class="p-2.5">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" ${c.allowSecondClass ? 'checked' : ''} onchange="toggleSecondClassAllowance('${c.id}', this.checked)" class="w-4 h-4 text-amber-600 rounded">
+                <span class="text-[11px] font-bold ${c.allowSecondClass ? 'text-amber-700' : 'text-slate-400'}">Allow 2nd Class</span>
+              </label>
+            </td>
+            <td class="p-2.5 text-center flex justify-center gap-2">
+              <button onclick="editClass('${c.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-[11px]">
+                <i class="fa-solid fa-pen"></i> Edit
+              </button>
+              <button onclick="handleDeleteClass('${c.id}')" class="text-red-600 hover:text-red-800 font-bold text-[11px]">
+                <i class="fa-solid fa-trash"></i> මකන්න
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      populateClassTeacherSelect();
+    }
+
+    function toggleSecondClassAllowance(classId, allowed) {
+      const cls = schoolClasses.find(c => c.id === classId);
+      if (cls) {
+        cls.allowSecondClass = allowed;
+        saveAllToStorage();
+        renderClassesList();
+      }
+    }
+
+    function handleSaveClass(e) {
+      e.preventDefault();
+      const editId = document.getElementById("editClassId").value;
+      const grade = parseInt(document.getElementById("newClassGradeSelect").value);
+      const section = document.getElementById("newClassSectionName").value.trim();
+      const teacherId = document.getElementById("newClassTeacherSelect").value || null;
+      const name = `${grade}-${section}`;
+
+      if (teacherId) {
+        const assignedClasses = schoolClasses.filter(c => c.classTeacherId === teacherId && c.id !== editId);
+        if (assignedClasses.length >= 1) {
+          const isAllowed = assignedClasses.some(c => c.allowSecondClass);
+          if (!isAllowed) {
+            alert("අවවාදයයි! මෙම ගුරුවරයා දැනටමත් වෙනත් පන්තියක පන්තිභාරව කටයුතු කරයි. විශේෂ අවසරය (Allow 2nd Class) නොමැතිව තවත් පන්තියක් භාරදිය නොහැක.");
+            return;
+          }
+        }
+      }
+
+      if (editId) {
+        const cls = schoolClasses.find(c => c.id === editId);
+        if (cls) {
+          cls.grade = grade;
+          cls.name = name;
+          cls.classTeacherId = teacherId;
+        }
+        cancelClassEdit();
+      } else {
+        if (schoolClasses.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+          alert("මෙම පන්තිය දැනටමත් ඇත.");
+          return;
+        }
+        schoolClasses.push({ id: name, grade, name, classTeacherId: teacherId, allowSecondClass: false });
+        document.getElementById("newClassSectionName").value = "";
+      }
+
+      saveAllToStorage();
+      renderClassesList();
+      populateClassSelects();
+      renderClassTimetableGrid();
+      populatePortalTeacherDropdown();
+    }
+
+    function editClass(id) {
+      const cls = schoolClasses.find(c => c.id === id);
+      if (!cls) return;
+
+      document.getElementById("editClassId").value = cls.id;
+      document.getElementById("newClassGradeSelect").value = cls.grade;
+      const parts = cls.name.split("-");
+      document.getElementById("newClassSectionName").value = parts.length > 1 ? parts.slice(1).join("-") : cls.name;
+
+      populateClassTeacherSelect(cls.id);
+      document.getElementById("newClassTeacherSelect").value = cls.classTeacherId || "";
+
+      document.getElementById("classFormHeading").innerText = "පන්තිය සංස්කරණය (Edit Class)";
+      document.getElementById("classSubmitBtn").innerHTML = '<i class="fa-solid fa-check"></i> යාවත්කාලීන කරන්න (Update)';
+      document.getElementById("classCancelEditBtn").classList.remove("hidden");
+    }
+
+    function cancelClassEdit() {
+      document.getElementById("editClassId").value = "";
+      document.getElementById("newClassSectionName").value = "";
+      document.getElementById("classFormHeading").innerText = "නව පන්තියක් ඇතුළත් කිරීම";
+      document.getElementById("classSubmitBtn").innerHTML = '<i class="fa-solid fa-plus"></i> පන්තිය එක් කරන්න';
+      document.getElementById("classCancelEditBtn").classList.add("hidden");
+      populateClassTeacherSelect();
+    }
+
+    function handleDeleteClass(id) {
+      if (!confirm("මෙම පන්තිය සහ කාලසටහන් ඉවත් කිරීමට අවශ්‍ය බව තහවුරු කරන්න?")) return;
+      schoolClasses = schoolClasses.filter(c => c.id !== id);
+      masterSchedule = masterSchedule.filter(s => s.classId !== id);
+      saveAllToStorage();
+      renderClassesList();
+      populateClassSelects();
+      renderClassTimetableGrid();
+    }
+
+    // =========================================================================
+    // 10. GRADE MASTER TIMETABLE BUILDER
+    // =========================================================================
+    function populateGradeMasterSelect() {
+      const select = document.getElementById("gradeMasterSelect");
+      if (!select) return;
+      const current = select.value;
+      select.innerHTML = "";
+      gradeSettings.filter(g => g.enabled).forEach(g => {
+        select.innerHTML += `<option value="${g.grade}">Grade ${g.grade} (${g.group})</option>`;
+      });
+      if (current) select.value = current;
+    }
+
+    function renderGradeMasterGrid() {
+      populateGradeMasterSelect();
+      const select = document.getElementById("gradeMasterSelect");
+      if (!select) return;
+      const grade = parseInt(select.value);
+      const day = document.getElementById("gradeMasterDaySelect").value;
+      const container = document.getElementById("gradeMasterSlotsContainer");
+      if (!container) return;
+      container.innerHTML = "";
+
+      if (!grade) return;
+
+      renderGradeWeeklyQuotaTracker(grade);
+
+      for (let p = 1; p <= 8; p++) {
+        const slot = gradeMasterSchedule.find(s => s.grade === grade && s.day === day && s.period === p);
+        const card = document.createElement("div");
+        card.className = "bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between hover:border-indigo-400 transition";
+
+        let contentHtml = "";
+        if (slot) {
+          if (slot.isBasket && slot.basketSubjects && slot.basketSubjects.length > 0) {
+            contentHtml = `
+              <div class="flex justify-between items-center mb-1.5">
+                <span class="font-black text-indigo-700 text-xs">Period ${p}</span>
+                <span class="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.2 rounded font-bold">Basket (කාණ්ඩ)</span>
+              </div>
+              <div class="font-bold text-xs text-purple-900 bg-white p-2 rounded border border-purple-200">
+                ${slot.basketSubjects.map(s => `• ${s}`).join('<br>')}
+              </div>
+            `;
+          } else if (!slot.isBasket && slot.subject) {
+            contentHtml = `
+              <div class="flex justify-between items-center mb-1.5">
+                <span class="font-black text-indigo-700 text-xs">Period ${p}</span>
+                <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">Planned</span>
+              </div>
+              <div class="font-bold text-sm text-slate-800">${slot.subject}</div>
+            `;
+          }
+        } else {
+          contentHtml = `
+            <div class="flex justify-between items-center mb-1.5">
+              <span class="font-black text-slate-400 text-xs">Period ${p}</span>
+              <span class="text-[10px] bg-slate-200 text-slate-500 px-1.5 py-0.2 rounded">Empty</span>
+            </div>
+            <div class="text-xs text-slate-400 italic py-1">විෂයක් තෝරා නැත</div>
+          `;
+        }
+
+        card.innerHTML = `
+          <div>${contentHtml}</div>
+          <div class="mt-3 pt-2 border-t border-slate-200 flex gap-1">
+            <button onclick="openGradeSlotModal(${grade}, '${day}', ${p})" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold py-1 rounded transition">
+              <i class="fa-solid fa-pen"></i> ${slot ? 'Edit' : 'තෝරන්න'}
+            </button>
+            <button onclick="clearGradeMasterPeriod(${grade}, '${day}', ${p})" class="px-2 bg-slate-200 hover:bg-red-100 hover:text-red-600 text-slate-600 text-[11px] rounded transition"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        `;
+        container.appendChild(card);
+      }
+    }
+
+    function renderGradeWeeklyQuotaTracker(grade) {
+      const trackerDiv = document.getElementById("gradeWeeklyQuotaStatus");
+      if (!trackerDiv) return;
+      trackerDiv.innerHTML = `<span class="font-bold text-indigo-900"><i class="fa-solid fa-calculator"></i> සතිපතා කාලච්ඡේද සාරාංශය:</span>`;
+
+      const gradeCurriculum = curriculumSubjects.filter(c => c.grade === grade);
+      if (gradeCurriculum.length === 0) {
+        trackerDiv.innerHTML += `<span class="text-slate-400 italic">මෙම ශ්‍රේණිය සඳහා විෂයන් ඇතුළත් කර නැත.</span>`;
+        return;
+      }
+
+      gradeCurriculum.forEach(cs => {
+        const scheduled = getGradeScheduledSubjectCount(grade, cs.subject);
+        const isCompleted = scheduled === cs.maxWeekly;
+        const isOver = scheduled > cs.maxWeekly;
+
+        let badgeClass = "bg-white text-indigo-700 border-indigo-200";
+        if (isCompleted) badgeClass = "bg-emerald-100 text-emerald-800 border-emerald-300 font-bold";
+        else if (isOver) badgeClass = "bg-red-100 text-red-800 border-red-300 font-bold animate-pulse";
+
+        trackerDiv.innerHTML += `
+          <span class="px-2 py-0.5 rounded-lg text-[11px] border ${badgeClass}">
+            ${cs.subject}: <b>${scheduled} / ${cs.maxWeekly}</b> ${isCompleted ? '✓' : ''}
+          </span>
+        `;
+      });
+    }
+
+    function openGradeSlotModal(grade, day, period) {
+      currentGradeModalSlot = { grade, day, period };
+      document.getElementById("modalGradeSlotTitle").innerText = `Grade ${grade} | ${DAY_LABELS[day]} - Period ${period}`;
+
+      const gradeCurriculum = curriculumSubjects.filter(c => c.grade === grade);
+      const existing = gradeMasterSchedule.find(s => s.grade === grade && s.day === day && s.period === period);
+
+      const singleSel = document.getElementById("modalGradeSingleSubject");
+      singleSel.innerHTML = '<option value="">-- විෂයක් තෝරන්න --</option>';
+      gradeCurriculum.forEach(cs => {
+        const isSelected = existing && !existing.isBasket && existing.subject === cs.subject;
+        singleSel.innerHTML += `<option value="${cs.subject}" ${isSelected ? 'selected' : ''}>${cs.subject} (Max: ${cs.maxWeekly})</option>`;
+      });
+
+      const chkContainer = document.getElementById("gradeBasketCheckboxesContainer");
+      chkContainer.innerHTML = "";
+      gradeCurriculum.forEach(cs => {
+        const isChecked = existing && existing.isBasket && existing.basketSubjects && existing.basketSubjects.includes(cs.subject);
+        chkContainer.innerHTML += `
+          <label class="flex items-center gap-1.5 p-1.5 bg-slate-50 border rounded text-xs font-semibold cursor-pointer hover:bg-purple-50">
+            <input type="checkbox" value="${cs.subject}" ${isChecked ? 'checked' : ''} class="grade-basket-sub-chk w-4 h-4 text-purple-600 rounded">
+            <span>${cs.subject}</span>
+          </label>
+        `;
+      });
+
+      if (existing && existing.isBasket) {
+        setGradeSlotModalMode('basket');
+      } else {
+        setGradeSlotModalMode('single');
+      }
+
+      document.getElementById("gradeSlotModal").classList.remove("hidden");
+    }
+
+    function closeGradeSlotModal() {
+      document.getElementById("gradeSlotModal").classList.add("hidden");
+      currentGradeModalSlot = null;
+    }
+
+    function setGradeSlotModalMode(mode) {
+      gradeModalMode = mode;
+      const isBasket = mode === 'basket';
+      document.getElementById("gradeModalSingleSection").classList.toggle("hidden", isBasket);
+      document.getElementById("gradeModalBasketSection").classList.toggle("hidden", !isBasket);
+
+      document.getElementById("btnGradeModalSingle").className = !isBasket ? 
+        "flex-1 py-1.5 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600" : 
+        "flex-1 py-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600";
+
+      document.getElementById("btnGradeModalBasket").className = isBasket ? 
+        "flex-1 py-1.5 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600" : 
+        "flex-1 py-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600";
+    }
+
+    function saveGradeSlotModalData() {
+      if (!currentGradeModalSlot) return;
+      const { grade, day, period } = currentGradeModalSlot;
+
+      gradeMasterSchedule = gradeMasterSchedule.filter(s => !(s.grade === grade && s.day === day && s.period === period));
+
+      if (gradeModalMode === 'single') {
+        const subject = document.getElementById("modalGradeSingleSubject").value;
+        if (subject) {
+          const curObj = curriculumSubjects.find(cs => cs.grade === grade && cs.subject.toLowerCase() === subject.toLowerCase());
+          if (curObj) {
+            const currentCount = getGradeScheduledSubjectCount(grade, subject);
+            if (currentCount >= curObj.maxWeekly) {
+              alert(`සීමාව ඉක්මවා ඇත! Grade ${grade} සඳහා ${subject} විෂයට සතියකට වෙන්කළ හැකි උපරිම කාලච්ඡේද ගණන (${curObj.maxWeekly}) සම්පූර්ණ කර ඇත.`);
+              return;
+            }
+          }
+          gradeMasterSchedule.push({ grade, day, period, isBasket: false, subject });
+        }
+      } else {
+        const checkedSubs = [];
+        document.querySelectorAll(".grade-basket-sub-chk:checked").forEach(chk => checkedSubs.push(chk.value));
+        if (checkedSubs.length === 0) {
+          alert("කරුණාකර අවම වශයෙන් එක් කාණ්ඩ විෂයක් තෝරන්න.");
+          return;
+        }
+        gradeMasterSchedule.push({ grade, day, period, isBasket: true, basketSubjects: checkedSubs });
+      }
+
+      saveAllToStorage();
+      closeGradeSlotModal();
+      renderGradeMasterGrid();
+    }
+
+    function clearGradeSlotModalData() {
+      if (!currentGradeModalSlot) return;
+      clearGradeMasterPeriod(currentGradeModalSlot.grade, currentGradeModalSlot.day, currentGradeModalSlot.period);
+      closeGradeSlotModal();
+    }
+
+    function clearGradeMasterPeriod(grade, day, period) {
+      gradeMasterSchedule = gradeMasterSchedule.filter(s => !(s.grade === grade && s.day === day && s.period === period));
+      saveAllToStorage();
+      renderGradeMasterGrid();
+    }
+
+    function applyGradeMasterToAllClasses() {
+      const select = document.getElementById("gradeMasterSelect");
+      if (!select) return;
+      const grade = parseInt(select.value);
+      const day = document.getElementById("gradeMasterDaySelect").value;
+      const classesOfGrade = schoolClasses.filter(c => c.grade === grade);
+
+      if (classesOfGrade.length === 0) {
+        alert("මෙම ශ්‍රේණිය සඳහා පන්ති කිසිවක් සක්‍රීයව නොමැත.");
+        return;
+      }
+
+      if (!confirm(`Grade ${grade} ශ්‍රේණියේ සියලුම සමාන්තර පන්ති (${classesOfGrade.map(c=>c.name).join(', ')}) සඳහා ${DAY_LABELS[day]} දින කාලසටහන සමමුහුර්ත කිරීමට අවශ්‍ය බව තහවුරු කරන්න?\n(පසුව පන්ති කාලසටහන තුළදී ඕනෑම පන්තියක් නිදහසේ Edit කළ හැක)`)) {
+        return;
+      }
+
+      for (let p = 1; p <= 8; p++) {
+        const gradeSlot = gradeMasterSchedule.find(s => s.grade === grade && s.day === day && s.period === p);
+        classesOfGrade.forEach(cls => {
+          let existingSlot = masterSchedule.find(s => s.classId === cls.id && s.day === day && s.period === p);
+
+          if (gradeSlot) {
+            if (gradeSlot.isBasket) {
+              const basketItems = (gradeSlot.basketSubjects || []).map(sub => ({ subject: sub, teacherId: null }));
+              if (existingSlot) {
+                existingSlot.isBasket = true;
+                existingSlot.basketItems = basketItems;
+              } else {
+                masterSchedule.push({
+                  classId: cls.id, day, period: p, isBasket: true, basketItems, isCombined: false, combinedWithClasses: []
+                });
+              }
+            } else if (gradeSlot.subject) {
+              if (existingSlot) {
+                existingSlot.isBasket = false;
+                existingSlot.subject = gradeSlot.subject;
+              } else {
+                masterSchedule.push({
+                  classId: cls.id, day, period: p, isBasket: false, subject: gradeSlot.subject, teacherId: null, isCombined: false, combinedWithClasses: []
+                });
+              }
+            }
+          }
+        });
+      }
+
+      saveAllToStorage();
+      alert(`Grade ${grade} සියලු සමාන්තර පන්ති සඳහා ${DAY_LABELS[day]} දින කාලසටහන සාර්ථකව සමමුහුර්ත කරන ලදි!`);
+      renderClassTimetableGrid();
+    }
+
+    // =========================================================================
+    // 11. CLASS TIMETABLE BUILDER
+    // =========================================================================
     function populateClassSelects() {
       const activeClassSel = document.getElementById("activeClassSelect");
       if (!activeClassSel) return;
@@ -2654,6 +2782,9 @@
       });
     }
 
+    // =========================================================================
+    // 12. PERIOD MODAL (CLASS OVERRIDE)
+    // =========================================================================
     function setSlotModalMode(mode) {
       modalMode = mode;
       const isBasket = mode === 'basket';
@@ -2762,7 +2893,7 @@
 
       if (otherSectionTeachers.length > 0) {
         let optGroup = document.createElement("optgroup");
-        optGroup.label = "වෙනත් අංශවල ගුරුවරුන්";
+        optGroup.label = "වෙනත් අංශවල ගුරුවරුන් (Other Sections)";
         otherSectionTeachers.forEach(t => {
           optGroup.innerHTML += `<option value="${t.id}" ${t.id === selectedTeacherId ? 'selected' : ''}>${t.name} (${t.subject}) - [${(t.sections||[]).join(', ')}]</option>`;
         });
@@ -2980,355 +3111,28 @@
       closeClassSlotModal();
     }
 
-    function renderTeachersMasterList() {
-      const tbody = document.getElementById("teachersMasterTableBody");
-      if (!tbody) return;
-      tbody.innerHTML = "";
-
-      teachers.forEach(t => {
-        const load = calculateTeacherWeeklyWorkload(t.id);
-        const isCapped = load >= 35;
-        const sectionsBadges = (t.sections || []).map(s => `<span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 mr-1">${s}</span>`).join('');
-
-        tbody.innerHTML += `
-          <tr class="hover:bg-slate-50 border-b">
-            <td class="p-2.5 font-bold text-slate-400">${t.id}</td>
-            <td class="p-2.5 font-bold text-slate-800">${t.name}</td>
-            <td class="p-2.5 text-slate-600 font-semibold">${t.phone || '-'}</td>
-            <td class="p-2.5">${t.subject}</td>
-            <td class="p-2.5">${sectionsBadges}</td>
-            <td class="p-2.5 font-black ${isCapped ? 'text-amber-600' : 'text-slate-800'}">
-              ${load} / 35 ${isCapped ? '<i class="fa-solid fa-triangle-exclamation text-amber-500 ml-1"></i>' : ''}
-            </td>
-            <td class="p-2.5">
-              <label class="flex items-center gap-1 cursor-pointer">
-                <input type="checkbox" ${t.allowOver35 ? 'checked' : ''} onchange="toggleOver35Allowance('${t.id}', this.checked)" class="w-4 h-4 text-indigo-600 rounded">
-                <span class="text-[11px] font-semibold ${t.allowOver35 ? 'text-indigo-700' : 'text-slate-400'}">Over 35 Allow</span>
-              </label>
-            </td>
-            <td class="p-2.5">
-              <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full border ${t.isExempt ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-slate-100 text-slate-600'}">
-                ${t.isExempt ? 'Exempt' : 'Active'}
-              </span>
-            </td>
-            <td class="p-2.5 text-center flex justify-center gap-2">
-              <button onclick="editTeacher('${t.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-[11px]">
-                <i class="fa-solid fa-pen"></i> Edit
-              </button>
-              <button onclick="handleDeleteTeacher('${t.id}')" class="text-red-600 hover:text-red-800 font-bold text-[11px]">
-                <i class="fa-solid fa-trash"></i> මකන්න
-              </button>
-            </td>
-          </tr>
-        `;
-      });
-    }
-
-    function handleSaveTeacher(e) {
-      e.preventDefault();
-      const editId = document.getElementById("editTeacherId").value;
-      const name = document.getElementById("newTeacherName").value.trim();
-      const phone = document.getElementById("newTeacherPhone").value.trim();
-      const subject = document.getElementById("newTeacherSubjectSelect").value;
-      const isAll = document.querySelector(".tch-sec-chk-all").checked;
-
-      let sections = [];
-      if (isAll) {
-        sections = ["All"];
-      } else {
-        document.querySelectorAll(".tch-sec-chk:checked").forEach(chk => {
-          sections.push(chk.value);
-        });
-      }
-
-      if (sections.length === 0) {
-        alert("කරුණාකර අවම වශයෙන් එක් අංශයක් තෝරන්න.");
-        return;
-      }
-      if (!subject) {
-        alert("කරුණාකර ප්‍රධාන විෂය තෝරන්න.");
-        return;
-      }
-
-      if (editId) {
-        const t = teachers.find(x => x.id === editId);
-        if (t) {
-          t.name = name;
-          t.phone = phone;
-          t.subject = subject;
-          t.sections = sections;
-        }
-        cancelTeacherEdit();
-      } else {
-        const id = "T" + String(teachers.length + 1).padStart(2, '0');
-        teachers.push({ id, name, phone, subject, sections, isPresent: true, isExempt: false, allowOver35: false });
-        document.getElementById("newTeacherName").value = "";
-        document.getElementById("newTeacherPhone").value = "";
-      }
-
-      saveAllToStorage();
-      renderTeachersMasterList();
-      renderGradeToggles();
-      populateClassTeacherSelect();
-      populatePortalTeacherDropdown();
-      renderReliefAttendance();
-    }
-
-    function editTeacher(id) {
-      const t = teachers.find(x => x.id === id);
-      if (!t) return;
-
-      document.getElementById("editTeacherId").value = t.id;
-      document.getElementById("newTeacherName").value = t.name;
-      document.getElementById("newTeacherPhone").value = t.phone || "";
-
-      const isAll = (t.sections || []).includes("All");
-      document.querySelector(".tch-sec-chk-all").checked = isAll;
-
-      document.querySelectorAll(".tch-sec-chk").forEach(chk => {
-        chk.disabled = isAll;
-        chk.checked = !isAll && (t.sections || []).includes(chk.value);
-      });
-
-      onTeacherSectionCheckboxesChange();
-      document.getElementById("newTeacherSubjectSelect").value = t.subject;
-
-      document.getElementById("teacherSubmitBtn").innerHTML = '<i class="fa-solid fa-check"></i> යාවත්කාලීන කරන්න';
-      document.getElementById("teacherCancelEditBtn").classList.remove("hidden");
-    }
-
-    function cancelTeacherEdit() {
-      document.getElementById("editTeacherId").value = "";
-      document.getElementById("newTeacherName").value = "";
-      document.getElementById("newTeacherPhone").value = "";
-      document.getElementById("teacherSubmitBtn").innerHTML = '<i class="fa-solid fa-user-plus"></i> ගුරුවරයා එක් කරන්න';
-      document.getElementById("teacherCancelEditBtn").classList.add("hidden");
-    }
-
-    function toggleOver35Allowance(id, allowed) {
-      const t = teachers.find(x => x.id === id);
-      if (t) {
-        t.allowOver35 = allowed;
-        saveAllToStorage();
-        renderTeachersMasterList();
-      }
-    }
-
-    function handleDeleteTeacher(id) {
-      if (!confirm("මෙම ගුරුවරයා ඉවත් කිරීමට අවශ්‍ය බව තහවුරු කරන්න?")) return;
-      teachers = teachers.filter(t => t.id !== id);
-      masterSchedule = masterSchedule.filter(s => {
-        if (!s.isBasket) return s.teacherId !== id;
-        s.basketItems = s.basketItems.filter(b => b.teacherId !== id);
-        return s.basketItems.length > 0;
-      });
-      schoolClasses.forEach(c => {
-        if (c.classTeacherId === id) c.classTeacherId = null;
-      });
-      saveAllToStorage();
-      renderTeachersMasterList();
-      renderClassesList();
-      populatePortalTeacherDropdown();
-      renderReliefAttendance();
-    }
-
-    function toggleAllSectionsCheckbox(allCheckbox) {
-      document.querySelectorAll(".tch-sec-chk").forEach(chk => {
-        chk.checked = false;
-        chk.disabled = allCheckbox.checked;
-      });
-      onTeacherSectionCheckboxesChange();
-    }
-
-    function onTeacherSectionCheckboxesChange() {
-      const select = document.getElementById("newTeacherSubjectSelect");
-      if (!select) return;
-      const curSubject = select.value;
-      select.innerHTML = '<option value="">-- ප්‍රධාන විෂය තෝරන්න --</option>';
-
-      const isAll = document.querySelector(".tch-sec-chk-all").checked;
-      let checkedSections = [];
-
-      if (isAll) {
-        checkedSections = ["All"];
-      } else {
-        document.querySelectorAll(".tch-sec-chk:checked").forEach(chk => {
-          checkedSections.push(chk.value);
-        });
-      }
-
-      let matchingGrades = [];
-      checkedSections.forEach(sec => {
-        if (sec === "1-5") matchingGrades.push(1,2,3,4,5);
-        else if (sec === "6-7") matchingGrades.push(6,7);
-        else if (sec === "8-11") matchingGrades.push(8,9,10,11);
-        else if (sec === "12-13") matchingGrades.push(12,13);
-        else if (sec === "All") matchingGrades = gradeSettings.map(g => g.grade);
-      });
-
-      const subjectsSet = new Set();
-      curriculumSubjects.filter(cs => matchingGrades.includes(cs.grade)).forEach(cs => {
-        subjectsSet.add(cs.subject);
-      });
-
-      if (subjectsSet.size === 0) {
-        select.innerHTML += '<option value="General">සාමාන්‍ය (General / විෂයන් නැත)</option>';
-      } else {
-        subjectsSet.forEach(sub => {
-          select.innerHTML += `<option value="${sub}" ${sub === curSubject ? 'selected' : ''}>${sub}</option>`;
-        });
-      }
-    }
-
-    function renderCurriculumTable() {
-      populateCurriculumGradesDropdown();
-      const filterGrade = document.getElementById("curriculumFilterGradeSelect").value;
-      const tbody = document.getElementById("curriculumTableBody");
-      if (!tbody) return;
-      tbody.innerHTML = "";
-
-      let list = curriculumSubjects;
-      if (filterGrade !== "All") {
-        list = list.filter(c => c.grade === parseInt(filterGrade));
-      }
-
-      list.forEach(cs => {
-        tbody.innerHTML += `
-          <tr class="hover:bg-slate-50 border-b">
-            <td class="p-2.5 font-bold text-indigo-700">Grade ${cs.grade}</td>
-            <td class="p-2.5 font-bold text-slate-500">${getSectionOfGrade(cs.grade)}</td>
-            <td class="p-2.5 font-semibold text-slate-800">${cs.subject}</td>
-            <td class="p-2.5 font-bold text-slate-700">${cs.maxWeekly} Periods / Week</td>
-            <td class="p-2.5 text-center flex justify-center gap-2">
-              <button onclick="editCurriculumSubject('${cs.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-[11px]">
-                <i class="fa-solid fa-pen"></i> Edit
-              </button>
-              <button onclick="handleDeleteCurriculum('${cs.id}')" class="text-red-600 hover:text-red-800 font-bold text-[11px]">
-                <i class="fa-solid fa-trash"></i> Delete
-              </button>
-            </td>
-          </tr>
-        `;
-      });
-    }
-
-    function handleSaveCurriculumSubject(e) {
-      e.preventDefault();
-      const editId = document.getElementById("curriculumEditId").value;
-      const grade = parseInt(document.getElementById("curriculumGradeSelect").value);
-      const subject = document.getElementById("curriculumSubjectName").value.trim();
-      const maxWeekly = parseInt(document.getElementById("curriculumMaxPeriods").value);
-
-      const isDuplicate = curriculumSubjects.some(cs => 
-        cs.id !== editId && 
-        cs.grade === grade && 
-        cs.subject.trim().toLowerCase() === subject.toLowerCase()
-      );
-
-      if (isDuplicate) {
-        alert(`අවවාදයයි! Grade ${grade} සඳහා "${subject}" විෂය දැනටමත් ඇත.`);
-        return;
-      }
-
-      if (editId) {
-        const existing = curriculumSubjects.find(cs => cs.id === editId);
-        if (existing) {
-          existing.grade = grade;
-          existing.subject = subject;
-          existing.maxWeekly = maxWeekly;
-        }
-        cancelCurriculumEdit();
-      } else {
-        curriculumSubjects.push({ id: "CS" + Date.now().toString().slice(-4), grade, subject, maxWeekly });
-        document.getElementById("curriculumSubjectName").value = "";
-      }
-
-      saveAllToStorage();
-      renderCurriculumTable();
-      onTeacherSectionCheckboxesChange();
-      renderGradeMasterGrid();
-    }
-
-    function editCurriculumSubject(id) {
-      const cs = curriculumSubjects.find(c => c.id === id);
-      if (!cs) return;
-
-      document.getElementById("curriculumEditId").value = cs.id;
-      document.getElementById("curriculumGradeSelect").value = cs.grade;
-      document.getElementById("curriculumSubjectName").value = cs.subject;
-      document.getElementById("curriculumMaxPeriods").value = cs.maxWeekly;
-
-      document.getElementById("curriculumSubmitBtn").innerHTML = '<i class="fa-solid fa-check"></i> Update';
-      document.getElementById("curriculumCancelEditBtn").classList.remove("hidden");
-    }
-
-    function cancelCurriculumEdit() {
-      document.getElementById("editCurriculumEditId").value = "";
-      document.getElementById("curriculumSubjectName").value = "";
-      document.getElementById("curriculumMaxPeriods").value = 5;
-      document.getElementById("curriculumSubmitBtn").innerHTML = '<i class="fa-solid fa-plus"></i> විෂය එක් කරන්න';
-      document.getElementById("curriculumCancelEditBtn").classList.add("hidden");
-    }
-
-    function handleDeleteCurriculum(id) {
-      if (!confirm("මෙම විෂය ඉවත් කිරීමට අවශ්‍ය බව තහවුරු කරන්න?")) return;
-      curriculumSubjects = curriculumSubjects.filter(cs => cs.id !== id);
-      saveAllToStorage();
-      renderCurriculumTable();
-      onTeacherSectionCheckboxesChange();
-      renderGradeMasterGrid();
-    }
-
-    function renderGradeToggles() {
-      const g1 = document.getElementById("gradesGroup1_5");
-      const g2 = document.getElementById("gradesGroup6_7");
-      const g3 = document.getElementById("gradesGroup8_11");
-      const g4 = document.getElementById("gradesGroup12_13");
-
-      if (!g1 || !g2 || !g3 || !g4) return;
-
-      g1.innerHTML = ""; g2.innerHTML = ""; g3.innerHTML = ""; g4.innerHTML = "";
-
-      gradeSettings.forEach(g => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.onclick = () => toggleGradeStatus(g.grade);
-        btn.className = `px-2 py-1 rounded-lg text-xs font-bold border transition ${g.enabled ? 'bg-indigo-600 text-white border-indigo-700 shadow-sm' : 'bg-white text-slate-400 border-slate-300'}`;
-        btn.innerHTML = `G${g.grade} ${g.enabled ? '✓' : '✕'}`;
-
-        if (g.group === "1-5") g1.appendChild(btn);
-        else if (g.group === "6-7") g2.appendChild(btn);
-        else if (g.group === "8-11") g3.appendChild(btn);
-        else g4.appendChild(btn);
-      });
-
-      const classGradeSel = document.getElementById("newClassGradeSelect");
-      if (classGradeSel) {
-        classGradeSel.innerHTML = "";
-        gradeSettings.filter(g => g.enabled).forEach(g => {
-          classGradeSel.innerHTML += `<option value="${g.grade}">Grade ${g.grade} (${g.group})</option>`;
-        });
-      }
-
-      populateClassTeacherSelect();
-    }
-
-    function toggleGradeStatus(gradeNum) {
-      const g = gradeSettings.find(x => x.grade === gradeNum);
-      if (g) {
-        g.enabled = !g.enabled;
-        saveAllToStorage();
-        renderGradeToggles();
-        renderClassesList();
-        populateClassSelects();
-        populateCurriculumGradesDropdown();
-        populateGradeMasterSelect();
-      }
-    }
-
+    // =========================================================================
+    // 13. GLOBAL TAB CONTROLLER & INITIALIZATION
+    // =========================================================================
     function switchTab(tabId) {
-      const allTabs = ['teacherPortalTab', 'gradeMasterTab', 'classTimetableTab', 'teacherScheduleTab', 'reliefTab', 'subjectCurriculumTab', 'gradeSettingsTab', 'teachersTab'];
+      const adminTabs = ['gradeMasterTab', 'classTimetableTab', 'teacherScheduleTab', 'reliefTab', 'subjectCurriculumTab', 'gradeSettingsTab', 'teachersTab'];
+      
+      if (adminTabs.includes(tabId) && !isAdminLoggedIn) {
+        document.querySelectorAll('.admin-tab').forEach(el => el.classList.add('hidden'));
+        document.getElementById('teacherPortalTab').classList.add('hidden');
+        document.getElementById('adminLockedBanner').classList.remove('hidden');
 
+        document.querySelectorAll('nav button').forEach(b => {
+          b.classList.remove('border-indigo-600', 'text-indigo-600');
+          b.classList.add('border-transparent', 'text-slate-500');
+        });
+        document.getElementById('tab-' + tabId).classList.add('border-indigo-600', 'text-indigo-600');
+        return;
+      }
+
+      document.getElementById('adminLockedBanner').classList.add('hidden');
+
+      const allTabs = ['teacherPortalTab', ...adminTabs];
       allTabs.forEach(t => {
         const el = document.getElementById(t);
         if (el) el.classList.add('hidden');
@@ -3339,9 +3143,7 @@
         }
       });
 
-      const targetEl = document.getElementById(tabId);
-      if (targetEl) targetEl.classList.remove('hidden');
-
+      document.getElementById(tabId).classList.remove('hidden');
       const activeBtn = document.getElementById('tab-' + tabId);
       if (activeBtn) {
         activeBtn.classList.add('border-indigo-600', 'text-indigo-600');
@@ -3377,15 +3179,15 @@
 
     window.addEventListener("DOMContentLoaded", () => {
       loadAllFromStorage();
+      populatePortalTeacherDropdown();
+      renderTeacherPortalView();
+      renderReliefAttendance();
       populateGradeMasterSelect();
       populateClassSelects();
       renderGradeToggles();
       renderClassesList();
       renderGradeMasterGrid();
       renderClassTimetableGrid();
-      populatePortalTeacherDropdown();
-      renderTeacherPortalView();
-      renderReliefAttendance();
       updateAdminAuthUI();
 
       const defaultChk = document.querySelector(".tch-sec-chk[value='8-11']");
