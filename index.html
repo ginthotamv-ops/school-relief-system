@@ -69,7 +69,7 @@
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
           <i class="fa-solid fa-school text-amber-400"></i> පාසල් කාලසටහන් & සහන කළමනාකරණය
         </h1>
-        <p class="text-xs text-indigo-200 mt-0.5">Admin-Secured Control Panel | Teacher View Portal | Multi-Slip Print</p>
+        <p class="text-xs text-indigo-200 mt-0.5">Admin Control Panel | Teacher Portal | Fixed Editing & Dropdowns</p>
       </div>
       
       <div class="flex flex-wrap items-center gap-2">
@@ -89,14 +89,14 @@
           <button type="button" onclick="openAdminLoginModal()" id="adminLoginBtn" class="bg-amber-500 hover:bg-amber-600 text-indigo-950 font-black text-xs px-3.5 py-2 rounded-lg shadow transition flex items-center gap-1.5">
             <i class="fa-solid fa-lock"></i> Admin Login
           </button>
-          <button type="button" onclick="openChangePasswordModal()" id="adminChangePwdBtn" class="hidden bg-indigo-700 hover:bg-indigo-600 text-white font-bold text-xs px-2.5 py-2 rounded-lg shadow transition" title="Change Admin Password">
+          <button type="button" onclick="openChangePasswordModal()" id="adminChangePwdBtn" class="hidden bg-indigo-700 hover:bg-indigo-600 text-white font-bold text-xs px-2.5 py-2 rounded-lg shadow transition" title="Change Password">
             <i class="fa-solid fa-key"></i>
           </button>
           <button type="button" onclick="adminLogout()" id="adminLogoutBtn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg shadow transition flex items-center gap-1.5">
             <i class="fa-solid fa-right-from-bracket"></i> Logout
           </button>
-          <button type="button" onclick="resetSystemData()" title="පද්ධතියේ Data Reset කරන්න" class="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold text-xs px-3 py-2 rounded-lg shadow transition flex items-center gap-1">
-            <i class="fa-solid fa-rotate-left"></i> Reset System
+          <button type="button" onclick="resetSystemData()" title="Reset Data" class="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold text-xs px-3 py-2 rounded-lg shadow transition flex items-center gap-1">
+            <i class="fa-solid fa-rotate-left"></i> Reset
           </button>
         </div>
       </div>
@@ -713,7 +713,6 @@
 
   <!-- SCRIPT ENGINE -->
   <script>
-    // System initialization and robust routing logic
     function switchTab(tabId) {
       const adminTabs = ['gradeMasterTab', 'classTimetableTab', 'teacherScheduleTab', 'reliefTab', 'subjectCurriculumTab', 'gradeSettingsTab', 'teachersTab'];
 
@@ -779,7 +778,6 @@
     window.addEventListener("DOMContentLoaded", () => {
       loadAllFromStorage();
 
-      // Ensure at least grades 6-13 are enabled by default
       const activeGradesCount = gradeSettings.filter(g => g.enabled).length;
       if (activeGradesCount === 0) {
         gradeSettings.forEach(g => { if (g.grade >= 6) g.enabled = true; });
