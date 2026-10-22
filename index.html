@@ -723,9 +723,112 @@
     </div>
   </div>
 
+
+<!-- SCRIPT COMPLETE ENGINE -->
   <script>
     // =========================================================================
-    // YOUR FIREBASE CONFIG (INTEGRATED)
+    // 1. GLOBAL CONSTANTS & MASTER DATA DECLARATIONS (MUST BE AT THE TOP)
+    // =========================================================================
+    const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+    const DAY_LABELS = { Monday: "සඳුදා", Tuesday: "අඟහරුවාදා", Wednesday: "බදාදා", Thursday: "බ්‍රහස්පතින්දා", Friday: "සිකුරාදා" };
+
+    let activeDay = "Monday", activeClass = "10-A", modalMode = "single";
+    let currentModalEditingSlot = null, currentManualReliefIndex = null, currentGradeModalSlot = null, gradeModalMode = "single";
+    let currentWhatsAppQueue = [], currentQueueStep = 0;
+
+    const DEFAULT_GRADES = [
+      { grade: 1, group: "1-5", enabled: false }, { grade: 2, group: "1-5", enabled: false },
+      { grade: 3, group: "1-5", enabled: false }, { grade: 4, group: "1-5", enabled: false },
+      { grade: 5, group: "1-5", enabled: false }, { grade: 6, group: "6-7", enabled: true },
+      { grade: 7, group: "6-7", enabled: true }, { grade: 8, group: "8-11", enabled: true },
+      { grade: 9, group: "8-11", enabled: true }, { grade: 10, group: "8-11", enabled: true },
+      { grade: 11, group: "8-11", enabled: true }, { grade: 12, group: "12-13", enabled: true },
+      { grade: 13, group: "12-13", enabled: true }
+    ];
+
+    const DEFAULT_CLASSES = [
+      { id: "6-A", grade: 6, name: "6-A", classTeacherId: "T03", allowSecondClass: false },
+      { id: "10-A", grade: 10, name: "10-A", classTeacherId: "T01", allowSecondClass: false },
+      { id: "10-B", grade: 10, name: "10-B", classTeacherId: "T05", allowSecondClass: false }
+    ];
+
+    const DEFAULT_CURRICULUM = [
+      { id: "CS01", grade: 6, subject: "Science", maxWeekly: 6 },
+      { id: "CS02", grade: 6, subject: "Mathematics", maxWeekly: 6 },
+      { id: "CS03", grade: 6, subject: "Sinhala", maxWeekly: 6 },
+      { id: "CS04", grade: 6, subject: "English", maxWeekly: 5 },
+      { id: "CS05", grade: 6, subject: "History", maxWeekly: 3 },
+      { id: "CS06", grade: 6, subject: "Music", maxWeekly: 3 },
+      { id: "CS10", grade: 10, subject: "Mathematics", maxWeekly: 6 },
+      { id: "CS11", grade: 10, subject: "Science", maxWeekly: 6 },
+      { id: "CS12", grade: 10, subject: "Sinhala", maxWeekly: 6 },
+      { id: "CS13", grade: 10, subject: "English", maxWeekly: 5 },
+      { id: "CS14", grade: 10, subject: "ICT", maxWeekly: 5 },
+      { id: "CS15", grade: 10, subject: "History", maxWeekly: 3 },
+      { id: "CS16", grade: 10, subject: "Music", maxWeekly: 3 },
+      { id: "CS17", grade: 10, subject: "Dancing", maxWeekly: 3 }
+    ];
+
+    const DEFAULT_TEACHERS = [
+      { id: "T01", name: "කමල් පෙරේරා", phone: "0712345671", subject: "ICT", sections: ["8-11"], leaveStatus: "present", isExempt: false, allowOver35: false },
+      { id: "T02", name: "සුනිල් ශාන්ත", phone: "0712345672", subject: "Music", sections: ["6-7", "8-11"], leaveStatus: "absent", isExempt: false, allowOver35: false },
+      { id: "T03", name: "මාලිනී ෆොන්සේකා", phone: "0712345673", subject: "Science", sections: ["6-7", "8-11"], leaveStatus: "present", isExempt: false, allowOver35: false },
+      { id: "T04", name: "චන්ද්‍රිකා සිරිවර්ධන", phone: "0712345674", subject: "Dancing", sections: ["6-7", "8-11"], leaveStatus: "present", isExempt: false, allowOver35: false },
+      { id: "T05", name: "නිමල් සිල්වා", phone: "0712345675", subject: "Science", sections: ["8-11", "12-13"], leaveStatus: "present", isExempt: false, allowOver35: false },
+      { id: "T06", name: "රංජිත් ප්‍රනාන්දු", phone: "0712345676", subject: "Mathematics", sections: ["6-7", "8-11"], leaveStatus: "present", isExempt: false, allowOver35: false },
+      { id: "T07", name: "අනූෂා දමයන්ති", phone: "0712345677", subject: "Sinhala", sections: ["6-7", "8-11"], leaveStatus: "present", isExempt: false, allowOver35: false },
+      { id: "T08", name: "ප්‍රියන්ත කුමාර", phone: "0712345678", subject: "English", sections: ["6-7", "8-11"], leaveStatus: "present", isExempt: false, allowOver35: false },
+      { id: "T09", name: "ජගත් විජේසිංහ", phone: "0712345679", subject: "History", sections: ["6-7", "8-11"], leaveStatus: "present", isExempt: false, allowOver35: false }
+    ];
+
+    function buildDefaultGradeMaster() {
+      const gm = [];
+      const subs = ["Mathematics", "Science", "Sinhala", "English", "ICT", "History", "Science", "Mathematics"];
+      DAYS.forEach(day => {
+        for (let p = 1; p <= 8; p++) {
+          if (day === "Monday" && p === 1) {
+            gm.push({ grade: 10, day, period: p, isBasket: true, basketSubjects: ["Music", "Dancing"] });
+          } else {
+            gm.push({ grade: 10, day, period: p, isBasket: false, subject: subs[(p - 1) % subs.length] });
+          }
+        }
+      });
+      return gm;
+    }
+
+    function buildDefaultSchedule() {
+      const schedule = [];
+      const subs = ["Mathematics", "Science", "Sinhala", "English", "ICT", "History", "Science", "Mathematics"];
+      const tchs = ["T06", "T05", "T07", "T08", "T01", "T09", "T05", "T06"];
+      DAYS.forEach(day => {
+        for (let p = 1; p <= 8; p++) {
+          if (day === "Monday" && p === 1) {
+            schedule.push({ classId: "10-A", day, period: p, isBasket: true, basketItems: [{ subject: "Music", teacherId: "T02" }, { subject: "Dancing", teacherId: "T04" }], isCombined: true, combinedWithClasses: ["10-B"] });
+            schedule.push({ classId: "10-B", day, period: p, isBasket: true, basketItems: [{ subject: "Music", teacherId: "T02" }, { subject: "Dancing", teacherId: "T04" }], isCombined: true, combinedWithClasses: ["10-A"] });
+            schedule.push({ classId: "6-A", day, period: p, isBasket: false, subject: "Science", teacherId: "T03", isCombined: false, combinedWithClasses: [] });
+          } else {
+            const s = subs[(p - 1) % subs.length];
+            const t = tchs[(p - 1) % tchs.length];
+            schedule.push({ classId: "10-A", day, period: p, isBasket: false, subject: s, teacherId: t, isCombined: false, combinedWithClasses: [] });
+            schedule.push({ classId: "10-B", day, period: p, isBasket: false, subject: s, teacherId: (s === "Science" ? "T03" : t), isCombined: false, combinedWithClasses: [] });
+            schedule.push({ classId: "6-A", day, period: p, isBasket: false, subject: (p % 2 === 0 ? "Mathematics" : "Sinhala"), teacherId: (p % 2 === 0 ? "T06" : "T07"), isCombined: false, combinedWithClasses: [] });
+          }
+        }
+      });
+      return schedule;
+    }
+
+    // Active State Variables
+    let gradeSettings = JSON.parse(JSON.stringify(DEFAULT_GRADES));
+    let schoolClasses = JSON.parse(JSON.stringify(DEFAULT_CLASSES));
+    let curriculumSubjects = JSON.parse(JSON.stringify(DEFAULT_CURRICULUM));
+    let teachers = JSON.parse(JSON.stringify(DEFAULT_TEACHERS));
+    let gradeMasterSchedule = buildDefaultGradeMaster();
+    let masterSchedule = buildDefaultSchedule();
+    let generatedReliefResults = [];
+
+    // =========================================================================
+    // 2. FIREBASE REALTIME DATABASE SYNC
     // =========================================================================
     const firebaseConfig = {
       apiKey: "AIzaSyCJj4SvS46Witm-n4JXOuzEc9a4Lw-iiKU",
@@ -749,7 +852,6 @@
           firebaseDb = firebase.database();
           isFirebaseActive = true;
 
-          // Realtime Listener
           firebaseDb.ref("timetable_system").on("value", (snapshot) => {
             const data = snapshot.val();
             if (data && data.teachers && data.teachers.length > 0) {
@@ -767,7 +869,6 @@
               }
               refreshAllUI();
             } else {
-              // Firebase database is empty on first setup -> upload defaults!
               if (badge) {
                 badge.className = "bg-emerald-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm";
                 badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-white"></span> Live Cloud (Seeded)';
@@ -810,7 +911,7 @@
     }
 
     // =========================================================================
-    // DATA INTEGRITY & STORAGE HELPERS
+    // 3. STORAGE & INTEGRITY LOGIC
     // =========================================================================
     function ensureDataIntegrity() {
       if (!gradeSettings || gradeSettings.length === 0) gradeSettings = JSON.parse(JSON.stringify(DEFAULT_GRADES));
@@ -834,7 +935,6 @@
           gradeMaster: gradeMasterSchedule, teachers: teachers, schedule: masterSchedule
         };
         localStorage.setItem("sch_app_data_v2026_final", JSON.stringify(payload));
-
         if (isFirebaseActive && firebaseDb) {
           firebaseDb.ref("timetable_system").set(payload);
         }
@@ -858,7 +958,7 @@
     }
 
     function resetSystemData() {
-      if (!confirm("පද්ධතියේ දත්ත සියල්ල Reset කර පෙරනිමි (Default) සම්පූර්ණ කාලසටහන නැවත පූරණය කිරීමට අවශ්‍යද?")) return;
+      if (!confirm("පද්ධතියේ දත්ත සියල්ල Reset කර පෙරනිමි කාලසටහන නැවත පූරණය කිරීමට අවශ්‍යද?")) return;
       localStorage.clear();
       if (isFirebaseActive && firebaseDb) {
         firebaseDb.ref("timetable_system").remove();
@@ -879,7 +979,7 @@
       document.body.appendChild(a);
       a.click();
       a.remove();
-      alert("පාසල් කාලසටහන් සම්පූර්ණ Backup ගොනුව සාර්ථකව බාගත විය!");
+      alert("කාලසටහන් Backup ගොනුව බාගත විය!");
     }
 
     function triggerImportFileInput() { document.getElementById("importBackupFileInput").click(); }
@@ -906,7 +1006,1606 @@
     }
 
     // =========================================================================
-    // DOM BOOTLOADER
+    // 4. COMMON CALCULATION HELPERS
+    // =========================================================================
+    function getSectionOfGrade(gradeNum) {
+      if (gradeNum <= 5) return "1-5"; if (gradeNum <= 7) return "6-7"; if (gradeNum <= 11) return "8-11"; return "12-13";
+    }
+
+    function isTeacherInTargetSection(teacher, section) {
+      if (!teacher || !teacher.sections) return true;
+      if (teacher.sections.includes("All")) return true;
+      return teacher.sections.includes(section);
+    }
+
+    function calculateTeacherWeeklyWorkload(teacherId) {
+      let unique = new Set();
+      masterSchedule.forEach(s => {
+        if (!s.isBasket && s.teacherId === teacherId) unique.add(`${s.day}-P${s.period}`);
+        else if (s.isBasket && s.basketItems && s.basketItems.some(b => b.teacherId === teacherId)) unique.add(`${s.day}-P${s.period}`);
+      });
+      return unique.size;
+    }
+
+    function calculateTeacherDailyWorkload(teacherId, day) {
+      let unique = new Set();
+      masterSchedule.forEach(s => {
+        if (s.day === day) {
+          if (!s.isBasket && s.teacherId === teacherId) unique.add(`P${s.period}`);
+          else if (s.isBasket && s.basketItems && s.basketItems.some(b => b.teacherId === teacherId)) unique.add(`P${s.period}`);
+        }
+      });
+      return unique.size;
+    }
+
+    function getGradeScheduledSubjectCount(grade, subjectName) {
+      let count = 0;
+      gradeMasterSchedule.forEach(s => {
+        if (s.grade === grade) {
+          if (!s.isBasket && s.subject && s.subject.toLowerCase() === subjectName.toLowerCase()) count++;
+          else if (s.isBasket && s.basketSubjects && s.basketSubjects.some(sub => sub.toLowerCase() === subjectName.toLowerCase())) count++;
+        }
+      });
+      return count;
+    }
+
+    function getClassScheduledSubjectCount(classId, subjectName) {
+      let count = 0;
+      masterSchedule.forEach(s => {
+        if (s.classId === classId) {
+          if (!s.isBasket && s.subject && s.subject.toLowerCase() === subjectName.toLowerCase()) count++;
+          else if (s.isBasket && s.basketItems && s.basketItems.some(b => b.subject.toLowerCase() === subjectName.toLowerCase())) count++;
+        }
+      });
+      return count;
+    }
+
+    function formatPhoneForWhatsApp(phoneStr) {
+      if (!phoneStr) return "";
+      let p = phoneStr.replace(/\D/g, "");
+      if (p.startsWith("0")) p = "94" + p.slice(1);
+      return p;
+    }
+
+    function isTeacherAbsentDuringPeriod(teacher, period) {
+      const status = teacher.leaveStatus || "present";
+      if (status === "absent") return true;
+      if (status === "half_pm" && period >= 5) return true;
+      if (status === "half_am" && period <= 4) return true;
+      if (status === "short_pm" && period >= 7) return true;
+      if (status === "short_am" && period <= 2) return true;
+      return false;
+    }
+
+    function switchTab(tabId) {
+      const allPanels = ['reliefTab', 'classTimetableTab', 'gradeMasterTab', 'teacherScheduleTab', 'subjectCurriculumTab', 'gradeSettingsTab', 'teachersTab'];
+      allPanels.forEach(t => {
+        const el = document.getElementById(t);
+        if (el) el.classList.add('hidden');
+      });
+      document.querySelectorAll('nav button').forEach(btn => {
+        btn.classList.remove('border-indigo-600', 'text-indigo-600');
+        btn.classList.add('border-transparent', 'text-slate-500');
+      });
+
+      const targetEl = document.getElementById(tabId);
+      if (targetEl) targetEl.classList.remove('hidden');
+
+      const activeNavBtn = document.getElementById('tab-' + tabId);
+      if (activeNavBtn) {
+        activeNavBtn.classList.add('border-indigo-600', 'text-indigo-600');
+        activeNavBtn.classList.remove('border-transparent', 'text-slate-500');
+      }
+
+      if (tabId === 'gradeMasterTab') renderGradeMasterGrid();
+      else if (tabId === 'classTimetableTab') renderClassTimetableGrid();
+      else if (tabId === 'teacherScheduleTab') renderIndividualTeacherSchedule();
+      else if (tabId === 'reliefTab') renderReliefAttendance();
+      else if (tabId === 'subjectCurriculumTab') renderCurriculumTable();
+      else if (tabId === 'gradeSettingsTab') { renderGradeToggles(); renderClassesList(); }
+      else if (tabId === 'teachersTab') { renderTeachersMasterList(); onTeacherSectionCheckboxesChange(); }
+    }
+
+    function changeActiveDay(day) {
+      activeDay = day;
+      renderReliefAttendance();
+      const ctTab = document.getElementById("classTimetableTab");
+      if (ctTab && !ctTab.classList.contains("hidden")) {
+        document.getElementById("classViewDaySelect").value = day;
+        renderClassTimetableGrid();
+      }
+      const gmTab = document.getElementById("gradeMasterTab");
+      if (gmTab && !gmTab.classList.contains("hidden")) {
+        document.getElementById("gradeMasterDaySelect").value = day;
+        renderGradeMasterGrid();
+      }
+    }
+
+    // =========================================================================
+    // 5. ATTENDANCE & AUTO RELIEF
+    // =========================================================================
+    function getLeaveCounts() {
+      let halfDays = 0, shortLeaves = 0, absent = 0, present = 0;
+      teachers.forEach(t => {
+        const s = t.leaveStatus || "present";
+        if (s === "half_pm" || s === "half_am") halfDays++;
+        else if (s === "short_pm" || s === "short_am") shortLeaves++;
+        else if (s === "absent") absent++;
+        else present++;
+      });
+      return { halfDays, shortLeaves, absent, present };
+    }
+
+    function updateLeaveQuotaBadges() {
+      const counts = getLeaveCounts();
+      const pEl = document.getElementById("badgePresentCount");
+      const aEl = document.getElementById("badgeAbsentCount");
+      if (pEl) pEl.innerText = `පැමිණි: ${counts.present}`;
+      if (aEl) aEl.innerText = `නොපැමිණි: ${counts.absent}`;
+      
+      const halfEl = document.getElementById("badgeHalfDayCount");
+      if (halfEl) {
+        halfEl.innerText = `Half Day: ${counts.halfDays} / 5`;
+        halfEl.className = counts.halfDays >= 5 ? "bg-amber-200 text-amber-950 border border-amber-400 px-3 py-1 rounded-lg font-bold" : "bg-amber-50 text-amber-900 border border-amber-200 px-3 py-1 rounded-lg font-bold";
+      }
+
+      const shortEl = document.getElementById("badgeShortLeaveCount");
+      if (shortEl) {
+        shortEl.innerText = `Short Leave: ${counts.shortLeaves} / 5`;
+        shortEl.className = counts.shortLeaves >= 5 ? "bg-blue-200 text-blue-950 border border-blue-400 px-3 py-1 rounded-lg font-bold" : "bg-blue-50 text-blue-900 border border-blue-200 px-3 py-1 rounded-lg font-bold";
+      }
+    }
+
+    function renderReliefAttendance() {
+      const dayLabel = document.getElementById("reliefDayLabel");
+      if (dayLabel) dayLabel.innerText = DAY_LABELS[activeDay] || activeDay;
+      const container = document.getElementById("reliefAttendanceList");
+      if (!container) return;
+      container.innerHTML = "";
+
+      updateLeaveQuotaBadges();
+
+      teachers.forEach(t => {
+        const card = document.createElement("div");
+        card.id = `teacher-att-card-${t.id}`;
+        
+        let cardBg = "bg-white border-slate-200";
+        if (t.leaveStatus === "absent") cardBg = "bg-rose-50 border-rose-200";
+        else if (t.leaveStatus === "half_pm" || t.leaveStatus === "half_am") cardBg = "bg-amber-50 border-amber-200";
+        else if (t.leaveStatus === "short_pm" || t.leaveStatus === "short_am") cardBg = "bg-blue-50 border-blue-200";
+
+        card.className = `p-3 rounded-xl border flex flex-col justify-between gap-2.5 transition ${cardBg}`;
+        card.innerHTML = `
+          <div>
+            <div class="flex items-start justify-between">
+              <div>
+                <div class="font-bold text-xs text-slate-800">${t.name}</div>
+                <div class="text-[11px] text-slate-500">${t.subject} [${Array.isArray(t.sections)?t.sections.join(','):'All'}]</div>
+              </div>
+              <label class="text-[10px] flex items-center gap-1 cursor-pointer">
+                <input type="checkbox" ${t.isExempt ? 'checked' : ''} onchange="toggleReliefExemption('${t.id}', this.checked)" class="w-3.5 h-3.5 text-amber-500 rounded">
+                <span class="text-slate-500 font-semibold">Exempt</span>
+              </label>
+            </div>
+            <div class="mt-2">
+              <label class="block text-[10px] font-bold text-slate-600 mb-0.5">පැමිණීම / නිවාඩු තත්ත්වය:</label>
+              <select onchange="changeTeacherLeaveStatus('${t.id}', this.value)" class="w-full p-1.5 border rounded-lg text-xs font-bold bg-white outline-none cursor-pointer">
+                <option value="present" ${t.leaveStatus === 'present' ? 'selected' : ''}>✅ සම්පූර්ණ පැමිණි (Full Day)</option>
+                <option value="absent" ${t.leaveStatus === 'absent' ? 'selected' : ''}>❌ නොපැමිණි (Full Day Absent)</option>
+                <option value="half_pm" ${t.leaveStatus === 'half_pm' ? 'selected' : ''}>🟡 Half Day (සවස P5-P8 නිවාඩු)</option>
+                <option value="half_am" ${t.leaveStatus === 'half_am' ? 'selected' : ''}>🟡 Half Day (උදෑසන P1-P4 නිවාඩු)</option>
+                <option value="short_pm" ${t.leaveStatus === 'short_pm' ? 'selected' : ''}>🔵 Short Leave (සවස P7-P8 නිවාඩු)</option>
+                <option value="short_am" ${t.leaveStatus === 'short_am' ? 'selected' : ''}>🔵 Short Leave (උදෑසන P1-P2 නිවාඩු)</option>
+              </select>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function changeTeacherLeaveStatus(teacherId, newStatus) {
+      const teacher = teachers.find(t => t.id === teacherId);
+      if (!teacher) return;
+      const counts = getLeaveCounts();
+
+      if ((newStatus === "half_pm" || newStatus === "half_am") && (teacher.leaveStatus !== "half_pm" && teacher.leaveStatus !== "half_am")) {
+        if (counts.halfDays >= 5) {
+          alert("දිනකට අර්ධ දින නිවාඩු (Half Day) ලබාගත හැක්කේ උපරිම ගුරුවරුන් 5 දෙනෙකුට පමණි!");
+          renderReliefAttendance();
+          return;
+        }
+      }
+
+      if ((newStatus === "short_pm" || newStatus === "short_am") && (teacher.leaveStatus !== "short_pm" && teacher.leaveStatus !== "short_am")) {
+        if (counts.shortLeaves >= 5) {
+          alert("දිනකට කෙටි නිවාඩු (Short Leave) ලබාගත හැක්කේ උපරිම ගුරුවරුන් 5 දෙනෙකුට පමණි!");
+          renderReliefAttendance();
+          return;
+        }
+      }
+
+      teacher.leaveStatus = newStatus;
+      saveAllToStorage();
+      renderReliefAttendance();
+    }
+
+    function toggleReliefExemption(id, isExempt) {
+      const t = teachers.find(x => x.id === id);
+      if (t) { t.isExempt = isExempt; saveAllToStorage(); renderReliefAttendance(); }
+    }
+
+    function runAutoReliefEngine() {
+      generatedReliefResults = [];
+      const unassignedList = [];
+      const loadMap = {};
+
+      teachers.forEach(t => {
+        loadMap[t.id] = {
+          name: t.name, phone: t.phone, subject: t.subject, sections: t.sections || ["All"],
+          leaveStatus: t.leaveStatus || "present", isExempt: t.isExempt,
+          currentDayLoad: calculateTeacherDailyWorkload(t.id, activeDay),
+          occupiedPeriods: new Set()
+        };
+      });
+
+      masterSchedule.forEach(slot => {
+        if (slot.day === activeDay) {
+          if (!slot.isBasket && slot.teacherId) {
+            const t = loadMap[slot.teacherId];
+            if (t && !isTeacherAbsentDuringPeriod(t, slot.period)) t.occupiedPeriods.add(slot.period);
+          } else if (slot.isBasket && slot.basketItems) {
+            slot.basketItems.forEach(b => {
+              if (b.teacherId) {
+                const t = loadMap[b.teacherId];
+                if (t && !isTeacherAbsentDuringPeriod(t, slot.period)) t.occupiedPeriods.add(slot.period);
+              }
+            });
+          }
+        }
+      });
+
+      const reliefUnits = [];
+      const handledKeys = new Set();
+
+      masterSchedule.forEach(slot => {
+        if (slot.day === activeDay) {
+          const clsObj = schoolClasses.find(c => c.id === slot.classId);
+          const clsSection = clsObj ? getSectionOfGrade(clsObj.grade) : "General";
+          const groupKey = slot.isCombined && slot.combinedWithClasses ? [slot.classId, ...slot.combinedWithClasses].sort().join('+') + `-P${slot.period}` : `${slot.classId}-P${slot.period}`;
+
+          if (!slot.isBasket && slot.teacherId) {
+            const t = loadMap[slot.teacherId];
+            if (t && isTeacherAbsentDuringPeriod(t, slot.period)) {
+              const uniqueId = `${groupKey}-${slot.teacherId}`;
+              if (!handledKeys.has(uniqueId)) {
+                handledKeys.add(uniqueId);
+                reliefUnits.push({
+                  period: slot.period, classId: slot.isCombined ? [slot.classId, ...slot.combinedWithClasses].join('+') : slot.classId,
+                  section: clsSection, subject: slot.subject, absentTeacherId: slot.teacherId, absentTeacherName: t.name,
+                  reason: t.leaveStatus === 'absent' ? 'නොපැමිණි' : (t.leaveStatus.includes('half') ? 'Half Day' : 'Short Leave')
+                });
+              }
+            }
+          } else if (slot.isBasket && slot.basketItems) {
+            slot.basketItems.forEach(b => {
+              if (b.teacherId) {
+                const t = loadMap[b.teacherId];
+                if (t && isTeacherAbsentDuringPeriod(t, slot.period)) {
+                  const uniqueId = `${groupKey}-${b.teacherId}`;
+                  if (!handledKeys.has(uniqueId)) {
+                    handledKeys.add(uniqueId);
+                    reliefUnits.push({
+                      period: slot.period, classId: slot.isCombined ? [slot.classId, ...slot.combinedWithClasses].join('+') : slot.classId,
+                      section: clsSection, subject: `${b.subject} (Basket)`, absentTeacherId: b.teacherId, absentTeacherName: t.name,
+                      reason: t.leaveStatus === 'absent' ? 'නොපැමිණි' : (t.leaveStatus.includes('half') ? 'Half Day' : 'Short Leave')
+                    });
+                  }
+                }
+              }
+            });
+          }
+        }
+      });
+
+      if (reliefUnits.length === 0) {
+        document.getElementById("reliefResultsTableBody").innerHTML = `<tr><td colspan="7" class="p-6 text-center text-green-600 font-bold"><i class="fa-solid fa-circle-check"></i> අද දින සහන අවශ්‍ය වන පන්ති නොමැත. සියල්ල සාමාන්‍ය පරිදි පැවැත්වේ!</td></tr>`;
+        document.getElementById("unassignedReliefContainer").classList.add("hidden");
+        return;
+      }
+
+      reliefUnits.sort((a, b) => a.period - b.period);
+
+      reliefUnits.forEach(unit => {
+        let assignedId = null, note = "", badge = "";
+        const cleanSub = unit.subject.replace(" (Basket)", "").trim().toLowerCase();
+
+        let candidates = Object.keys(loadMap).filter(tId => {
+          const c = loadMap[tId];
+          return !isTeacherAbsentDuringPeriod(c, unit.period) && !c.isExempt && !c.occupiedPeriods.has(unit.period) && c.currentDayLoad < 7;
+        });
+
+        let sameSectionCand = candidates.filter(tId => isTeacherInTargetSection(loadMap[tId], unit.section));
+        let otherSectionCand = candidates.filter(tId => !isTeacherInTargetSection(loadMap[tId], unit.section));
+
+        let tier1 = sameSectionCand.filter(tId => loadMap[tId].subject.trim().toLowerCase() === cleanSub);
+        let tier2 = sameSectionCand.filter(tId => loadMap[tId].subject.trim().toLowerCase() !== cleanSub);
+        let tier3 = otherSectionCand.filter(tId => loadMap[tId].subject.trim().toLowerCase() === cleanSub);
+        let tier4 = otherSectionCand.filter(tId => loadMap[tId].subject.trim().toLowerCase() !== cleanSub);
+
+        if (tier1.length > 0) { tier1.sort((a, b) => loadMap[a].currentDayLoad - loadMap[b].currentDayLoad); assignedId = tier1[0]; note = "1. එම අංශය - එම විෂය"; badge = "bg-green-100 text-green-800"; }
+        else if (tier2.length > 0) { tier2.sort((a, b) => loadMap[a].currentDayLoad - loadMap[b].currentDayLoad); assignedId = tier2[0]; note = "2. එම අංශය - වෙනත් විෂය"; badge = "bg-emerald-100 text-emerald-800"; }
+        else if (tier3.length > 0) { tier3.sort((a, b) => loadMap[a].currentDayLoad - loadMap[b].currentDayLoad); assignedId = tier3[0]; note = "3. වෙනත් අංශය - එම විෂය"; badge = "bg-amber-100 text-amber-800"; }
+        else if (tier4.length > 0) { tier4.sort((a, b) => loadMap[a].currentDayLoad - loadMap[b].currentDayLoad); assignedId = tier4[0]; note = "4. වෙනත් අංශය - වෙනත් විෂය"; badge = "bg-orange-100 text-orange-800"; }
+
+        if (assignedId) {
+          loadMap[assignedId].currentDayLoad += 1;
+          loadMap[assignedId].occupiedPeriods.add(unit.period);
+          generatedReliefResults.push({
+            period: unit.period, classId: unit.classId, section: unit.section, subject: unit.subject,
+            absentTeacherName: `${unit.absentTeacherName} (${unit.reason})`,
+            assignedId: assignedId, assignedName: loadMap[assignedId].name, assignedSubject: loadMap[assignedId].subject,
+            assignedSections: (loadMap[assignedId].sections || []).join(', '), status: note, badge: badge, isManual: false
+          });
+        } else {
+          unassignedList.push({ period: unit.period, classId: unit.classId, section: unit.section, subject: unit.subject, absentTeacherName: `${unit.absentTeacherName} (${unit.reason})`, reason: "ගුරුවරුන් කාර්යබහුලයි / සීමාව ඉක්මවා ඇත" });
+          generatedReliefResults.push({
+            period: unit.period, classId: unit.classId, section: unit.section, subject: unit.subject,
+            absentTeacherName: `${unit.absentTeacherName} (${unit.reason})`,
+            assignedId: null, assignedName: "කිසිවෙකු නැත", assignedSubject: "-", assignedSections: "-", status: "නිදහස් නැත", badge: "bg-red-100 text-red-800", isManual: false
+          });
+        }
+      });
+
+      renderReliefTable();
+      renderUnassignedReliefTable(unassignedList);
+    }
+
+    function renderUnassignedReliefTable(unassignedList) {
+      const container = document.getElementById("unassignedReliefContainer");
+      const tbody = document.getElementById("unassignedReliefTableBody");
+      if (!tbody || !container) return;
+      tbody.innerHTML = "";
+      if (unassignedList.length === 0) { container.classList.add("hidden"); return; }
+      container.classList.remove("hidden");
+      unassignedList.forEach(item => {
+        tbody.innerHTML += `
+          <tr class="border-b border-red-100">
+            <td class="p-2 border font-bold">Period ${item.period}</td>
+            <td class="p-2 border font-bold text-indigo-900">${item.classId}</td>
+            <td class="p-2 border">${item.section}</td>
+            <td class="p-2 border font-semibold">${item.subject}</td>
+            <td class="p-2 border text-red-700 font-bold">${item.absentTeacherName}</td>
+            <td class="p-2 border italic">${item.reason}</td>
+          </tr>
+        `;
+      });
+    }
+
+    function renderReliefTable() {
+      const tbody = document.getElementById("reliefResultsTableBody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      generatedReliefResults.forEach((item, index) => {
+        tbody.innerHTML += `
+          <tr class="border-b hover:bg-slate-50 transition">
+            <td class="p-2.5 font-bold text-indigo-700">Period ${item.period}</td>
+            <td class="p-2.5 font-bold">${item.classId}</td>
+            <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 font-bold">${item.section}</span></td>
+            <td class="p-2.5 font-medium">${item.subject}</td>
+            <td class="p-2.5 font-bold ${item.assignedId ? 'text-slate-800' : 'text-red-500'}">
+              ${item.assignedName} <span class="text-[10px] text-slate-500 font-normal">(${item.assignedSubject})</span>
+              ${item.isManual ? '<span class="ml-1 text-[9px] bg-purple-100 text-purple-700 px-1 rounded font-bold border border-purple-200">Manual</span>' : ''}
+            </td>
+            <td class="p-2.5"><span class="px-2 py-0.5 text-[10px] font-semibold rounded-full border ${item.badge}">${item.status}</span></td>
+            <td class="p-2.5 text-center">
+              <button type="button" onclick="openManualReliefModal(${index})" class="text-[11px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1 rounded border border-indigo-200 transition">
+                <i class="fa-solid fa-user-pen"></i> Edit
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function isTeacherOccupiedInDayPeriod(teacherId, day, period, excludeReliefIndex = null) {
+      const teacher = teachers.find(t => t.id === teacherId);
+      if (teacher && isTeacherAbsentDuringPeriod(teacher, period)) return true;
+
+      const hasRegular = masterSchedule.some(s => {
+        if (s.day !== day || s.period !== period) return false;
+        if (!s.isBasket && s.teacherId === teacherId) return true;
+        if (s.isBasket && s.basketItems && s.basketItems.some(b => b.teacherId === teacherId)) return true;
+        return false;
+      });
+      if (hasRegular) return true;
+
+      return generatedReliefResults.some((r, idx) => {
+        if (idx === excludeReliefIndex) return false;
+        return r.period === period && r.assignedId === teacherId;
+      });
+    }
+
+    function openManualReliefModal(index) {
+      currentManualReliefIndex = index;
+      const item = generatedReliefResults[index];
+      document.getElementById("manualModalPeriod").innerText = item.period;
+      document.getElementById("manualModalClass").innerText = item.classId;
+      document.getElementById("manualModalSection").innerText = item.section;
+      document.getElementById("manualModalSubject").innerText = item.subject;
+      document.getElementById("manualModalAbsentTeacher").innerText = item.absentTeacherName;
+      document.getElementById("chkForceOverrideTeachers").checked = false;
+      populateManualReliefDropdown();
+      document.getElementById("manualReliefModal").classList.remove("hidden");
+    }
+
+    function populateManualReliefDropdown() {
+      if (currentManualReliefIndex === null) return;
+      const item = generatedReliefResults[currentManualReliefIndex];
+      const select = document.getElementById("manualModalTeacherSelect");
+      const isForceOverride = document.getElementById("chkForceOverrideTeachers").checked;
+      select.innerHTML = '<option value="">-- ආදේශක ගුරුවරයෙකු තෝරන්න --</option>';
+
+      let eligible = isForceOverride ? teachers : teachers.filter(t => !isTeacherAbsentDuringPeriod(t, item.period) && !isTeacherOccupiedInDayPeriod(t.id, activeDay, item.period, currentManualReliefIndex));
+      
+      if (eligible.length === 0) {
+        select.innerHTML = '<option value="">⚠️ නිදහස් ගුරුවරුන් නැත (Force Override Tick කරන්න)</option>';
+      } else {
+        eligible.forEach(t => {
+          const isSelected = t.id === item.assignedId;
+          const isBusy = isTeacherOccupiedInDayPeriod(t.id, activeDay, item.period, currentManualReliefIndex);
+          select.innerHTML += `<option value="${t.id}" ${isSelected ? 'selected' : ''}>${t.name} (${t.subject}) ${isBusy ? ' - [Busy/නිවාඩු]' : ' - [Free]'}</option>`;
+        });
+      }
+    }
+
+    function closeManualReliefModal() {
+      document.getElementById("manualReliefModal").classList.add("hidden");
+      currentManualReliefIndex = null;
+    }
+
+    function saveManualReliefSelection() {
+      if (currentManualReliefIndex === null) return;
+      const select = document.getElementById("manualModalTeacherSelect");
+      const selectedId = select.value;
+      if (!selectedId) { alert("කරුණාකර ගුරුවරයෙකු තෝරන්න."); return; }
+      const item = generatedReliefResults[currentManualReliefIndex];
+      const teacher = teachers.find(t => t.id === selectedId);
+      if (teacher) {
+        item.assignedId = teacher.id;
+        item.assignedName = teacher.name;
+        item.assignedSubject = teacher.subject;
+        item.assignedSections = (teacher.sections || []).join(', ');
+        item.status = "Manual Override";
+        item.badge = "bg-purple-100 text-purple-800";
+        item.isManual = true;
+        renderReliefTable();
+        closeManualReliefModal();
+      }
+    }
+
+    function clearManualReliefSelection() {
+      if (currentManualReliefIndex === null) return;
+      const item = generatedReliefResults[currentManualReliefIndex];
+      item.assignedId = null;
+      item.assignedName = "කිසිවෙකු නැත";
+      item.assignedSubject = "-";
+      item.assignedSections = "-";
+      item.status = "Cleared";
+      item.badge = "bg-red-100 text-red-800";
+      item.isManual = true;
+      renderReliefTable();
+      closeManualReliefModal();
+    }
+
+    function adminOpenReliefQueue() {
+      const assigned = generatedReliefResults.filter(r => r.assignedId !== null);
+      if (assigned.length === 0) {
+        alert("සහන කාලච්ඡේද කිසිවක් සකස් කර නොමැත. කරුණාකර පළමුව 'සහන කාලසටහන සකසන්න' ඔබන්න.");
+        return;
+      }
+      const byTeacher = {};
+      assigned.forEach(r => {
+        if (!byTeacher[r.assignedId]) byTeacher[r.assignedId] = [];
+        byTeacher[r.assignedId].push(r);
+      });
+
+      const queue = [];
+      Object.keys(byTeacher).forEach(tId => {
+        const teacher = teachers.find(t => t.id === tId);
+        const myReliefs = byTeacher[tId];
+        let msg = `🔔 *පාසල් සහන කාලච්ඡේද නිල දැනුම්දීම (Relief Notice)*\n═══════════════════════════\n👤 *ගුරුතුමා/ගුරුතුමිය:* ${teacher ? teacher.name : 'Unknown'}\n📅 *දිනය:* ${DAY_LABELS[activeDay]}\n📌 *පැවරී ඇති මුළු සහන පන්ති:* ${myReliefs.length}\n═══════════════════════════\n\n`;
+        myReliefs.forEach(r => {
+          msg += `┌─── 🕒 *Period ${r.period}* ───\n│ 🏫 *පන්තිය:* ${r.classId} (${r.section})\n│ 📖 *විෂය:* ${r.subject}\n└─── 🏷️ *තත්ත්වය:* ${r.status}\n\n`;
+        });
+        msg += `═══════════════════════════\n_කරුණාකර නියමිත වේලාවට අදාළ පන්ති වෙත සහභාගී වන්න._`;
+
+        queue.push({
+          teacherName: teacher ? teacher.name : 'Unknown',
+          phone: teacher ? teacher.phone : '',
+          description: `Relief පන්ති ${myReliefs.length} ක්`,
+          message: msg,
+          sent: false
+        });
+      });
+      openWhatsAppQueueModal("දෛනික Relief WhatsApp Queue", queue);
+    }
+
+    function adminBroadcastReliefToSchoolGroup() {
+      if (generatedReliefResults.length === 0) { alert("සහන කාලච්ඡේද සකසා නොමැත."); return; }
+      let msg = `📢 *පාසල් දෛනික සහන කාලසටහන (Daily Relief Schedule)*\n══════════════════════════════\n📅 *දිනය:* ${DAY_LABELS[activeDay]}\n\n`;
+      generatedReliefResults.forEach((r, idx) => {
+        msg += `*${idx + 1}. Period ${r.period}* | *${r.classId}*\n   ├ 📖 විෂය: ${r.subject}\n   └ ${r.assignedId ? `👉 *සහන ගුරුතුමා:* *${r.assignedName}*` : `⚠️ *සහන ගුරුතුමා:* *නැත*`}\n\n`;
+      });
+      msg += `══════════════════════════════\n_සියලුම ගුරුභවතුන්ගේ අවධානය පිණිසයි._`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+    }
+
+    function openWhatsAppQueueModal(title, queueList) {
+      currentWhatsAppQueue = queueList; currentQueueStep = 0;
+      document.getElementById("queueModalTitle").innerText = title;
+      renderQueueList();
+      document.getElementById("whatsappQueueModal").classList.remove("hidden");
+    }
+
+    function closeWhatsAppQueueModal() {
+      document.getElementById("whatsappQueueModal").classList.add("hidden");
+      currentWhatsAppQueue = []; currentQueueStep = 0;
+    }
+
+    function renderQueueList() {
+      const container = document.getElementById("queueItemsContainer");
+      if (!container) return;
+      container.innerHTML = "";
+      const total = currentWhatsAppQueue.length;
+      const sentCount = currentWhatsAppQueue.filter(x => x.sent).length;
+      document.getElementById("queueProgressText").innerText = `${sentCount} / ${total} Sent`;
+
+      if (currentQueueStep < total) {
+        document.getElementById("queueCurrentTargetLabel").innerText = `ඊළඟට යැවිය යුතු: ${currentWhatsAppQueue[currentQueueStep].teacherName}`;
+        document.getElementById("btnQueueNext").disabled = false;
+        document.getElementById("btnQueueNext").classList.remove("opacity-50", "cursor-not-allowed");
+      } else {
+        document.getElementById("queueCurrentTargetLabel").innerText = `සියලු පණිවිඩ යවා අවසන්!`;
+        document.getElementById("btnQueueNext").disabled = true;
+        document.getElementById("btnQueueNext").classList.add("opacity-50", "cursor-not-allowed");
+      }
+
+      currentWhatsAppQueue.forEach((item, index) => {
+        const isCurrent = index === currentQueueStep;
+        const row = document.createElement("div");
+        row.className = `p-3 rounded-xl border flex justify-between items-center transition ${item.sent ? 'bg-emerald-50 border-emerald-200' : (isCurrent ? 'bg-white border-indigo-400 ring-2 ring-indigo-200' : 'bg-slate-50 border-slate-200')}`;
+        row.innerHTML = `<div><div class="flex items-center gap-2"><span class="font-bold text-xs text-slate-800">${index + 1}. ${item.teacherName}</span>${item.sent ? '<span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">Sent ✓</span>' : ''}${isCurrent ? '<span class="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded font-bold animate-pulse">Next ▶</span>' : ''}</div><div class="text-[11px] text-slate-500 mt-0.5">${item.phone || '<span class="text-red-500 font-bold">No WhatsApp</span>'}</div></div><button type="button" onclick="dispatchSpecificQueueItem(${index})" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-1.5 px-3 rounded-lg shadow transition flex items-center gap-1"><i class="fa-brands fa-whatsapp"></i> Send</button>`;
+        container.appendChild(row);
+      });
+    }
+
+    function dispatchNextQueueItem() {
+      if (currentQueueStep >= currentWhatsAppQueue.length) return;
+      dispatchSpecificQueueItem(currentQueueStep);
+      currentQueueStep++;
+      renderQueueList();
+    }
+
+    function dispatchSpecificQueueItem(index) {
+      const item = currentWhatsAppQueue[index];
+      if (!item) return;
+      const phone = formatPhoneForWhatsApp(item.phone);
+      const waUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(item.message)}` : `https://wa.me/?text=${encodeURIComponent(item.message)}`;
+      item.sent = true;
+      if (index === currentQueueStep) currentQueueStep++;
+      renderQueueList();
+      window.open(waUrl, "_blank");
+    }
+
+    // =========================================================================
+    // 6. PRINT DISPATCHERS
+    // =========================================================================
+    function print16ReliefCutSlipsA4() {
+      const assignedReliefs = generatedReliefResults.filter(r => r.assignedId !== null);
+      if (assignedReliefs.length === 0) {
+        alert("මුද්‍රණය කිරීමට සහන කාලච්ඡේද නොමැත. කරුණාකර පළමුව 'සහන කාලසටහන සකසන්න' ඔබන්න.");
+        return;
+      }
+      const byTeacher = {};
+      assignedReliefs.forEach(r => {
+        if (!byTeacher[r.assignedId]) byTeacher[r.assignedId] = { teacherName: r.assignedName, items: [] };
+        byTeacher[r.assignedId].items.push(r);
+      });
+
+      const container = document.getElementById("slips16UpContainer");
+      container.innerHTML = "";
+
+      Object.keys(byTeacher).forEach(tId => {
+        const teacherData = byTeacher[tId];
+        let periodsListHtml = "";
+        teacherData.items.forEach(item => {
+          periodsListHtml += `<div style="font-size: 7.5pt; line-height: 1.25; margin-top: 1px; color: #0f172a;">• <b>Period ${item.period}</b>: <b>${item.classId}</b> - ${item.subject}</div>`;
+        });
+        const slip = document.createElement("div");
+        slip.className = "relief-cut-slip-16";
+        slip.innerHTML = `
+          <div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #475569; padding-bottom: 1px; font-weight: bold; font-size: 7.5pt;">
+              <span>පාසල් සහන පත්‍රිකාව (Relief Slip)</span>
+              <span>${DAY_LABELS[activeDay]}</span>
+            </div>
+            <div style="margin-top: 2px; font-size: 8pt;">ගුරු භවතා: <b style="font-size: 8.5pt; color: #1e1b4b;">${teacherData.teacherName}</b></div>
+            <div style="margin-top: 2px; border-top: 0.5px solid #cbd5e1; padding-top: 2px;">${periodsListHtml}</div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 6.5pt; border-top: 1px dashed #94a3b8; padding-top: 1px; color: #475569;">
+            <span>නියමිත වේලාවට පන්තියට යන්න</span><span>අත්සන: ....................</span>
+          </div>
+        `;
+        container.appendChild(slip);
+      });
+
+      document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
+      const target = document.getElementById("printable16SlipsArea");
+      target.classList.add("print-target");
+      window.print();
+      target.classList.remove("print-target");
+    }
+
+    function downloadReliefPDFForStaffGroup() {
+      if (generatedReliefResults.length === 0) {
+        alert("PDF සෑදීමට සහන කාලසටහනක් නොමැත. පළමුව 'සහන කාලසටහන සකසන්න' ඔබන්න.");
+        return;
+      }
+      document.getElementById("printReliefSlipDay").innerText = DAY_LABELS[activeDay];
+      document.getElementById("printReliefSlipTotalCount").innerText = generatedReliefResults.length;
+
+      const sortedReliefs = generatedReliefResults.slice().sort((a, b) => a.period - b.period);
+      const tbody = document.getElementById("printableReliefSlipTableBody");
+      tbody.innerHTML = "";
+
+      sortedReliefs.forEach(r => {
+        tbody.innerHTML += `
+          <tr class="border-b border-slate-300">
+            <td class="p-2 border border-slate-400 font-bold text-indigo-950">Period ${r.period}</td>
+            <td class="p-2 border border-slate-400 font-bold">${r.classId} (${r.section})</td>
+            <td class="p-2 border border-slate-400 font-semibold">${r.subject}</td>
+            <td class="p-2 border border-slate-400 font-black text-slate-900">${r.assignedName}</td>
+            <td class="p-2 border border-slate-400 text-[10px]">${r.status}</td>
+          </tr>
+        `;
+      });
+
+      const element = document.getElementById("printableReliefArea");
+      element.classList.remove("hidden");
+      const opt = { margin: 10, filename: `Staff_Relief_${activeDay}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+      html2pdf().set(opt).from(element).save().then(() => {
+        element.classList.add("hidden");
+        alert("Staff Group සඳහා වූ Relief PDF ගොනුව බාගත විය!");
+      }).catch(err => {
+        element.classList.add("hidden");
+        alert("PDF සෑදීමේ දෝෂයක්. Print බොත්තම භාවිත කරන්න.");
+      });
+    }
+
+    function printReliefSlip() {
+      if (generatedReliefResults.length === 0) { alert("ප්‍රින්ට් කිරීමට සහන කාලසටහනක් නැත."); return; }
+      document.getElementById("printReliefSlipDay").innerText = DAY_LABELS[activeDay];
+      document.getElementById("printReliefSlipTotalCount").innerText = generatedReliefResults.length;
+
+      const sortedReliefs = generatedReliefResults.slice().sort((a, b) => a.period - b.period);
+      const tbody = document.getElementById("printableReliefSlipTableBody");
+      tbody.innerHTML = "";
+
+      sortedReliefs.forEach(r => {
+        tbody.innerHTML += `
+          <tr class="border-b border-slate-300">
+            <td class="p-2 border border-slate-400 font-bold text-indigo-950">Period ${r.period}</td>
+            <td class="p-2 border border-slate-400 font-bold">${r.classId} (${r.section})</td>
+            <td class="p-2 border border-slate-400 font-semibold">${r.subject}</td>
+            <td class="p-2 border border-slate-400 font-black text-slate-900">${r.assignedName}</td>
+            <td class="p-2 border border-slate-400 text-[10px]">${r.status}</td>
+          </tr>
+        `;
+      });
+
+      document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
+      const target = document.getElementById("printableReliefArea");
+      target.classList.add("print-target");
+      window.print();
+      target.classList.remove("print-target");
+    }
+
+    function print2ClassesPerA4() {
+      const container = document.getElementById("classes2UpContainer");
+      container.innerHTML = "";
+      for (let i = 0; i < schoolClasses.length; i += 2) {
+        const pair = [schoolClasses[i], schoolClasses[i + 1]].filter(Boolean);
+        let pairHtml = `<div class="classes-2up-container">`;
+        pair.forEach(cls => {
+          const teacher = teachers.find(t => t.id === cls.classTeacherId);
+          let rowsHtml = "";
+          DAYS.forEach(day => {
+            let cellsHtml = "";
+            for (let p = 1; p <= 8; p++) {
+              const slot = masterSchedule.find(s => s.classId === cls.id && s.day === day && s.period === p);
+              if (slot) {
+                if (slot.isBasket) {
+                  const subs = (slot.basketItems || []).map(b => b.subject).join(',');
+                  cellsHtml += `<td class="p-1 border border-slate-300 font-bold bg-purple-50 text-[9px]"><div class="text-purple-950">${subs}</div></td>`;
+                } else {
+                  const t = teachers.find(x => x.id === slot.teacherId);
+                  cellsHtml += `<td class="p-1 border border-slate-300 bg-indigo-50/40 text-[9px]"><div class="font-bold text-indigo-950">${slot.subject}</div><div class="text-[8px] text-slate-500">${t ? t.name : '-'}</div></td>`;
+                }
+              } else {
+                cellsHtml += `<td class="p-1 border border-slate-300 text-[9px] text-slate-300">-</td>`;
+              }
+            }
+            rowsHtml += `<tr class="border-b border-slate-300"><td class="p-1 border border-slate-300 font-bold bg-slate-50 text-[9px]">${DAY_LABELS[day]}</td>${cellsHtml}</tr>`;
+          });
+          pairHtml += `
+            <div class="class-half-page">
+              <div style="text-align: center; border-bottom: 1px solid #334155; padding-bottom: 2px; margin-bottom: 3px;">
+                <h4 style="font-weight: 900; font-size: 10pt; text-transform: uppercase;">පන්ති කාලසටහන - ${cls.name}</h4>
+                <div style="display: flex; justify-content: space-between; font-size: 8pt; font-weight: bold; margin-top: 1px;">
+                  <span>ශ්‍රේණිය: Grade ${cls.grade} (${getSectionOfGrade(cls.grade)})</span>
+                  <span>පන්තිභාර: <b>${teacher ? teacher.name : 'පත් කර නොමැත'}</b></span>
+                </div>
+              </div>
+              <table style="width: 100%; text-align: center; border-collapse: collapse; font-size: 8pt;">
+                <thead style="background: #f1f5f9; font-weight: bold;">
+                  <tr>
+                    <th style="border: 1px solid #cbd5e1; padding: 2px;">දිනය</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P1</th><th style="border: 1px solid #cbd5e1; padding: 2px;">P2</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P3</th><th style="border: 1px solid #cbd5e1; padding: 2px;">P4</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P5</th><th style="border: 1px solid #cbd5e1; padding: 2px;">P6</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P7</th><th style="border: 1px solid #cbd5e1; padding: 2px;">P8</th>
+                  </tr>
+                </thead>
+                <tbody>${rowsHtml}</tbody>
+              </table>
+            </div>
+          `;
+        });
+        pairHtml += `</div>`;
+        container.innerHTML += pairHtml;
+      }
+      document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
+      const target = document.getElementById("printable2ClassesArea");
+      target.classList.add("print-target");
+      window.print();
+      target.classList.remove("print-target");
+    }
+
+    function print2TeachersPerA4() {
+      const container = document.getElementById("teachers2UpContainer");
+      container.innerHTML = "";
+      for (let i = 0; i < teachers.length; i += 2) {
+        const pair = [teachers[i], teachers[i + 1]].filter(Boolean);
+        let pairHtml = `<div class="teachers-2up-container">`;
+        pair.forEach(teacher => {
+          const totalLoad = calculateTeacherWeeklyWorkload(teacher.id);
+          let rowsHtml = "";
+          DAYS.forEach(day => {
+            let dailyCount = 0;
+            let cellsHtml = "";
+            for (let p = 1; p <= 8; p++) {
+              const slot = masterSchedule.find(s => s.day === day && s.period === p && ((!s.isBasket && s.teacherId === teacher.id) || (s.isBasket && s.basketItems && s.basketItems.some(b => b.teacherId === teacher.id))));
+              if (slot) {
+                dailyCount++;
+                const cls = slot.isCombined && slot.combinedWithClasses ? [slot.classId, ...slot.combinedWithClasses].join('+') : slot.classId;
+                const sub = !slot.isBasket ? slot.subject : (slot.basketItems.find(b => b.teacherId === teacher.id)?.subject || "Basket");
+                cellsHtml += `<td class="p-1 border border-slate-300 font-bold bg-indigo-50/40 text-[9px]"><div class="text-indigo-950">${cls}</div><div class="text-[8px] text-slate-500">${sub}</div></td>`;
+              } else {
+                cellsHtml += `<td class="p-1 border border-slate-300 text-[9px] text-slate-300">-</td>`;
+              }
+            }
+            rowsHtml += `<tr class="border-b border-slate-300"><td class="p-1 border border-slate-300 font-bold bg-slate-50 text-[9px]">${DAY_LABELS[day]}</td>${cellsHtml}<td class="p-1 border border-slate-300 font-black text-indigo-800 text-[9px]">${dailyCount}</td></tr>`;
+          });
+          pairHtml += `
+            <div class="teacher-half-page">
+              <div style="text-align: center; border-bottom: 1px solid #334155; padding-bottom: 2px; margin-bottom: 3px;">
+                <h4 style="font-weight: 900; font-size: 10pt; text-transform: uppercase;">ගුරු පෞද්ගලික කාලසටහන</h4>
+                <div style="display: flex; justify-content: space-between; font-size: 8pt; font-weight: bold; margin-top: 2px;">
+                  <span>නම: <b>${teacher.name}</b></span><span>කාලච්ඡේද: <b>${totalLoad}/35</b></span>
+                </div>
+              </div>
+              <table style="width: 100%; text-align: center; border-collapse: collapse; font-size: 8pt;">
+                <thead style="background: #f1f5f9; font-weight: bold;">
+                  <tr>
+                    <th style="border: 1px solid #cbd5e1; padding: 2px;">දිනය</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P1</th><th style="border: 1px solid #cbd5e1; padding: 2px;">P2</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P3</th><th style="border: 1px solid #cbd5e1; padding: 2px;">P4</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P5</th><th style="border: 1px solid #cbd5e1; padding: 2px;">P6</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 2px;">P7</th><th style="border: 1px solid #cbd5e1; padding: 2px;">P8</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 2px;">එකතුව</th>
+                  </tr>
+                </thead>
+                <tbody>${rowsHtml}</tbody>
+              </table>
+            </div>
+          `;
+        });
+        pairHtml += `</div>`;
+        container.innerHTML += pairHtml;
+      }
+      document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
+      const target = document.getElementById("printable2TeachersArea");
+      target.classList.add("print-target");
+      window.print();
+      target.classList.remove("print-target");
+    }
+
+    function printClassTimetableSlip() {
+      const clsId = document.getElementById("activeClassSelect").value;
+      const clsObj = schoolClasses.find(c => c.id === clsId);
+      if (!clsObj) return;
+
+      const teacher = teachers.find(t => t.id === clsObj.classTeacherId);
+      document.getElementById("slipClassName").innerText = clsObj.name;
+      document.getElementById("slipClassSection").innerText = getSectionOfGrade(clsObj.grade);
+      document.getElementById("slipClassTeacher").innerText = teacher ? `${teacher.name} (${teacher.subject})` : "පත් කර නොමැත";
+
+      const tbody = document.getElementById("individualClassPrintGridBody");
+      tbody.innerHTML = "";
+
+      DAYS.forEach(day => {
+        let rowHtml = `<tr class="border-b border-slate-300"><td class="p-2 border border-slate-300 font-bold bg-slate-50 text-left">${DAY_LABELS[day]}</td>`;
+        for (let p = 1; p <= 8; p++) {
+          const slot = masterSchedule.find(s => s.classId === clsId && s.day === day && s.period === p);
+          if (slot) {
+            if (slot.isBasket) {
+              const subs = (slot.basketItems || []).map(b => b.subject).join(', ');
+              rowHtml += `<td class="p-2 border border-slate-300 bg-purple-50/50"><div class="font-bold text-purple-900">${subs}</div><div class="text-[9px] text-slate-500">(Basket)</div></td>`;
+            } else {
+              const t = teachers.find(x => x.id === slot.teacherId);
+              rowHtml += `<td class="p-2 border border-slate-300 bg-indigo-50/30"><div class="font-bold text-indigo-900">${slot.subject}</div><div class="text-[9px] text-slate-500">${t ? t.name : '-'}</div></td>`;
+            }
+          } else {
+            rowHtml += `<td class="p-2 border border-slate-300 text-slate-300">-</td>`;
+          }
+        }
+        rowHtml += `</tr>`;
+        tbody.innerHTML += rowHtml;
+      });
+
+      document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
+      const target = document.getElementById("printableClassArea");
+      target.classList.add("print-target");
+      window.print();
+      target.classList.remove("print-target");
+    }
+
+    function printTeacherSlipFromAdmin() {
+      document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
+      const target = document.getElementById("printableTeacherArea");
+      target.classList.add("print-target");
+      window.print();
+      target.classList.remove("print-target");
+    }
+
+    function renderIndividualTeacherSchedule() {
+      const select = document.getElementById("printTeacherSelect");
+      if (select && select.options.length === 0) {
+        teachers.forEach(t => { select.innerHTML += `<option value="${t.id}">${t.name} (${t.subject})</option>`; });
+      }
+      const tId = select ? select.value : null;
+      if (!tId) return;
+
+      const teacher = teachers.find(t => t.id === tId);
+      const totalLoad = calculateTeacherWeeklyWorkload(tId);
+
+      document.getElementById("slipTeacherName").innerText = teacher.name;
+      document.getElementById("slipTeacherSection").innerText = (teacher.sections || []).join(', ');
+      document.getElementById("slipTeacherSubject").innerText = teacher.subject;
+      document.getElementById("slipTeacherTotalLoad").innerText = `${totalLoad} / 35`;
+
+      const tbody = document.getElementById("individualTeacherGridBody");
+      tbody.innerHTML = "";
+
+      DAYS.forEach(day => {
+        let dailyCount = 0;
+        let rowHtml = `<tr class="border-b border-slate-300"><td class="p-2 border border-slate-300 font-bold bg-slate-50 text-left">${DAY_LABELS[day]}</td>`;
+        for (let p = 1; p <= 8; p++) {
+          let cellContent = "-"; let isOccupied = false;
+          const slot = masterSchedule.find(s => s.day === day && s.period === p && ((!s.isBasket && s.teacherId === tId) || (s.isBasket && s.basketItems && s.basketItems.some(b => b.teacherId === tId))));
+          if (slot) {
+            isOccupied = true; dailyCount += 1;
+            const allClasses = slot.isCombined && slot.combinedWithClasses ? [slot.classId, ...slot.combinedWithClasses].join('+') : slot.classId;
+            if (!slot.isBasket) cellContent = `<div class="font-bold text-indigo-900">${allClasses}</div><div class="text-[10px] text-slate-600">${slot.subject}</div>`;
+            else { const bItem = slot.basketItems.find(x => x.teacherId === tId); cellContent = `<div class="font-bold text-purple-900">${allClasses} <span class="text-[9px] font-normal">(Basket)</span></div><div class="text-[10px] text-slate-600">${bItem ? bItem.subject : ''}</div>`; }
+          }
+          rowHtml += `<td class="p-2 border border-slate-300 ${isOccupied ? 'bg-indigo-50/40' : 'text-slate-300'}">${cellContent}</td>`;
+        }
+        rowHtml += `<td class="p-2 border border-slate-300 font-bold bg-slate-50 text-indigo-800">${dailyCount}</td></tr>`;
+        tbody.innerHTML += rowHtml;
+      });
+    }
+
+    function openReshuffleModal() {
+      document.getElementById("reshuffleClassLabel").innerText = activeClass;
+      document.getElementById("reshuffleDay1Select").value = activeDay;
+      document.getElementById("reshuffleDay2Select").value = activeDay;
+      document.getElementById("reshufflePeriod1Select").value = "1";
+      document.getElementById("reshufflePeriod2Select").value = "2";
+      document.getElementById("reshuffleModal").classList.remove("hidden");
+    }
+
+    function closeReshuffleModal() { document.getElementById("reshuffleModal").classList.add("hidden"); }
+
+    function executePeriodReshuffle() {
+      const d1 = document.getElementById("reshuffleDay1Select").value;
+      const p1 = parseInt(document.getElementById("reshufflePeriod1Select").value);
+      const d2 = document.getElementById("reshuffleDay2Select").value;
+      const p2 = parseInt(document.getElementById("reshufflePeriod2Select").value);
+
+      if (d1 === d2 && p1 === p2) { alert("වෙනස් කාලච්ඡේද දෙකක් හෝ දින දෙකක් තෝරන්න."); return; }
+      const slot1 = masterSchedule.find(s => s.classId === activeClass && s.day === d1 && s.period === p1);
+      const slot2 = masterSchedule.find(s => s.classId === activeClass && s.day === d2 && s.period === p2);
+
+      if (!slot1 && !slot2) { alert("තෝරාගත් කාලච්ඡේද දෙකම හිස්ය."); return; }
+
+      if (slot1) { slot1.day = d2; slot1.period = p2; }
+      if (slot2) { slot2.day = d1; slot2.period = p1; }
+
+      saveAllToStorage();
+      closeReshuffleModal();
+      renderClassTimetableGrid();
+      alert(`[${DAY_LABELS[d1]} P${p1}] සහ [${DAY_LABELS[d2]} P${p2}] සාර්ථකව මාරු (Swap) කරන ලදි!`);
+    }
+
+    // =========================================================================
+    // 7. CLASS & GRADE TIMETABLE CONTROLLER
+    // =========================================================================
+    function populateClassSelects() {
+      const sel = document.getElementById("activeClassSelect");
+      if (!sel) return;
+      const currentVal = sel.value;
+      sel.innerHTML = "";
+      const enabledGrades = new Set(gradeSettings.filter(g => g.enabled).map(g => g.grade));
+      const valid = schoolClasses.filter(c => enabledGrades.has(c.grade));
+      valid.forEach(c => {
+        sel.innerHTML += `<option value="${c.id}">${c.name} (${getSectionOfGrade(c.grade)})</option>`;
+      });
+      if (valid.some(c => c.id === currentVal)) sel.value = currentVal;
+      else if (valid.length > 0) sel.value = valid[0].id;
+      activeClass = sel.value || (valid[0] ? valid[0].id : "");
+    }
+
+    function populateGradeMasterSelect() {
+      const sel = document.getElementById("gradeMasterSelect");
+      if (!sel) return;
+      const cur = sel.value;
+      sel.innerHTML = "";
+      gradeSettings.filter(g => g.enabled).forEach(g => {
+        sel.innerHTML += `<option value="${g.grade}">Grade ${g.grade} (${g.group})</option>`;
+      });
+      if (cur && Array.from(sel.options).some(o => o.value === cur)) sel.value = cur;
+      else if (Array.from(sel.options).some(o => o.value === "10")) sel.value = "10";
+    }
+
+    function renderGradeMasterGrid() {
+      populateGradeMasterSelect();
+      const sel = document.getElementById("gradeMasterSelect");
+      if (!sel || !sel.value) return;
+      const grade = parseInt(sel.value);
+      const day = document.getElementById("gradeMasterDaySelect").value;
+      const container = document.getElementById("gradeMasterSlotsContainer");
+      if (!container) return;
+      container.innerHTML = "";
+
+      renderGradeWeeklyQuotaTracker(grade);
+
+      for (let p = 1; p <= 8; p++) {
+        const slot = gradeMasterSchedule.find(s => s.grade === grade && s.day === day && s.period === p);
+        const card = document.createElement("div");
+        card.className = "bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between hover:border-indigo-400 transition";
+
+        let contentHtml = "";
+        if (slot) {
+          if (slot.isBasket && slot.basketSubjects && slot.basketSubjects.length > 0) {
+            contentHtml = `<div class="flex justify-between items-center mb-1.5"><span class="font-black text-indigo-700 text-xs">Period ${p}</span><span class="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.2 rounded font-bold">Basket</span></div><div class="font-bold text-xs text-purple-900 bg-white p-2 rounded border border-purple-200">${slot.basketSubjects.map(s => `• ${s}`).join('<br>')}</div>`;
+          } else if (!slot.isBasket && slot.subject) {
+            contentHtml = `<div class="flex justify-between items-center mb-1.5"><span class="font-black text-indigo-700 text-xs">Period ${p}</span><span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">Planned</span></div><div class="font-bold text-sm text-slate-800">${slot.subject}</div>`;
+          }
+        } else {
+          contentHtml = `<div class="flex justify-between items-center mb-1.5"><span class="font-black text-slate-400 text-xs">Period ${p}</span><span class="text-[10px] bg-slate-200 text-slate-500 px-1.5 py-0.2 rounded">Empty</span></div><div class="text-xs text-slate-400 italic py-1">විෂයක් තෝරා නැත</div>`;
+        }
+
+        card.innerHTML = `<div>${contentHtml}</div><div class="mt-3 pt-2 border-t border-slate-200 flex gap-1"><button type="button" onclick="openGradeSlotModal(${grade}, '${day}', ${p})" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold py-1 rounded transition"><i class="fa-solid fa-pen"></i> Edit</button><button type="button" onclick="clearGradeMasterPeriod(${grade}, '${day}', ${p})" class="px-2 bg-slate-200 hover:bg-red-100 hover:text-red-600 text-slate-600 text-[11px] rounded transition"><i class="fa-solid fa-trash"></i></button></div>`;
+        container.appendChild(card);
+      }
+    }
+
+    function renderGradeWeeklyQuotaTracker(grade) {
+      const trackerDiv = document.getElementById("gradeWeeklyQuotaStatus");
+      if (!trackerDiv) return;
+      trackerDiv.innerHTML = `<span class="font-bold text-indigo-900"><i class="fa-solid fa-calculator"></i> සතිපතා කාලච්ඡේද:</span>`;
+      const list = curriculumSubjects.filter(c => c.grade === grade);
+      if (list.length === 0) { trackerDiv.innerHTML += `<span class="text-slate-400 italic">විෂයන් ඇතුළත් කර නැත.</span>`; return; }
+      list.forEach(cs => {
+        const scheduled = getGradeScheduledSubjectCount(grade, cs.subject);
+        const isCompleted = scheduled === cs.maxWeekly;
+        const badgeClass = isCompleted ? "bg-emerald-100 text-emerald-800 border-emerald-300 font-bold" : (scheduled > cs.maxWeekly ? "bg-red-100 text-red-800 border-red-300 font-bold animate-pulse" : "bg-white text-indigo-700 border-indigo-200");
+        trackerDiv.innerHTML += `<span class="px-2 py-0.5 rounded-lg text-[11px] border ${badgeClass}">${cs.subject}: <b>${scheduled}/${cs.maxWeekly}</b> ${isCompleted ? '✓' : ''}</span>`;
+      });
+    }
+
+    function renderClassTimetableGrid() {
+      populateClassSelects();
+      const sel = document.getElementById("activeClassSelect");
+      if (!sel || !sel.value) return;
+      activeClass = sel.value;
+      const viewDay = document.getElementById("classViewDaySelect").value;
+      const container = document.getElementById("classPeriodSlotsContainer");
+      if (!container) return;
+      container.innerHTML = "";
+
+      const clsObj = schoolClasses.find(c => c.id === activeClass);
+      const teacher = teachers.find(t => t.id === (clsObj ? clsObj.classTeacherId : null));
+      if (document.getElementById("classMasterTeacherName")) {
+        document.getElementById("classMasterTeacherName").innerText = teacher ? `${teacher.name} (${teacher.subject})` : "පත් කර නොමැත";
+      }
+
+      renderClassSubjectQuota(activeClass, clsObj ? clsObj.grade : null);
+
+      for (let p = 1; p <= 8; p++) {
+        const slot = masterSchedule.find(s => s.classId === activeClass && s.day === viewDay && s.period === p);
+        const card = document.createElement("div");
+        card.className = "bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between hover:border-indigo-400 transition";
+
+        if (slot) {
+          const combinedBadge = slot.isCombined && slot.combinedWithClasses && slot.combinedWithClasses.length > 0 ? `<span class="inline-block mt-1 text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded font-bold">Combined (${[slot.classId, ...slot.combinedWithClasses].join(', ')})</span>` : '';
+          if (slot.isBasket) {
+            let basketHtml = (slot.basketItems || []).map(item => { const t = teachers.find(x => x.id === item.teacherId); return `<div class="text-[11px] font-medium text-slate-700">• <b>${item.subject}</b> - ${t ? t.name : '<span class="text-amber-600 italic">ගුරුවරයෙකු නැත</span>'}</div>`; }).join('');
+            card.innerHTML = `<div><div class="flex justify-between items-center mb-1.5"><span class="font-black text-indigo-700 text-xs">Period ${p}</span><span class="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold">Basket</span></div><div class="space-y-1 mt-1 bg-white p-2 rounded border border-slate-200">${basketHtml || '<div class="text-slate-400 italic">විෂයන් නැත</div>'}</div>${combinedBadge}</div><div class="mt-3 pt-2 border-t border-slate-200 flex gap-1"><button type="button" onclick="openClassSlotModal('${activeClass}', '${viewDay}', ${p})" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold py-1 rounded transition">Edit</button><button type="button" onclick="deleteSingleSlotDirect('${activeClass}', '${viewDay}', ${p})" class="px-2 bg-slate-200 hover:bg-red-100 hover:text-red-600 text-slate-600 text-[11px] rounded transition"><i class="fa-solid fa-trash"></i></button></div>`;
+          } else {
+            const t = teachers.find(x => x.id === slot.teacherId);
+            card.innerHTML = `<div><div class="flex justify-between items-center mb-1.5"><span class="font-black text-indigo-700 text-xs">Period ${p}</span><span class="text-[10px] ${t ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-800'} px-1.5 py-0.5 rounded font-bold">${t ? 'Assigned' : 'No Teacher'}</span></div><div class="font-bold text-sm text-slate-800">${slot.subject}</div><div class="text-xs text-slate-600 mt-0.5">${t ? t.name : '<span class="text-amber-600 italic">ගුරුවරයෙකු යොදන්න</span>'}</div>${combinedBadge}</div><div class="mt-3 pt-2 border-t border-slate-200 flex gap-1"><button type="button" onclick="openClassSlotModal('${activeClass}', '${viewDay}', ${p})" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold py-1 rounded transition">Edit</button><button type="button" onclick="deleteSingleSlotDirect('${activeClass}', '${viewDay}', ${p})" class="px-2 bg-slate-200 hover:bg-red-100 hover:text-red-600 text-slate-600 text-[11px] rounded transition"><i class="fa-solid fa-trash"></i></button></div>`;
+          }
+        } else {
+          card.innerHTML = `<div><div class="flex justify-between items-center mb-1.5"><span class="font-black text-slate-400 text-xs">Period ${p}</span><span class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">Free</span></div><div class="text-xs text-slate-400 italic py-2">විෂයක් පවරා නොමැත</div></div><div class="mt-3 pt-2 border-t border-slate-200"><button type="button" onclick="openClassSlotModal('${activeClass}', '${viewDay}', ${p})" class="w-full bg-slate-200 hover:bg-indigo-600 hover:text-white text-slate-700 text-[11px] font-bold py-1.5 rounded transition">+ Edit</button></div>`;
+        }
+        container.appendChild(card);
+      }
+    }
+
+    function renderClassSubjectQuota(clsId, grade) {
+      const container = document.getElementById("classSubjectQuotaStatus");
+      if (!container) return;
+      container.innerHTML = `<span class="font-bold text-slate-700">සතිපතා විෂය කාලච්ඡේද සීමා:</span>`;
+      const list = curriculumSubjects.filter(c => c.grade === grade);
+      if (list.length === 0) { container.innerHTML += `<span class="text-slate-400 italic">විෂයන් නැත.</span>`; return; }
+      list.forEach(cur => {
+        const used = getClassScheduledSubjectCount(clsId, cur.subject);
+        const badgeStyle = used === cur.maxWeekly ? "bg-emerald-100 text-emerald-800 font-bold" : (used > cur.maxWeekly ? "bg-red-100 text-red-800 font-bold" : "bg-white text-indigo-800");
+        container.innerHTML += `<span class="px-2 py-0.5 rounded-md text-[11px] border ${badgeStyle}">${cur.subject}: <b>${used}/${cur.maxWeekly}</b></span>`;
+      });
+    }
+
+    function openGradeSlotModal(grade, day, period) {
+      currentGradeModalSlot = { grade, day, period };
+      document.getElementById("modalGradeSlotTitle").innerText = `Grade ${grade} | ${DAY_LABELS[day]} - Period ${period}`;
+
+      const gradeCurriculum = curriculumSubjects.filter(c => c.grade === grade);
+      const existing = gradeMasterSchedule.find(s => s.grade === grade && s.day === day && s.period === period);
+
+      const singleSel = document.getElementById("modalGradeSingleSubject");
+      singleSel.innerHTML = '<option value="">-- විෂයක් තෝරන්න --</option>';
+      gradeCurriculum.forEach(cs => {
+        const isSelected = existing && !existing.isBasket && existing.subject === cs.subject;
+        singleSel.innerHTML += `<option value="${cs.subject}" ${isSelected ? 'selected' : ''}>${cs.subject} (Max: ${cs.maxWeekly})</option>`;
+      });
+
+      const chkContainer = document.getElementById("gradeBasketCheckboxesContainer");
+      chkContainer.innerHTML = "";
+      gradeCurriculum.forEach(cs => {
+        const isChecked = existing && existing.isBasket && existing.basketSubjects && existing.basketSubjects.includes(cs.subject);
+        chkContainer.innerHTML += `<label class="flex items-center gap-1.5 p-1.5 bg-slate-50 border rounded text-xs font-semibold cursor-pointer hover:bg-purple-50"><input type="checkbox" value="${cs.subject}" ${isChecked ? 'checked' : ''} class="grade-basket-sub-chk w-4 h-4 text-purple-600 rounded"><span>${cs.subject}</span></label>`;
+      });
+
+      if (existing && existing.isBasket) setGradeSlotModalMode('basket');
+      else setGradeSlotModalMode('single');
+      document.getElementById("gradeSlotModal").classList.remove("hidden");
+    }
+
+    function closeGradeSlotModal() { document.getElementById("gradeSlotModal").classList.add("hidden"); currentGradeModalSlot = null; }
+
+    function setGradeSlotModalMode(mode) {
+      gradeModalMode = mode;
+      const isBasket = mode === 'basket';
+      document.getElementById("gradeModalSingleSection").classList.toggle("hidden", isBasket);
+      document.getElementById("gradeModalBasketSection").classList.toggle("hidden", !isBasket);
+      document.getElementById("btnGradeModalSingle").className = !isBasket ? "flex-1 py-1.5 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600" : "flex-1 py-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600";
+      document.getElementById("btnGradeModalBasket").className = isBasket ? "flex-1 py-1.5 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600" : "flex-1 py-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600";
+    }
+
+    function saveGradeSlotModalData() {
+      if (!currentGradeModalSlot) return;
+      const { grade, day, period } = currentGradeModalSlot;
+      gradeMasterSchedule = gradeMasterSchedule.filter(s => !(s.grade === grade && s.day === day && s.period === period));
+
+      if (gradeModalMode === 'single') {
+        const subject = document.getElementById("modalGradeSingleSubject").value;
+        if (subject) {
+          const curObj = curriculumSubjects.find(cs => cs.grade === grade && cs.subject.toLowerCase() === subject.toLowerCase());
+          if (curObj && getGradeScheduledSubjectCount(grade, subject) >= curObj.maxWeekly) {
+            alert(`සීමාව ඉක්මවා ඇත!`);
+            return;
+          }
+          gradeMasterSchedule.push({ grade, day, period, isBasket: false, subject });
+        }
+      } else {
+        const checkedSubs = [];
+        document.querySelectorAll(".grade-basket-sub-chk:checked").forEach(chk => checkedSubs.push(chk.value));
+        if (checkedSubs.length === 0) { alert("අවම වශයෙන් එක් කාණ්ඩ විෂයක් තෝරන්න."); return; }
+        gradeMasterSchedule.push({ grade, day, period, isBasket: true, basketSubjects: checkedSubs });
+      }
+
+      saveAllToStorage();
+      closeGradeSlotModal();
+      renderGradeMasterGrid();
+    }
+
+    function clearGradeSlotModalData() { if (!currentGradeModalSlot) return; clearGradeMasterPeriod(currentGradeModalSlot.grade, currentGradeModalSlot.day, currentGradeModalSlot.period); closeGradeSlotModal(); }
+    function clearGradeMasterPeriod(grade, day, period) { gradeMasterSchedule = gradeMasterSchedule.filter(s => !(s.grade === grade && s.day === day && s.period === period)); saveAllToStorage(); renderGradeMasterGrid(); }
+
+    function applyGradeMasterToAllClasses() {
+      const select = document.getElementById("gradeMasterSelect");
+      if (!select) return;
+      const grade = parseInt(select.value);
+      const day = document.getElementById("gradeMasterDaySelect").value;
+      const classesOfGrade = schoolClasses.filter(c => c.grade === grade);
+
+      if (classesOfGrade.length === 0) { alert("මෙම ශ්‍රේණිය සඳහා පන්ති නොමැත."); return; }
+      if (!confirm(`Grade ${grade} පන්ති සඳහා කාලසටහන සමමුහුර්ත කිරීමට අවශ්‍යද?`)) return;
+
+      for (let p = 1; p <= 8; p++) {
+        const gradeSlot = gradeMasterSchedule.find(s => s.grade === grade && s.day === day && s.period === p);
+        classesOfGrade.forEach(cls => {
+          let existingSlot = masterSchedule.find(s => s.classId === cls.id && s.day === day && s.period === p);
+          if (gradeSlot) {
+            if (gradeSlot.isBasket) {
+              const basketItems = (gradeSlot.basketSubjects || []).map(sub => ({ subject: sub, teacherId: null }));
+              if (existingSlot) { existingSlot.isBasket = true; existingSlot.basketItems = basketItems; }
+              else { masterSchedule.push({ classId: cls.id, day, period: p, isBasket: true, basketItems, isCombined: false, combinedWithClasses: [] }); }
+            } else if (gradeSlot.subject) {
+              if (existingSlot) { existingSlot.isBasket = false; existingSlot.subject = gradeSlot.subject; }
+              else { masterSchedule.push({ classId: cls.id, day, period: p, isBasket: false, subject: gradeSlot.subject, teacherId: null, isCombined: false, combinedWithClasses: [] }); }
+            }
+          }
+        });
+      }
+      saveAllToStorage();
+      alert("සාර්ථකව සමමුහුර්ත කරන ලදි!");
+      renderClassTimetableGrid();
+    }
+
+    function setSlotModalMode(mode) {
+      modalMode = mode;
+      const isBasket = mode === 'basket';
+      document.getElementById("singleSubjectSection").classList.toggle("hidden", isBasket);
+      document.getElementById("basketSubjectSection").classList.toggle("hidden", !isBasket);
+      document.getElementById("btnModalSingle").className = !isBasket ? "flex-1 py-2 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600" : "flex-1 py-2 text-xs font-bold text-slate-500 hover:text-indigo-600";
+      document.getElementById("btnModalBasket").className = isBasket ? "flex-1 py-2 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600" : "flex-1 py-2 text-xs font-bold text-slate-500 hover:text-indigo-600";
+    }
+
+    function openClassSlotModal(classId, day, period) {
+      currentModalEditingSlot = { classId, day, period };
+      document.getElementById("modalSlotDayPeriod").innerText = `${DAY_LABELS[day]} - Period ${period} (${classId})`;
+      const currentClassObj = schoolClasses.find(c => c.id === classId);
+      const grade = currentClassObj ? currentClassObj.grade : 10;
+      const section = getSectionOfGrade(grade);
+      const existing = masterSchedule.find(s => s.classId === classId && s.day === day && s.period === period);
+
+      const singleSub = document.getElementById("modalSingleSubject");
+      singleSub.innerHTML = '<option value="">-- විෂය තෝරන්න --</option>';
+      curriculumSubjects.filter(c => c.grade === grade).forEach(cs => {
+        const isSelected = existing && !existing.isBasket && existing.subject && existing.subject.toLowerCase() === cs.subject.toLowerCase();
+        singleSub.innerHTML += `<option value="${cs.subject}" ${isSelected ? 'selected' : ''}>${cs.subject} (Max: ${cs.maxWeekly})</option>`;
+      });
+
+      const chkContainer = document.getElementById("combinedClassesCheckboxes");
+      chkContainer.innerHTML = "";
+      schoolClasses.filter(c => c.grade === grade && c.id !== classId).forEach(c => {
+        chkContainer.innerHTML += `<label class="flex items-center gap-1.5 p-1.5 bg-white border border-amber-300 rounded cursor-pointer"><input type="checkbox" value="${c.id}" class="combined-cls-chk w-3.5 h-3.5 text-amber-600 rounded"><span class="font-bold text-slate-700">${c.name}</span></label>`;
+      });
+
+      document.getElementById("basketItemsList").innerHTML = "";
+
+      if (existing) {
+        if (existing.isBasket) {
+          setSlotModalMode('basket');
+          (existing.basketItems || []).forEach(item => addBasketItemRow(item.subject, item.teacherId, grade, section));
+        } else {
+          setSlotModalMode('single');
+          singleSub.value = existing.subject || "";
+          onModalSubjectChanged(existing.subject, existing.teacherId);
+        }
+        if (existing.isCombined && existing.combinedWithClasses) {
+          document.getElementById("modalCombinedCheckbox").checked = true;
+          document.querySelectorAll(".combined-cls-chk").forEach(chk => { if (existing.combinedWithClasses.includes(chk.value)) chk.checked = true; });
+        } else { document.getElementById("modalCombinedCheckbox").checked = false; }
+      } else {
+        setSlotModalMode('single');
+        document.getElementById("modalCombinedCheckbox").checked = false;
+        if (singleSub.options.length > 1) { singleSub.selectedIndex = 1; onModalSubjectChanged(singleSub.value); }
+        addBasketItemRow("", "", grade, section);
+        addBasketItemRow("", "", grade, section);
+      }
+
+      toggleCombinedClassSelector();
+      document.getElementById("classSlotModal").classList.remove("hidden");
+    }
+
+    function onModalSubjectChanged(selectedSubject, selectedTeacherId = null) {
+      if (!currentModalEditingSlot) return;
+      const c = schoolClasses.find(x => x.id === currentModalEditingSlot.classId);
+      const section = c ? getSectionOfGrade(c.grade) : "General";
+
+      const singleTch = document.getElementById("modalSingleTeacher");
+      singleTch.innerHTML = '<option value="">-- ගුරුවරයා තෝරන්න --</option>';
+      if (!selectedSubject) return;
+
+      teachers.filter(t => isTeacherInTargetSection(t, section) && t.subject.trim().toLowerCase() === selectedSubject.trim().toLowerCase()).forEach(t => {
+        singleTch.innerHTML += `<option value="${t.id}" ${t.id === selectedTeacherId ? 'selected' : ''}>${t.name} (${t.subject})</option>`;
+      });
+
+      const otherSectionTeachers = teachers.filter(t => !isTeacherInTargetSection(t, section) && t.subject.trim().toLowerCase() === selectedSubject.trim().toLowerCase());
+      if (otherSectionTeachers.length > 0) {
+        let optGroup = document.createElement("optgroup"); optGroup.label = "වෙනත් අංශවල ගුරුවරුන්";
+        otherSectionTeachers.forEach(t => { optGroup.innerHTML += `<option value="${t.id}" ${t.id === selectedTeacherId ? 'selected' : ''}>${t.name} (${t.subject}) - [${(t.sections||[]).join(', ')}]</option>`; });
+        singleTch.appendChild(optGroup);
+      }
+    }
+
+    function addBasketItemRow(selectedSub = "", selectedTch = "", grade = null, section = null) {
+      if (!grade && currentModalEditingSlot) { const c = schoolClasses.find(x => x.id === currentModalEditingSlot.classId); grade = c ? c.grade : 10; section = getSectionOfGrade(grade); }
+      const container = document.getElementById("basketItemsList");
+      const row = document.createElement("div");
+      row.className = "flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200 basket-row";
+      let subOptions = '<option value="">-- විෂය --</option>';
+      curriculumSubjects.filter(c => c.grade === grade).forEach(cs => { subOptions += `<option value="${cs.subject}" ${cs.subject === selectedSub ? 'selected' : ''}>${cs.subject}</option>`; });
+      let tchOptions = '<option value="">-- ගුරුවරයා --</option>';
+      teachers.filter(t => isTeacherInTargetSection(t, section)).forEach(t => { tchOptions += `<option value="${t.id}" ${t.id === selectedTch ? 'selected' : ''}>${t.name} (${t.subject})</option>`; });
+      row.innerHTML = `<select class="basket-subject-sel flex-1 p-1.5 border rounded bg-white text-xs font-semibold">${subOptions}</select><select class="basket-teacher-sel flex-1 p-1.5 border rounded bg-white text-xs font-semibold">${tchOptions}</select><button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 p-1 text-xs"><i class="fa-solid fa-trash"></i></button>`;
+      container.appendChild(row);
+    }
+
+    function closeClassSlotModal() { document.getElementById("classSlotModal").classList.add("hidden"); currentModalEditingSlot = null; }
+    function toggleCombinedClassSelector() { document.getElementById("combinedClassesListDiv").classList.toggle("hidden", !document.getElementById("modalCombinedCheckbox").checked); }
+
+    function saveClassSlotModalData() {
+      if (!currentModalEditingSlot) return;
+      const { classId, day, period } = currentModalEditingSlot;
+      const isCombined = document.getElementById("modalCombinedCheckbox").checked;
+      let selectedCombinedClasses = [];
+      if (isCombined) document.querySelectorAll(".combined-cls-chk:checked").forEach(chk => { selectedCombinedClasses.push(chk.value); });
+      const allSessionClasses = [classId, ...selectedCombinedClasses];
+
+      if (modalMode === 'single') {
+        const subject = document.getElementById("modalSingleSubject").value;
+        const teacherId = document.getElementById("modalSingleTeacher").value;
+        if (!subject) { alert("විෂය තෝරන්න."); return; }
+        if (teacherId) {
+          if (isTeacherClashing(teacherId, day, period, allSessionClasses)) { alert("ගුරුවරයා වෙනත් පන්තියක කාර්යබහුලයි."); return; }
+          if (!validateWorkloadAllowance(teacherId, day, period)) return;
+        }
+        masterSchedule = masterSchedule.filter(s => !(allSessionClasses.includes(s.classId) && s.day === day && s.period === period));
+        allSessionClasses.forEach(cls => { const others = allSessionClasses.filter(c => c !== cls); masterSchedule.push({ classId: cls, day, period, isBasket: false, subject, teacherId: teacherId || null, isCombined: others.length > 0, combinedWithClasses: others }); });
+      } else {
+        const rows = document.querySelectorAll(".basket-row");
+        let basketItems = []; let teacherSet = new Set();
+        for (let row of rows) {
+          const sub = row.querySelector(".basket-subject-sel").value;
+          const tch = row.querySelector(".basket-teacher-sel").value;
+          if (sub) {
+            if (tch) {
+              if (teacherSet.has(tch)) { alert("එකම කාලච්ඡේදයේ එක් ගුරුවරයෙකුට විෂයන් දෙකක් පැවරිය නොහැක."); return; }
+              teacherSet.add(tch);
+              if (isTeacherClashing(tch, day, period, allSessionClasses)) { alert("ගුරුවරයෙකු වෙනත් පන්තියක කාර්යබහුලයි."); return; }
+              if (!validateWorkloadAllowance(tch, day, period)) return;
+            }
+            basketItems.push({ subject: sub, teacherId: tch || null });
+          }
+        }
+        if (basketItems.length === 0) { alert("අවම වශයෙන් එක් කාණ්ඩ විෂයක් තෝරන්න."); return; }
+        masterSchedule = masterSchedule.filter(s => !(allSessionClasses.includes(s.classId) && s.day === day && s.period === period));
+        allSessionClasses.forEach(cls => { const others = allSessionClasses.filter(c => c !== cls); masterSchedule.push({ classId: cls, day, period, isBasket: true, basketItems: basketItems, isCombined: others.length > 0, combinedWithClasses: others }); });
+      }
+
+      saveAllToStorage();
+      closeClassSlotModal();
+      renderClassTimetableGrid();
+    }
+
+    function isTeacherClashing(teacherId, day, period, allowedClasses = []) {
+      return masterSchedule.find(s => {
+        if (s.day !== day || s.period !== period) return false;
+        if (allowedClasses.includes(s.classId)) return false;
+        if (!s.isBasket && s.teacherId === teacherId) return true;
+        if (s.isBasket && s.basketItems && s.basketItems.some(b => b.teacherId === teacherId)) return true;
+        return false;
+      });
+    }
+
+    function validateWorkloadAllowance(teacherId, day, period) {
+      const t = teachers.find(x => x.id === teacherId);
+      const currentWorkload = calculateTeacherWeeklyWorkload(teacherId);
+      const isAlreadyOccupiedHere = masterSchedule.some(s => {
+        if (s.day !== day || s.period !== period) return false;
+        if (!s.isBasket && s.teacherId === teacherId) return true;
+        if (s.isBasket && s.basketItems && s.basketItems.some(b => b.teacherId === teacherId)) return true;
+        return false;
+      });
+      if (!isAlreadyOccupiedHere && currentWorkload >= 35 && !t.allowOver35) { alert("ගුරුවරයාගේ සතිපතා කාලච්ඡේද 35 සීමාව ඉක්මවා ඇත."); return false; }
+      return true;
+    }
+
+    function deleteSingleSlotDirect(classId, day, period) {
+      if (!confirm("මෙම කාලච්ඡේදය හිස් කිරීමට අවශ්‍ය බව තහවුරු කරන්න?")) return;
+      const slot = masterSchedule.find(s => s.classId === classId && s.day === day && s.period === period);
+      if (slot && slot.isCombined && slot.combinedWithClasses) { slot.combinedWithClasses.forEach(cls => { masterSchedule = masterSchedule.filter(s => !(s.classId === cls && s.day === day && s.period === period)); }); }
+      masterSchedule = masterSchedule.filter(s => !(s.classId === classId && s.day === day && s.period === period));
+      saveAllToStorage();
+      renderClassTimetableGrid();
+    }
+
+    function deleteClassSlotModalData() { if (!currentModalEditingSlot) return; deleteSingleSlotDirect(currentModalEditingSlot.classId, currentModalEditingSlot.day, currentModalEditingSlot.period); closeClassSlotModal(); }
+
+    // =========================================================================
+    // 8. CLASSES & TEACHERS MANAGEMENT CONTROLLER
+    // =========================================================================
+    function handleSaveClass(e) {
+      if (e) e.preventDefault();
+      const editId = document.getElementById("editClassId").value;
+      const gradeVal = document.getElementById("newClassGradeSelect").value;
+      if (!gradeVal) { alert("කරුණාකර ශ්‍රේණියක් තෝරන්න."); return; }
+      const grade = parseInt(gradeVal);
+      const section = document.getElementById("newClassSectionName").value.trim();
+      if (!section) { alert("කරුණාකර පන්තියේ නම/අකුර ඇතුළත් කරන්න."); return; }
+      const teacherId = document.getElementById("newClassTeacherSelect").value || null;
+      const name = `${grade}-${section}`;
+
+      if (teacherId) {
+        const assignedClasses = schoolClasses.filter(c => c.classTeacherId === teacherId && c.id !== editId);
+        if (assignedClasses.length >= 1 && !assignedClasses.some(c => c.allowSecondClass)) {
+          alert("අවවාදයයි! මෙම ගුරුවරයා දැනටමත් පන්තියක් භාරව සිටී. විශේෂ අවසරය නොමැතිව තවත් පන්තියක් ලබාදිය නොහැක.");
+          return;
+        }
+      }
+
+      if (editId) {
+        const cls = schoolClasses.find(c => c.id === editId);
+        if (cls) { cls.grade = grade; cls.name = name; cls.classTeacherId = teacherId; }
+        cancelClassEdit();
+      } else {
+        if (schoolClasses.some(c => c.name.toLowerCase() === name.toLowerCase())) { alert("මෙම පන්තිය දැනටමත් පද්ධතියේ පවතී."); return; }
+        schoolClasses.push({ id: name, grade, name, classTeacherId: teacherId, allowSecondClass: false });
+        document.getElementById("newClassSectionName").value = "";
+      }
+
+      saveAllToStorage();
+      renderClassesList();
+      populateClassSelects();
+      renderClassTimetableGrid();
+      alert("පන්තිය සාර්ථකව සුරකින ලදි!");
+    }
+
+    function editClass(id) {
+      const cls = schoolClasses.find(c => c.id === id);
+      if (!cls) return;
+      document.getElementById("editClassId").value = cls.id;
+      document.getElementById("newClassGradeSelect").value = cls.grade;
+      const parts = cls.name.split("-");
+      document.getElementById("newClassSectionName").value = parts.length > 1 ? parts.slice(1).join("-") : cls.name;
+      populateClassTeacherSelect(cls.id);
+      document.getElementById("newClassTeacherSelect").value = cls.classTeacherId || "";
+      document.getElementById("classFormHeading").innerText = "පන්තිය සංස්කරණය කිරීම (Edit Class)";
+      document.getElementById("classSubmitBtn").innerHTML = '<i class="fa-solid fa-check"></i> යාවත්කාලීන කරන්න';
+      document.getElementById("classCancelEditBtn").classList.remove("hidden");
+    }
+
+    function cancelClassEdit() {
+      document.getElementById("editClassId").value = "";
+      document.getElementById("newClassSectionName").value = "";
+      document.getElementById("classFormHeading").innerText = "නව පන්තියක් ඇතුළත් කිරීම";
+      document.getElementById("classSubmitBtn").innerHTML = '<i class="fa-solid fa-plus"></i> පන්තිය එක් කරන්න';
+      document.getElementById("classCancelEditBtn").classList.add("hidden");
+      populateClassTeacherSelect();
+    }
+
+    function handleDeleteClass(id) {
+      if (!confirm("මෙම පන්තිය සහ ඊට අදාළ කාලසටහන් දත්ත ඉවත් කිරීමට අවශ්‍ය බව තහවුරු කරන්න?")) return;
+      schoolClasses = schoolClasses.filter(c => c.id !== id);
+      masterSchedule = masterSchedule.filter(s => s.classId !== id);
+      saveAllToStorage();
+      renderClassesList();
+      populateClassSelects();
+      renderClassTimetableGrid();
+    }
+
+    function renderGradeToggles() {
+      const g1 = document.getElementById("gradesGroup1_5");
+      const g2 = document.getElementById("gradesGroup6_7");
+      const g3 = document.getElementById("gradesGroup8_11");
+      const g4 = document.getElementById("gradesGroup12_13");
+      if (!g1 || !g2 || !g3 || !g4) return;
+
+      g1.innerHTML = ""; g2.innerHTML = ""; g3.innerHTML = ""; g4.innerHTML = "";
+
+      gradeSettings.forEach(g => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.onclick = () => toggleGradeStatus(g.grade);
+        btn.className = `px-2.5 py-1 rounded-lg text-xs font-bold border transition ${g.enabled ? 'bg-indigo-600 text-white border-indigo-700 shadow-sm' : 'bg-white text-slate-400 border-slate-300'}`;
+        btn.innerHTML = `G${g.grade} ${g.enabled ? '✓' : '✕'}`;
+
+        if (g.group === "1-5") g1.appendChild(btn);
+        else if (g.group === "6-7") g2.appendChild(btn);
+        else if (g.group === "8-11") g3.appendChild(btn);
+        else if (g.group === "12-13") g4.appendChild(btn);
+      });
+
+      const classGradeSel = document.getElementById("newClassGradeSelect");
+      if (classGradeSel) {
+        classGradeSel.innerHTML = "";
+        gradeSettings.filter(g => g.enabled).forEach(g => {
+          classGradeSel.innerHTML += `<option value="${g.grade}">Grade ${g.grade} (${g.group})</option>`;
+        });
+      }
+      populateClassTeacherSelect();
+    }
+
+    function toggleGradeStatus(gradeNum) {
+      const g = gradeSettings.find(x => x.grade === gradeNum);
+      if (g) {
+        g.enabled = !g.enabled;
+        saveAllToStorage();
+        renderGradeToggles();
+        renderClassesList();
+        populateClassSelects();
+        populateCurriculumGradesDropdown();
+        populateGradeMasterSelect();
+      }
+    }
+
+    function populateClassTeacherSelect(editClassId = null) {
+      const sel = document.getElementById("newClassTeacherSelect");
+      if (!sel) return;
+      const curVal = sel.value;
+      sel.innerHTML = '<option value="">-- පන්තිභාර ගුරුතුමා තෝරන්න --</option>';
+
+      teachers.forEach(t => {
+        const assignedCount = schoolClasses.filter(c => c.classTeacherId === t.id && c.id !== editClassId).length;
+        if (assignedCount === 0) {
+          sel.innerHTML += `<option value="${t.id}">${t.name} (${t.subject})</option>`;
+        } else if (schoolClasses.some(c => c.classTeacherId === t.id && c.allowSecondClass) && assignedCount < 2) {
+          sel.innerHTML += `<option value="${t.id}">${t.name} (${t.subject}) [2 වන පන්තිය]</option>`;
+        }
+      });
+      if (curVal) sel.value = curVal;
+    }
+
+    function renderClassesList() {
+      const tbody = document.getElementById("classesListTableBody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      schoolClasses.forEach(c => {
+        const teacher = teachers.find(t => t.id === c.classTeacherId);
+        tbody.innerHTML += `
+          <tr class="border-b hover:bg-slate-50">
+            <td class="p-2.5 font-bold text-slate-800">${c.name}</td>
+            <td class="p-2.5 text-slate-600">Grade ${c.grade}</td>
+            <td class="p-2.5 font-bold text-indigo-700">${getSectionOfGrade(c.grade)}</td>
+            <td class="p-2.5 font-semibold text-slate-800">
+              ${teacher ? `${teacher.name} (${teacher.subject})` : '<span class="text-slate-400 italic">පත් කර නොමැත</span>'}
+            </td>
+            <td class="p-2.5">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" ${c.allowSecondClass ? 'checked' : ''} onchange="toggleSecondClassAllowance('${c.id}', this.checked)" class="w-4 h-4 text-amber-600 rounded">
+                <span class="text-[11px] font-bold">Allow 2nd Class</span>
+              </label>
+            </td>
+            <td class="p-2.5 text-center flex justify-center gap-2">
+              <button type="button" onclick="editClass('${c.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-[11px]">Edit</button>
+              <button type="button" onclick="handleDeleteClass('${c.id}')" class="text-red-600 hover:text-red-800 font-bold text-[11px]">මකන්න</button>
+            </td>
+          </tr>
+        `;
+      });
+      populateClassTeacherSelect();
+    }
+
+    function toggleSecondClassAllowance(classId, allowed) {
+      const cls = schoolClasses.find(c => c.id === classId);
+      if (cls) {
+        cls.allowSecondClass = allowed;
+        saveAllToStorage();
+        renderClassesList();
+      }
+    }
+
+    function handleSaveTeacher(e) {
+      if (e) e.preventDefault();
+      const editId = document.getElementById("editTeacherId").value;
+      const name = document.getElementById("newTeacherName").value.trim();
+      const phone = document.getElementById("newTeacherPhone").value.trim();
+      const subject = document.getElementById("newTeacherSubjectSelect").value;
+      const isAll = document.querySelector(".tch-sec-chk-all").checked;
+
+      let sections = [];
+      if (isAll) sections = ["All"];
+      else document.querySelectorAll(".tch-sec-chk:checked").forEach(chk => { sections.push(chk.value); });
+
+      if (!name) { alert("කරුණාකර ගුරු නම ඇතුළත් කරන්න."); return; }
+      if (sections.length === 0) { alert("අංශයක් තෝරන්න."); return; }
+      if (!subject) { alert("ප්‍රධාන විෂය තෝරන්න."); return; }
+
+      if (editId) {
+        const t = teachers.find(x => x.id === editId);
+        if (t) { t.name = name; t.phone = phone; t.subject = subject; t.sections = sections; }
+        cancelTeacherEdit();
+      } else {
+        const id = "T" + String(teachers.length + 1).padStart(2, '0');
+        teachers.push({ id, name, phone, subject, sections, leaveStatus: "present", isExempt: false, allowOver35: false });
+        document.getElementById("newTeacherName").value = "";
+        document.getElementById("newTeacherPhone").value = "";
+      }
+
+      saveAllToStorage();
+      renderTeachersMasterList();
+      renderGradeToggles();
+      populateClassTeacherSelect();
+      renderReliefAttendance();
+      alert("ගුරු විස්තර සාර්ථකව සුරකින ලදි!");
+    }
+
+    function editTeacher(id) {
+      const t = teachers.find(x => x.id === id);
+      if (!t) return;
+      document.getElementById("editTeacherId").value = t.id;
+      document.getElementById("newTeacherName").value = t.name;
+      document.getElementById("newTeacherPhone").value = t.phone || "";
+
+      const isAll = (t.sections || []).includes("All");
+      document.querySelector(".tch-sec-chk-all").checked = isAll;
+      document.querySelectorAll(".tch-sec-chk").forEach(chk => {
+        chk.disabled = isAll;
+        chk.checked = !isAll && (t.sections || []).includes(chk.value);
+      });
+      onTeacherSectionCheckboxesChange();
+      document.getElementById("newTeacherSubjectSelect").value = t.subject;
+      document.getElementById("teacherSubmitBtn").innerHTML = '<i class="fa-solid fa-check"></i> යාවත්කාලීන කරන්න';
+      document.getElementById("teacherCancelEditBtn").classList.remove("hidden");
+    }
+
+    function cancelTeacherEdit() {
+      document.getElementById("editTeacherId").value = "";
+      document.getElementById("newTeacherName").value = "";
+      document.getElementById("newTeacherPhone").value = "";
+      document.getElementById("teacherSubmitBtn").innerHTML = '<i class="fa-solid fa-user-plus"></i> ගුරුවරයා එක් කරන්න';
+      document.getElementById("teacherCancelEditBtn").classList.add("hidden");
+    }
+
+    function toggleOver35Allowance(id, allowed) {
+      const t = teachers.find(x => x.id === id);
+      if (t) { t.allowOver35 = allowed; saveAllToStorage(); renderTeachersMasterList(); }
+    }
+
+    function handleDeleteTeacher(id) {
+      if (!confirm("මෙම ගුරුවරයා ඉවත් කිරීමට අවශ්‍ය බව තහවුරු කරන්න?")) return;
+      teachers = teachers.filter(t => t.id !== id);
+      masterSchedule = masterSchedule.filter(s => {
+        if (!s.isBasket) return s.teacherId !== id;
+        s.basketItems = s.basketItems.filter(b => b.teacherId !== id);
+        return s.basketItems.length > 0;
+      });
+      schoolClasses.forEach(c => { if (c.classTeacherId === id) c.classTeacherId = null; });
+      saveAllToStorage();
+      renderTeachersMasterList();
+      renderClassesList();
+      renderReliefAttendance();
+    }
+
+    // =========================================================================
+    // 9. WINDOW BOOTLOADER
     // =========================================================================
     window.addEventListener("DOMContentLoaded", () => {
       loadAllFromStorage();
@@ -918,24 +2617,17 @@
 
       refreshAllUI();
 
-      const gmSelect = document.getElementById("gradeMasterSelect");
-      if (gmSelect && Array.from(gmSelect.options).some(o => o.value === "10")) gmSelect.value = "10";
-
-      const clsSelect = document.getElementById("activeClassSelect");
-      if (clsSelect && Array.from(clsSelect.options).some(o => o.value === "10-A")) {
-        clsSelect.value = "10-A";
-        activeClass = "10-A";
-      }
-
       const defaultChk = document.querySelector(".tch-sec-chk[value='8-11']");
       if (defaultChk) defaultChk.checked = true;
       onTeacherSectionCheckboxesChange();
 
       switchTab('reliefTab');
 
-      // Firebase Live Cloud ආරම්භ කිරීම
+      // Initialize Firebase Connection
       initFirebaseCloud();
     });
   </script>
+
+  
 </body>
 </html>
