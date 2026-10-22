@@ -19,7 +19,6 @@
       .print-target { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
       .no-print { display: none !important; }
 
-      /* A4 එකට Slips 16ක් */
       .slips-16up-container {
         display: grid !important;
         grid-template-columns: repeat(2, 1fr) !important;
@@ -40,7 +39,6 @@
         page-break-inside: avoid !important;
       }
 
-      /* A4 එකට පන්ති 2ක් */
       .classes-2up-container {
         display: flex !important;
         flex-direction: column !important;
@@ -55,7 +53,6 @@
         box-sizing: border-box !important;
       }
 
-      /* A4 එකට ගුරුවරුන් 2ක් */
       .teachers-2up-container {
         display: flex !important;
         flex-direction: column !important;
@@ -519,224 +516,25 @@
 
   </main>
 
-  <!-- PRINT CONTAINERS -->
-  <div id="printableClassArea" class="hidden p-4 bg-white">
-    <div class="text-center pb-3 border-b border-slate-300 mb-3">
-      <h3 class="text-base font-black text-slate-900 uppercase">පන්ති සතිපතා කාලසටහන</h3>
-      <div class="flex justify-between items-center text-xs mt-1 text-slate-700 font-semibold max-w-2xl mx-auto px-2">
-        <span>පන්තිය: <b id="slipClassName" class="text-indigo-900 text-sm">-</b></span>
-        <span>අංශය: <b id="slipClassSection">-</b></span>
-        <span>පන්තිභාර ගුරුතුමා: <b id="slipClassTeacher" class="text-indigo-800">-</b></span>
-      </div>
-    </div>
-    <table class="w-full text-xs text-center border-collapse border border-slate-300">
-      <thead class="bg-slate-100 font-bold text-slate-800">
-        <tr>
-          <th class="p-2 border border-slate-300">දිනය</th>
-          <th class="p-2 border border-slate-300">P1</th><th class="p-2 border border-slate-300">P2</th>
-          <th class="p-2 border border-slate-300">P3</th><th class="p-2 border border-slate-300">P4</th>
-          <th class="p-2 border border-slate-300">P5</th><th class="p-2 border border-slate-300">P6</th>
-          <th class="p-2 border border-slate-300">P7</th><th class="p-2 border border-slate-300">P8</th>
-        </tr>
-      </thead>
-      <tbody id="individualClassPrintGridBody"></tbody>
-    </table>
-  </div>
-
-  <div id="printableReliefArea" class="hidden p-6 bg-white">
-    <div class="text-center pb-3 border-b-2 border-slate-800 mb-4">
-      <h2 class="text-lg font-black uppercase text-slate-900 tracking-wider">පාසල් දෛනික සහන කාලසටහන (Daily Relief Schedule)</h2>
-      <div class="flex justify-between items-center text-xs mt-2 font-bold text-slate-800 max-w-2xl mx-auto">
-        <span>දිනය: <b id="printReliefSlipDay" class="text-indigo-900">සඳුදා</b></span>
-        <span>කාලය: පෙ.ව. 07:50 - ප.ව. 01:30</span>
-        <span>මුළු සහන පන්ති: <b id="printReliefSlipTotalCount">0</b></span>
-      </div>
-    </div>
-    <table class="w-full text-xs text-left border-collapse border border-slate-400">
-      <thead class="bg-slate-200 text-slate-900 font-black border-b border-slate-400">
-        <tr>
-          <th class="p-2 border border-slate-400">කාලච්ඡේදය</th>
-          <th class="p-2 border border-slate-400">පන්තිය (අංශය)</th>
-          <th class="p-2 border border-slate-400">විෂය</th>
-          <th class="p-2 border border-slate-400 font-black">පැවරූ සහන ගුරුභවතා</th>
-          <th class="p-2 border border-slate-400">තත්ත්වය / ප්‍රමුඛතාවය</th>
-        </tr>
-      </thead>
-      <tbody id="printableReliefSlipTableBody" class="divide-y divide-slate-300"></tbody>
-    </table>
-  </div>
-
-  <div id="printable16SlipsArea" class="hidden p-2 bg-white"><div id="slips16UpContainer" class="slips-16up-container"></div></div>
-  <div id="printable2TeachersArea" class="hidden p-4 bg-white"><div id="teachers2UpContainer" class="teachers-2up-container"></div></div>
-  <div id="printable2ClassesArea" class="hidden p-4 bg-white"><div id="classes2UpContainer" class="classes-2up-container"></div></div>
-
-  <!-- MODALS -->
-  <div id="reshuffleModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200">
-      <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
-        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-          <i class="fa-solid fa-shuffle text-amber-600"></i> කාලච්ඡේද මාරු කිරීම (Periods Re-shuffle)
-        </h3>
-        <button type="button" onclick="closeReshuffleModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
-      </div>
-      <div class="bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs text-amber-900 mb-4">
-        පන්තිය: <b id="reshuffleClassLabel">-</b>
-        <p class="text-[11px] text-amber-700 mt-1">වෙනස් දින දෙකක් හෝ එකම දිනයක් තුළ කාලච්ඡේද දෙකක් එකිනෙක මාරු (Swap) කළ හැක.</p>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-        <div class="p-3 bg-slate-50 border rounded-xl space-y-2">
-          <span class="text-xs font-black text-indigo-700 block">මාරු කරන කාලච්ඡේදය 1</span>
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">දිනය 1:</label>
-            <select id="reshuffleDay1Select" class="w-full p-2 border rounded-lg text-xs font-bold bg-white">
-              <option value="Monday">සඳුදා (Monday)</option><option value="Tuesday">අඟහරුවාදා (Tuesday)</option>
-              <option value="Wednesday">බදාදා (Wednesday)</option><option value="Thursday">බ්‍රහස්පතින්දා (Thursday)</option>
-              <option value="Friday">සිකුරාදා (Friday)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">කාලච්ඡේදය 1:</label>
-            <select id="reshufflePeriod1Select" class="w-full p-2 border rounded-lg text-xs font-bold bg-white">
-              <option value="1">Period 1</option><option value="2">Period 2</option>
-              <option value="3">Period 3</option><option value="4">Period 4</option>
-              <option value="5">Period 5</option><option value="6">Period 6</option>
-              <option value="7">Period 7</option><option value="8">Period 8</option>
-            </select>
-          </div>
-        </div>
-        <div class="p-3 bg-slate-50 border rounded-xl space-y-2">
-          <span class="text-xs font-black text-amber-700 block">මාරු කරන කාලච්ඡේදය 2</span>
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">දිනය 2:</label>
-            <select id="reshuffleDay2Select" class="w-full p-2 border rounded-lg text-xs font-bold bg-white">
-              <option value="Monday">සඳුදා (Monday)</option><option value="Tuesday">අඟහරුවාදා (Tuesday)</option>
-              <option value="Wednesday">බදාදා (Wednesday)</option><option value="Thursday">බ්‍රහස්පතින්දා (Thursday)</option>
-              <option value="Friday">සිකුරාදා (Friday)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">කාලච්ඡේදය 2:</label>
-            <select id="reshufflePeriod2Select" class="w-full p-2 border rounded-lg text-xs font-bold bg-white">
-              <option value="1">Period 1</option><option value="2">Period 2</option>
-              <option value="3" selected>Period 3</option><option value="4">Period 4</option>
-              <option value="5">Period 5</option><option value="6">Period 6</option>
-              <option value="7">Period 7</option><option value="8">Period 8</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <div class="flex gap-2">
-        <button type="button" onclick="executePeriodReshuffle()" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition">
-          <i class="fa-solid fa-shuffle"></i> මාරු කරන්න (Swap Periods)
-        </button>
-        <button type="button" onclick="closeReshuffleModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs transition">
-          අවලංගු
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <div id="manualReliefModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
-      <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
-        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-user-pen text-indigo-600"></i> සහන ගුරුවරයා ආදේශය</h3>
-        <button type="button" onclick="closeManualReliefModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
-      </div>
-      <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1 text-xs text-slate-700 mb-3">
-        <div><b>Period:</b> <span id="manualModalPeriod" class="font-black text-indigo-700"></span></div>
-        <div><b>Class:</b> <span id="manualModalClass" class="font-bold"></span> (<span id="manualModalSection"></span>)</div>
-        <div><b>Subject:</b> <span id="manualModalSubject" class="font-semibold text-emerald-800"></span></div>
-        <div><b>Absent / On Leave:</b> <span id="manualModalAbsentTeacher" class="font-bold text-red-600"></span></div>
-      </div>
-      <div class="p-2 bg-amber-50 rounded-lg border border-amber-200 mb-3">
-        <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-amber-900">
-          <input type="checkbox" id="chkForceOverrideTeachers" onchange="populateManualReliefDropdown()" class="w-4 h-4 text-amber-600 rounded">
-          <span>සියලුම ගුරුවරුන් පෙන්වන්න (Force Override)</span>
-        </label>
-      </div>
-      <div class="mb-4">
-        <label class="block text-xs font-bold text-slate-700 mb-1">ආදේශක ගුරුවරයා:</label>
-        <select id="manualModalTeacherSelect" class="w-full p-2.5 border rounded-xl text-xs font-semibold outline-none"></select>
-      </div>
-      <div class="flex gap-2">
-        <button type="button" onclick="saveManualReliefSelection()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition">සුරකින්න</button>
-        <button type="button" onclick="clearManualReliefSelection()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-2 px-3 rounded-xl text-xs transition">Unassign</button>
-        <button type="button" onclick="closeManualReliefModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs transition">අවලංගු</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="gradeSlotModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
-      <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-3">
-        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-sitemap text-indigo-600"></i> ශ්‍රේණි කාලච්ඡේදය (<span id="modalGradeSlotTitle" class="text-indigo-600"></span>)</h3>
-        <button type="button" onclick="closeGradeSlotModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
-      </div>
-      <div class="flex border-b border-slate-200 mb-3">
-        <button type="button" onclick="setGradeSlotModalMode('single')" id="btnGradeModalSingle" class="flex-1 py-1.5 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600">තනි විෂය</button>
-        <button type="button" onclick="setGradeSlotModalMode('basket')" id="btnGradeModalBasket" class="flex-1 py-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600">කාණ්ඩ විෂය</button>
-      </div>
-      <div id="gradeModalSingleSection" class="space-y-3 mb-4 text-xs"><div><label class="block font-bold text-slate-700 mb-1">විෂය තෝරන්න:</label><select id="modalGradeSingleSubject" class="w-full p-2 border rounded-lg bg-white font-semibold"></select></div></div>
-      <div id="gradeModalBasketSection" class="hidden space-y-3 mb-4 text-xs"><p class="text-[11px] text-indigo-700 bg-indigo-50 p-2 rounded-lg">කාණ්ඩ විෂයන් තෝරන්න:</p><div id="gradeBasketCheckboxesContainer" class="grid grid-cols-2 gap-2 p-2 border rounded-lg max-h-40 overflow-y-auto"></div></div>
-      <div class="flex gap-2 pt-2 border-t border-slate-100"><button type="button" onclick="saveGradeSlotModalData()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition">Save</button><button type="button" onclick="clearGradeSlotModalData()" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 px-3 rounded-xl text-xs border border-red-200 transition">Clear</button><button type="button" onclick="closeGradeSlotModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs transition">Cancel</button></div>
-    </div>
-  </div>
-
-  <div id="whatsappQueueModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[100] flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-200 max-h-[90vh] flex flex-col">
-      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
-        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2"><i class="fa-brands fa-whatsapp text-emerald-600 text-lg"></i> <span id="queueModalTitle">WhatsApp Dispatch Queue</span></h3>
-        <button type="button" onclick="closeWhatsAppQueueModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
-      </div>
-      <div class="my-4 p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex flex-col sm:flex-row justify-between items-center gap-3">
-        <div><span class="text-xs font-bold text-emerald-950 block">ප්‍රගතිය: <span id="queueProgressText">0 / 0 Sent</span></span><span class="text-[11px] text-emerald-800" id="queueCurrentTargetLabel">ඊළඟට යැවිය යුතු: -</span></div>
-        <button type="button" onclick="dispatchNextQueueItem()" id="btnQueueNext" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow transition flex items-center gap-2"><i class="fa-solid fa-play"></i> <span>Send Next</span></button>
-      </div>
-      <div class="overflow-y-auto flex-grow space-y-2 pr-1" id="queueItemsContainer"></div>
-      <div class="pt-3 border-t border-slate-100 mt-4 flex justify-end"><button type="button" onclick="closeWhatsAppQueueModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-4 rounded-xl text-xs">Close</button></div>
-    </div>
-  </div>
-
-  <div id="classSlotModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-200 max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
-        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-indigo-600"></i> කාලච්ඡේදය සැකසීම (<span id="modalSlotDayPeriod" class="text-indigo-600 font-black"></span>)</h3>
-        <button type="button" onclick="closeClassSlotModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
-      </div>
-      <div class="flex border-b border-slate-200 mb-4">
-        <button type="button" onclick="setSlotModalMode('single')" id="btnModalSingle" class="flex-1 py-2 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600">තනි විෂය</button>
-        <button type="button" onclick="setSlotModalMode('basket')" id="btnModalBasket" class="flex-1 py-2 text-xs font-bold text-slate-500 hover:text-indigo-600">කාණ්ඩ විෂය</button>
-      </div>
-      <div id="singleSubjectSection" class="space-y-3 mb-4 text-xs">
-        <div><label class="block font-bold text-slate-700 mb-1">විෂය තෝරන්න:</label><select id="modalSingleSubject" onchange="onModalSubjectChanged(this.value)" class="w-full p-2 border rounded-lg bg-white font-semibold"></select></div>
-        <div><label class="block font-bold text-slate-700 mb-1">ගුරුවරයා තෝරන්න:</label><select id="modalSingleTeacher" class="w-full p-2 border rounded-lg bg-white font-semibold"></select></div>
-      </div>
-      <div id="basketSubjectSection" class="hidden space-y-3 mb-4 text-xs">
-        <div id="basketItemsList" class="space-y-2"></div>
-        <button type="button" onclick="addBasketItemRow()" class="w-full py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs border border-dashed border-slate-300">+ තවත් කාණ්ඩ විෂයක්</button>
-      </div>
-      <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 my-4 text-xs">
-        <label class="flex items-center gap-2 font-bold text-amber-900 cursor-pointer"><input type="checkbox" id="modalCombinedCheckbox" onchange="toggleCombinedClassSelector()" class="w-4 h-4 text-amber-600 rounded"><span>Combined Classes (පන්ති කිහිපයක් එකට)</span></label>
-        <div id="combinedClassesListDiv" class="hidden mt-3 pt-2 border-t border-amber-200"><div id="combinedClassesCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div></div>
-      </div>
-      <div class="flex gap-2 pt-3 border-t border-slate-100"><button type="button" onclick="saveClassSlotModalData()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition">Save Slot</button><button type="button" onclick="deleteClassSlotModalData()" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 px-3 rounded-xl text-xs border border-red-200">Clear</button><button type="button" onclick="closeClassSlotModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs">Cancel</button></div>
-    </div>
-  </div>
-
-
-<!-- SCRIPT COMPLETE ENGINE -->
+  <!-- SCRIPT COMPLETE ENGINE -->
   <script>
     // =========================================================================
-    // 1. GLOBAL CONSTANTS & MASTER DATA DECLARATIONS (MUST BE AT THE TOP)
+    // 1. GLOBAL VARIABLES & DEFAULT DATA (TOP SCOPE)
     // =========================================================================
-    const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-    const DAY_LABELS = { Monday: "සඳුදා", Tuesday: "අඟහරුවාදා", Wednesday: "බදාදා", Thursday: "බ්‍රහස්පතින්දා", Friday: "සිකුරාදා" };
+    var DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+    var DAY_LABELS = { Monday: "සඳුදා", Tuesday: "අඟහරුවාදා", Wednesday: "බදාදා", Thursday: "බ්‍රහස්පතින්දා", Friday: "සිකුරාදා" };
 
-    let activeDay = "Monday", activeClass = "10-A", modalMode = "single";
-    let currentModalEditingSlot = null, currentManualReliefIndex = null, currentGradeModalSlot = null, gradeModalMode = "single";
-    let currentWhatsAppQueue = [], currentQueueStep = 0;
+    var activeDay = "Monday";
+    var activeClass = "10-A";
+    var modalMode = "single";
+    var currentModalEditingSlot = null;
+    var currentManualReliefIndex = null;
+    var currentGradeModalSlot = null;
+    var gradeModalMode = "single";
+    var currentWhatsAppQueue = [];
+    var currentQueueStep = 0;
 
-    const DEFAULT_GRADES = [
+    var DEFAULT_GRADES = [
       { grade: 1, group: "1-5", enabled: false }, { grade: 2, group: "1-5", enabled: false },
       { grade: 3, group: "1-5", enabled: false }, { grade: 4, group: "1-5", enabled: false },
       { grade: 5, group: "1-5", enabled: false }, { grade: 6, group: "6-7", enabled: true },
@@ -746,13 +544,13 @@
       { grade: 13, group: "12-13", enabled: true }
     ];
 
-    const DEFAULT_CLASSES = [
+    var DEFAULT_CLASSES = [
       { id: "6-A", grade: 6, name: "6-A", classTeacherId: "T03", allowSecondClass: false },
       { id: "10-A", grade: 10, name: "10-A", classTeacherId: "T01", allowSecondClass: false },
       { id: "10-B", grade: 10, name: "10-B", classTeacherId: "T05", allowSecondClass: false }
     ];
 
-    const DEFAULT_CURRICULUM = [
+    var DEFAULT_CURRICULUM = [
       { id: "CS01", grade: 6, subject: "Science", maxWeekly: 6 },
       { id: "CS02", grade: 6, subject: "Mathematics", maxWeekly: 6 },
       { id: "CS03", grade: 6, subject: "Sinhala", maxWeekly: 6 },
@@ -769,7 +567,7 @@
       { id: "CS17", grade: 10, subject: "Dancing", maxWeekly: 3 }
     ];
 
-    const DEFAULT_TEACHERS = [
+    var DEFAULT_TEACHERS = [
       { id: "T01", name: "කමල් පෙරේරා", phone: "0712345671", subject: "ICT", sections: ["8-11"], leaveStatus: "present", isExempt: false, allowOver35: false },
       { id: "T02", name: "සුනිල් ශාන්ත", phone: "0712345672", subject: "Music", sections: ["6-7", "8-11"], leaveStatus: "absent", isExempt: false, allowOver35: false },
       { id: "T03", name: "මාලිනී ෆොන්සේකා", phone: "0712345673", subject: "Science", sections: ["6-7", "8-11"], leaveStatus: "present", isExempt: false, allowOver35: false },
@@ -782,10 +580,10 @@
     ];
 
     function buildDefaultGradeMaster() {
-      const gm = [];
-      const subs = ["Mathematics", "Science", "Sinhala", "English", "ICT", "History", "Science", "Mathematics"];
+      var gm = [];
+      var subs = ["Mathematics", "Science", "Sinhala", "English", "ICT", "History", "Science", "Mathematics"];
       DAYS.forEach(day => {
-        for (let p = 1; p <= 8; p++) {
+        for (var p = 1; p <= 8; p++) {
           if (day === "Monday" && p === 1) {
             gm.push({ grade: 10, day, period: p, isBasket: true, basketSubjects: ["Music", "Dancing"] });
           } else {
@@ -797,18 +595,18 @@
     }
 
     function buildDefaultSchedule() {
-      const schedule = [];
-      const subs = ["Mathematics", "Science", "Sinhala", "English", "ICT", "History", "Science", "Mathematics"];
-      const tchs = ["T06", "T05", "T07", "T08", "T01", "T09", "T05", "T06"];
+      var schedule = [];
+      var subs = ["Mathematics", "Science", "Sinhala", "English", "ICT", "History", "Science", "Mathematics"];
+      var tchs = ["T06", "T05", "T07", "T08", "T01", "T09", "T05", "T06"];
       DAYS.forEach(day => {
-        for (let p = 1; p <= 8; p++) {
+        for (var p = 1; p <= 8; p++) {
           if (day === "Monday" && p === 1) {
             schedule.push({ classId: "10-A", day, period: p, isBasket: true, basketItems: [{ subject: "Music", teacherId: "T02" }, { subject: "Dancing", teacherId: "T04" }], isCombined: true, combinedWithClasses: ["10-B"] });
             schedule.push({ classId: "10-B", day, period: p, isBasket: true, basketItems: [{ subject: "Music", teacherId: "T02" }, { subject: "Dancing", teacherId: "T04" }], isCombined: true, combinedWithClasses: ["10-A"] });
             schedule.push({ classId: "6-A", day, period: p, isBasket: false, subject: "Science", teacherId: "T03", isCombined: false, combinedWithClasses: [] });
           } else {
-            const s = subs[(p - 1) % subs.length];
-            const t = tchs[(p - 1) % tchs.length];
+            var s = subs[(p - 1) % subs.length];
+            var t = tchs[(p - 1) % tchs.length];
             schedule.push({ classId: "10-A", day, period: p, isBasket: false, subject: s, teacherId: t, isCombined: false, combinedWithClasses: [] });
             schedule.push({ classId: "10-B", day, period: p, isBasket: false, subject: s, teacherId: (s === "Science" ? "T03" : t), isCombined: false, combinedWithClasses: [] });
             schedule.push({ classId: "6-A", day, period: p, isBasket: false, subject: (p % 2 === 0 ? "Mathematics" : "Sinhala"), teacherId: (p % 2 === 0 ? "T06" : "T07"), isCombined: false, combinedWithClasses: [] });
@@ -818,17 +616,17 @@
       return schedule;
     }
 
-    // Active State Variables
-    let gradeSettings = JSON.parse(JSON.stringify(DEFAULT_GRADES));
-    let schoolClasses = JSON.parse(JSON.stringify(DEFAULT_CLASSES));
-    let curriculumSubjects = JSON.parse(JSON.stringify(DEFAULT_CURRICULUM));
-    let teachers = JSON.parse(JSON.stringify(DEFAULT_TEACHERS));
-    let gradeMasterSchedule = buildDefaultGradeMaster();
-    let masterSchedule = buildDefaultSchedule();
-    let generatedReliefResults = [];
+    // Direct initialization to prevent any ReferenceError
+    var gradeSettings = JSON.parse(JSON.stringify(DEFAULT_GRADES));
+    var schoolClasses = JSON.parse(JSON.stringify(DEFAULT_CLASSES));
+    var curriculumSubjects = JSON.parse(JSON.stringify(DEFAULT_CURRICULUM));
+    var teachers = JSON.parse(JSON.stringify(DEFAULT_TEACHERS));
+    var gradeMasterSchedule = buildDefaultGradeMaster();
+    var masterSchedule = buildDefaultSchedule();
+    var generatedReliefResults = [];
 
     // =========================================================================
-    // 2. FIREBASE REALTIME DATABASE SYNC
+    // 2. FIREBASE INTEGRATION (ginthota-bdb63)
     // =========================================================================
     const firebaseConfig = {
       apiKey: "AIzaSyCJj4SvS46Witm-n4JXOuzEc9a4Lw-iiKU",
@@ -852,6 +650,7 @@
           firebaseDb = firebase.database();
           isFirebaseActive = true;
 
+          // Realtime Listener
           firebaseDb.ref("timetable_system").on("value", (snapshot) => {
             const data = snapshot.val();
             if (data && data.teachers && data.teachers.length > 0) {
@@ -877,7 +676,7 @@
               refreshAllUI();
             }
           }, (err) => {
-            console.warn("Firebase Read/Permission Warning:", err);
+            console.warn("Firebase Read Warning:", err);
             markLocalStorageMode();
           });
         } else {
@@ -911,15 +710,15 @@
     }
 
     // =========================================================================
-    // 3. STORAGE & INTEGRITY LOGIC
+    // 3. STORAGE AND BACKUP HELPERS
     // =========================================================================
     function ensureDataIntegrity() {
-      if (!gradeSettings || gradeSettings.length === 0) gradeSettings = JSON.parse(JSON.stringify(DEFAULT_GRADES));
-      if (!schoolClasses || schoolClasses.length === 0) schoolClasses = JSON.parse(JSON.stringify(DEFAULT_CLASSES));
-      if (!curriculumSubjects || curriculumSubjects.length === 0) curriculumSubjects = JSON.parse(JSON.stringify(DEFAULT_CURRICULUM));
-      if (!gradeMasterSchedule || gradeMasterSchedule.length === 0) gradeMasterSchedule = buildDefaultGradeMaster();
-      if (!teachers || teachers.length === 0) teachers = JSON.parse(JSON.stringify(DEFAULT_TEACHERS));
-      if (!masterSchedule || masterSchedule.length === 0) masterSchedule = buildDefaultSchedule();
+      if (!gradeSettings || !Array.isArray(gradeSettings) || gradeSettings.length === 0) gradeSettings = JSON.parse(JSON.stringify(DEFAULT_GRADES));
+      if (!schoolClasses || !Array.isArray(schoolClasses) || schoolClasses.length === 0) schoolClasses = JSON.parse(JSON.stringify(DEFAULT_CLASSES));
+      if (!curriculumSubjects || !Array.isArray(curriculumSubjects) || curriculumSubjects.length === 0) curriculumSubjects = JSON.parse(JSON.stringify(DEFAULT_CURRICULUM));
+      if (!gradeMasterSchedule || !Array.isArray(gradeMasterSchedule) || gradeMasterSchedule.length === 0) gradeMasterSchedule = buildDefaultGradeMaster();
+      if (!teachers || !Array.isArray(teachers) || teachers.length === 0) teachers = JSON.parse(JSON.stringify(DEFAULT_TEACHERS));
+      if (!masterSchedule || !Array.isArray(masterSchedule) || masterSchedule.length === 0) masterSchedule = buildDefaultSchedule();
 
       teachers.forEach(t => {
         if (!t.sections || !Array.isArray(t.sections) || t.sections.length === 0) t.sections = ["All"];
@@ -946,12 +745,12 @@
         const raw = localStorage.getItem("sch_app_data_v2026_final");
         if (raw) {
           const d = JSON.parse(raw);
-          if (d.grades && d.grades.length > 0) gradeSettings = d.grades;
-          if (d.classes && d.classes.length > 0) schoolClasses = d.classes;
-          if (d.curriculum && d.curriculum.length > 0) curriculumSubjects = d.curriculum;
-          if (d.gradeMaster && d.gradeMaster.length > 0) gradeMasterSchedule = d.gradeMaster;
-          if (d.teachers && d.teachers.length > 0) teachers = d.teachers;
-          if (d.schedule && d.schedule.length > 0) masterSchedule = d.schedule;
+          if (d.grades && Array.isArray(d.grades) && d.grades.length > 0) gradeSettings = d.grades;
+          if (d.classes && Array.isArray(d.classes) && d.classes.length > 0) schoolClasses = d.classes;
+          if (d.curriculum && Array.isArray(d.curriculum) && d.curriculum.length > 0) curriculumSubjects = d.curriculum;
+          if (d.gradeMaster && Array.isArray(d.gradeMaster) && d.gradeMaster.length > 0) gradeMasterSchedule = d.gradeMaster;
+          if (d.teachers && Array.isArray(d.teachers) && d.teachers.length > 0) teachers = d.teachers;
+          if (d.schedule && Array.isArray(d.schedule) && d.schedule.length > 0) masterSchedule = d.schedule;
         }
       } catch (err) { console.warn(err); }
       ensureDataIntegrity();
@@ -979,7 +778,7 @@
       document.body.appendChild(a);
       a.click();
       a.remove();
-      alert("කාලසටහන් Backup ගොනුව බාගත විය!");
+      alert("පාසල් කාලසටහන් සම්පූර්ණ Backup ගොනුව සාර්ථකව බාගත විය!");
     }
 
     function triggerImportFileInput() { document.getElementById("importBackupFileInput").click(); }
@@ -1006,7 +805,7 @@
     }
 
     // =========================================================================
-    // 4. COMMON CALCULATION HELPERS
+    // 4. CALCULATION HELPERS
     // =========================================================================
     function getSectionOfGrade(gradeNum) {
       if (gradeNum <= 5) return "1-5"; if (gradeNum <= 7) return "6-7"; if (gradeNum <= 11) return "8-11"; return "12-13";
@@ -1122,7 +921,7 @@
     }
 
     // =========================================================================
-    // 5. ATTENDANCE & AUTO RELIEF
+    // 5. ATTENDANCE & AUTO RELIEF ENGINE
     // =========================================================================
     function getLeaveCounts() {
       let halfDays = 0, shortLeaves = 0, absent = 0, present = 0;
@@ -1599,7 +1398,7 @@
     }
 
     // =========================================================================
-    // 6. PRINT DISPATCHERS
+    // 6. PRINTS & PDF EXPORT
     // =========================================================================
     function print16ReliefCutSlipsA4() {
       const assignedReliefs = generatedReliefResults.filter(r => r.assignedId !== null);
@@ -1676,7 +1475,7 @@
       const opt = { margin: 10, filename: `Staff_Relief_${activeDay}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
       html2pdf().set(opt).from(element).save().then(() => {
         element.classList.add("hidden");
-        alert("Staff Group සඳහා වූ Relief PDF ගොනුව බාගත විය!");
+        alert("Staff Group සඳහා වූ Relief PDF ගොනුව සාර්ථකව බාගත විය!");
       }).catch(err => {
         element.classList.add("hidden");
         alert("PDF සෑදීමේ දෝෂයක්. Print බොත්තම භාවිත කරන්න.");
@@ -1946,7 +1745,7 @@
       saveAllToStorage();
       closeReshuffleModal();
       renderClassTimetableGrid();
-      alert(`[${DAY_LABELS[d1]} P${p1}] සහ [${DAY_LABELS[d2]} P${p2}] සාර්ථකව මාරු (Swap) කරන ලදි!`);
+      alert(`[${DAY_LABELS[d1]} P${p1}] සහ [${DAY_LABELS[d2]} P${p2}] සාර්ථකව මාරු කරන ලදි!`);
     }
 
     // =========================================================================
@@ -2349,7 +2148,7 @@
     function deleteClassSlotModalData() { if (!currentModalEditingSlot) return; deleteSingleSlotDirect(currentModalEditingSlot.classId, currentModalEditingSlot.day, currentModalEditingSlot.period); closeClassSlotModal(); }
 
     // =========================================================================
-    // 8. CLASSES & TEACHERS MANAGEMENT CONTROLLER
+    // 8. CLASSES & TEACHERS MANAGEMENT
     // =========================================================================
     function handleSaveClass(e) {
       if (e) e.preventDefault();
@@ -2605,7 +2404,168 @@
     }
 
     // =========================================================================
-    // 9. WINDOW BOOTLOADER
+    // 9. CURRICULUM MANAGEMENT
+    // =========================================================================
+    function populateCurriculumGradesDropdown() {
+      const sel = document.getElementById("curriculumGradeSelect");
+      const filterSel = document.getElementById("curriculumFilterGradeSelect");
+      if (!sel || !filterSel) return;
+      const curFilterVal = filterSel.value;
+      sel.innerHTML = "";
+      filterSel.innerHTML = '<option value="All">සියලුම ශ්‍රේණි (All)</option>';
+      gradeSettings.filter(g => g.enabled).forEach(g => {
+        sel.innerHTML += `<option value="${g.grade}">Grade ${g.grade} (${g.group})</option>`;
+        filterSel.innerHTML += `<option value="${g.grade}">Grade ${g.grade}</option>`;
+      });
+      if (curFilterVal) filterSel.value = curFilterVal;
+    }
+
+    function renderCurriculumTable() {
+      populateCurriculumGradesDropdown();
+      const filterGrade = document.getElementById("curriculumFilterGradeSelect").value;
+      const tbody = document.getElementById("curriculumTableBody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      let list = filterGrade !== "All" ? curriculumSubjects.filter(c => c.grade === parseInt(filterGrade)) : curriculumSubjects;
+      list.forEach(cs => {
+        tbody.innerHTML += `
+          <tr class="border-b hover:bg-slate-50">
+            <td class="p-2.5 font-bold text-indigo-700">Grade ${cs.grade}</td>
+            <td class="p-2.5 font-bold text-slate-500">${getSectionOfGrade(cs.grade)}</td>
+            <td class="p-2.5 font-semibold text-slate-800">${cs.subject}</td>
+            <td class="p-2.5 font-bold text-slate-700">${cs.maxWeekly} Periods</td>
+            <td class="p-2.5 text-center flex justify-center gap-2">
+              <button type="button" onclick="editCurriculumSubject('${cs.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-[11px]">Edit</button>
+              <button type="button" onclick="handleDeleteCurriculum('${cs.id}')" class="text-red-600 hover:text-red-800 font-bold text-[11px]">Delete</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function handleSaveCurriculumSubject(e) {
+      e.preventDefault();
+      const editId = document.getElementById("curriculumEditId").value;
+      const grade = parseInt(document.getElementById("curriculumGradeSelect").value);
+      const subject = document.getElementById("curriculumSubjectName").value.trim();
+      const maxWeekly = parseInt(document.getElementById("curriculumMaxPeriods").value);
+
+      if (curriculumSubjects.some(cs => cs.id !== editId && cs.grade === grade && cs.subject.trim().toLowerCase() === subject.toLowerCase())) {
+        alert("විෂය දැනටමත් ඇත.");
+        return;
+      }
+
+      if (editId) {
+        const existing = curriculumSubjects.find(cs => cs.id === editId);
+        if (existing) {
+          existing.grade = grade;
+          existing.subject = subject;
+          existing.maxWeekly = maxWeekly;
+        }
+        cancelCurriculumEdit();
+      } else {
+        curriculumSubjects.push({ id: "CS" + Date.now().toString().slice(-4), grade, subject, maxWeekly });
+        document.getElementById("curriculumSubjectName").value = "";
+      }
+
+      saveAllToStorage();
+      renderCurriculumTable();
+      onTeacherSectionCheckboxesChange();
+      renderGradeMasterGrid();
+    }
+
+    function editCurriculumSubject(id) {
+      const cs = curriculumSubjects.find(c => c.id === id);
+      if (!cs) return;
+      document.getElementById("curriculumEditId").value = cs.id;
+      document.getElementById("curriculumGradeSelect").value = cs.grade;
+      document.getElementById("curriculumSubjectName").value = cs.subject;
+      document.getElementById("curriculumMaxPeriods").value = cs.maxWeekly;
+      document.getElementById("curriculumSubmitBtn").innerHTML = '<i class="fa-solid fa-check"></i> Update';
+      document.getElementById("curriculumCancelEditBtn").classList.remove("hidden");
+    }
+
+    function cancelCurriculumEdit() {
+      document.getElementById("editCurriculumEditId").value = "";
+      document.getElementById("curriculumSubjectName").value = "";
+      document.getElementById("curriculumMaxPeriods").value = 5;
+      document.getElementById("curriculumSubmitBtn").innerHTML = '<i class="fa-solid fa-plus"></i> විෂය එක් කරන්න';
+      document.getElementById("curriculumCancelEditBtn").classList.add("hidden");
+    }
+
+    function handleDeleteCurriculum(id) {
+      if (!confirm("මෙම විෂය ඉවත් කිරීමට අවශ්‍යද?")) return;
+      curriculumSubjects = curriculumSubjects.filter(cs => cs.id !== id);
+      saveAllToStorage();
+      renderCurriculumTable();
+      onTeacherSectionCheckboxesChange();
+      renderGradeMasterGrid();
+    }
+
+    function toggleAllSectionsCheckbox(allCheckbox) {
+      document.querySelectorAll(".tch-sec-chk").forEach(chk => {
+        chk.checked = false;
+        chk.disabled = allCheckbox.checked;
+      });
+      onTeacherSectionCheckboxesChange();
+    }
+
+    function onTeacherSectionCheckboxesChange() {
+      const select = document.getElementById("newTeacherSubjectSelect");
+      if (!select) return;
+      const curSubject = select.value;
+      select.innerHTML = '<option value="">-- ප්‍රධාන විෂය තෝරන්න --</option>';
+
+      const isAll = document.querySelector(".tch-sec-chk-all").checked;
+      let checkedSections = [];
+      if (isAll) checkedSections = ["All"];
+      else document.querySelectorAll(".tch-sec-chk:checked").forEach(chk => { checkedSections.push(chk.value); });
+
+      let matchingGrades = [];
+      checkedSections.forEach(sec => {
+        if (sec === "1-5") matchingGrades.push(1,2,3,4,5);
+        else if (sec === "6-7") matchingGrades.push(6,7);
+        else if (sec === "8-11") matchingGrades.push(8,9,10,11);
+        else if (sec === "12-13") matchingGrades.push(12,13);
+        else if (sec === "All") matchingGrades = gradeSettings.map(g => g.grade);
+      });
+
+      const subjectsSet = new Set();
+      curriculumSubjects.filter(cs => matchingGrades.includes(cs.grade)).forEach(cs => { subjectsSet.add(cs.subject); });
+
+      if (subjectsSet.size === 0) select.innerHTML += '<option value="General">සාමාන්‍ය (General)</option>';
+      else subjectsSet.forEach(sub => { select.innerHTML += `<option value="${sub}" ${sub === curSubject ? 'selected' : ''}>${sub}</option>`; });
+    }
+
+    function renderTeachersMasterList() {
+      const tbody = document.getElementById("teachersMasterTableBody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      teachers.forEach(t => {
+        const load = calculateTeacherWeeklyWorkload(t.id);
+        const isCapped = load >= 35;
+        const sectionsBadges = (t.sections || []).map(s => `<span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 mr-1">${s}</span>`).join('');
+        tbody.innerHTML += `
+          <tr class="border-b hover:bg-slate-50">
+            <td class="p-2.5 font-bold text-slate-400">${t.id}</td>
+            <td class="p-2.5 font-bold text-slate-800">${t.name}</td>
+            <td class="p-2.5 text-slate-600 font-semibold">${t.phone || '-'}</td>
+            <td class="p-2.5">${t.subject}</td>
+            <td class="p-2.5">${sectionsBadges}</td>
+            <td class="p-2.5 font-black ${isCapped ? 'text-amber-600' : 'text-slate-800'}">${load} / 35</td>
+            <td class="p-2.5"><label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" ${t.allowOver35 ? 'checked' : ''} onchange="toggleOver35Allowance('${t.id}', this.checked)" class="w-4 h-4 text-indigo-600 rounded"><span class="text-[11px] font-semibold">Over 35 Allow</span></label></td>
+            <td class="p-2.5"><span class="px-2 py-0.5 text-[10px] font-semibold rounded-full border ${t.isExempt ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}">${t.isExempt ? 'Exempt' : 'Active'}</span></td>
+            <td class="p-2.5 text-center flex justify-center gap-2">
+              <button type="button" onclick="editTeacher('${t.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-[11px]">Edit</button>
+              <button type="button" onclick="handleDeleteTeacher('${t.id}')" class="text-red-600 hover:text-red-800 font-bold text-[11px]">මකන්න</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    // =========================================================================
+    // 10. BOOTLOADER
     // =========================================================================
     window.addEventListener("DOMContentLoaded", () => {
       loadAllFromStorage();
@@ -2623,11 +2583,9 @@
 
       switchTab('reliefTab');
 
-      // Initialize Firebase Connection
+      // Initialize Firebase Cloud sync
       initFirebaseCloud();
     });
   </script>
-
-  
 </body>
 </html>
