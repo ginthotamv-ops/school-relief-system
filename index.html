@@ -518,7 +518,214 @@
     <div id="slips16UpContainer" class="slips-16up-container"></div>
   </div>
   </main>
+  
+  
+  /////////////////////////////////////////////////
 
+<!-- ==================== PRINT CONTAINERS ==================== -->
+  <div id="printableClassArea" class="hidden p-4 bg-white">
+    <div class="text-center pb-3 border-b border-slate-300 mb-3">
+      <h3 class="text-base font-black text-slate-900 uppercase">පන්ති සතිපතා කාලසටහන</h3>
+      <div class="flex justify-between items-center text-xs mt-1 text-slate-700 font-semibold max-w-2xl mx-auto px-2">
+        <span>පන්තිය: <b id="slipClassName" class="text-indigo-900 text-sm">-</b></span>
+        <span>අංශය: <b id="slipClassSection">-</b></span>
+        <span>පන්තිභාර ගුරුතුමා: <b id="slipClassTeacher" class="text-indigo-800">-</b></span>
+      </div>
+    </div>
+    <table class="w-full text-xs text-center border-collapse border border-slate-300">
+      <thead class="bg-slate-100 font-bold text-slate-800">
+        <tr>
+          <th class="p-2 border border-slate-300">දිනය</th>
+          <th class="p-2 border border-slate-300">P1</th><th class="p-2 border border-slate-300">P2</th>
+          <th class="p-2 border border-slate-300">P3</th><th class="p-2 border border-slate-300">P4</th>
+          <th class="p-2 border border-slate-300">P5</th><th class="p-2 border border-slate-300">P6</th>
+          <th class="p-2 border border-slate-300">P7</th><th class="p-2 border border-slate-300">P8</th>
+        </tr>
+      </thead>
+      <tbody id="individualClassPrintGridBody"></tbody>
+    </table>
+  </div>
+
+  <div id="printableReliefArea" class="hidden p-6 bg-white">
+    <div class="text-center pb-3 border-b-2 border-slate-800 mb-4">
+      <h2 class="text-lg font-black uppercase text-slate-900 tracking-wider">පාසල් දෛනික සහන කාලසටහන (Daily Relief Schedule)</h2>
+      <div class="flex justify-between items-center text-xs mt-2 font-bold text-slate-800 max-w-2xl mx-auto">
+        <span>දිනය: <b id="printReliefSlipDay" class="text-indigo-900">සඳුදා</b></span>
+        <span>කාලය: පෙ.ව. 07:50 - ප.ව. 01:30</span>
+        <span>මුළු සහන පන්ති: <b id="printReliefSlipTotalCount">0</b></span>
+      </div>
+    </div>
+    <table class="w-full text-xs text-left border-collapse border border-slate-400">
+      <thead class="bg-slate-200 text-slate-900 font-black border-b border-slate-400">
+        <tr>
+          <th class="p-2 border border-slate-400">කාලච්ඡේදය</th>
+          <th class="p-2 border border-slate-400">පන්තිය (අංශය)</th>
+          <th class="p-2 border border-slate-400">විෂය</th>
+          <th class="p-2 border border-slate-400 font-black">පැවරූ සහන ගුරුභවතා</th>
+          <th class="p-2 border border-slate-400">තත්ත්වය / ප්‍රමුඛතාවය</th>
+        </tr>
+      </thead>
+      <tbody id="printableReliefSlipTableBody" class="divide-y divide-slate-300"></tbody>
+    </table>
+  </div>
+
+  <div id="printable16SlipsArea" class="hidden p-2 bg-white"><div id="slips16UpContainer" class="slips-16up-container"></div></div>
+  <div id="printable2TeachersArea" class="hidden p-4 bg-white"><div id="teachers2UpContainer" class="teachers-2up-container"></div></div>
+  <div id="printable2ClassesArea" class="hidden p-4 bg-white"><div id="classes2UpContainer" class="classes-2up-container"></div></div>
+
+  <!-- ==================== MODALS ==================== -->
+  <div id="reshuffleModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-shuffle text-amber-600"></i> කාලච්ඡේද මාරු කිරීම (Periods Re-shuffle)
+        </h3>
+        <button type="button" onclick="closeReshuffleModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+      <div class="bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs text-amber-900 mb-4">
+        පන්තිය: <b id="reshuffleClassLabel">-</b>
+        <p class="text-[11px] text-amber-700 mt-1">වෙනස් දින දෙකක් හෝ එකම දිනයක් තුළ කාලච්ඡේද දෙකක් එකිනෙක මාරු (Swap) කළ හැක.</p>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div class="p-3 bg-slate-50 border rounded-xl space-y-2">
+          <span class="text-xs font-black text-indigo-700 block">මාරු කරන කාලච්ඡේදය 1</span>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">දිනය 1:</label>
+            <select id="reshuffleDay1Select" class="w-full p-2 border rounded-lg text-xs font-bold bg-white">
+              <option value="Monday">සඳුදා (Monday)</option><option value="Tuesday">අඟහරුවාදා (Tuesday)</option>
+              <option value="Wednesday">බදාදා (Wednesday)</option><option value="Thursday">බ්‍රහස්පතින්දා (Thursday)</option>
+              <option value="Friday">සිකුරාදා (Friday)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">කාලච්ඡේදය 1:</label>
+            <select id="reshufflePeriod1Select" class="w-full p-2 border rounded-lg text-xs font-bold bg-white">
+              <option value="1">Period 1</option><option value="2">Period 2</option>
+              <option value="3">Period 3</option><option value="4">Period 4</option>
+              <option value="5">Period 5</option><option value="6">Period 6</option>
+              <option value="7">Period 7</option><option value="8">Period 8</option>
+            </select>
+          </div>
+        </div>
+        <div class="p-3 bg-slate-50 border rounded-xl space-y-2">
+          <span class="text-xs font-black text-amber-700 block">මාරු කරන කාලච්ඡේදය 2</span>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">දිනය 2:</label>
+            <select id="reshuffleDay2Select" class="w-full p-2 border rounded-lg text-xs font-bold bg-white">
+              <option value="Monday">සඳුදා (Monday)</option><option value="Tuesday">අඟහරුවාදා (Tuesday)</option>
+              <option value="Wednesday">බදාදා (Wednesday)</option><option value="Thursday">බ්‍රහස්පතින්දා (Thursday)</option>
+              <option value="Friday">සිකුරාදා (Friday)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">කාලච්ඡේදය 2:</label>
+            <select id="reshufflePeriod2Select" class="w-full p-2 border rounded-lg text-xs font-bold bg-white">
+              <option value="1">Period 1</option><option value="2">Period 2</option>
+              <option value="3" selected>Period 3</option><option value="4">Period 4</option>
+              <option value="5">Period 5</option><option value="6">Period 6</option>
+              <option value="7">Period 7</option><option value="8">Period 8</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" onclick="executePeriodReshuffle()" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition">
+          <i class="fa-solid fa-shuffle"></i> මාරු කරන්න (Swap Periods)
+        </button>
+        <button type="button" onclick="closeReshuffleModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs transition">
+          අවලංගු
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="manualReliefModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-user-pen text-indigo-600"></i> සහන ගුරුවරයා ආදේශය</h3>
+        <button type="button" onclick="closeManualReliefModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+      <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1 text-xs text-slate-700 mb-3">
+        <div><b>Period:</b> <span id="manualModalPeriod" class="font-black text-indigo-700"></span></div>
+        <div><b>Class:</b> <span id="manualModalClass" class="font-bold"></span> (<span id="manualModalSection"></span>)</div>
+        <div><b>Subject:</b> <span id="manualModalSubject" class="font-semibold text-emerald-800"></span></div>
+        <div><b>Absent / On Leave:</b> <span id="manualModalAbsentTeacher" class="font-bold text-red-600"></span></div>
+      </div>
+      <div class="p-2 bg-amber-50 rounded-lg border border-amber-200 mb-3">
+        <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-amber-900">
+          <input type="checkbox" id="chkForceOverrideTeachers" onchange="populateManualReliefDropdown()" class="w-4 h-4 text-amber-600 rounded">
+          <span>සියලුම ගුරුවරුන් පෙන්වන්න (Force Override)</span>
+        </label>
+      </div>
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-slate-700 mb-1">ආදේශක ගුරුවරයා:</label>
+        <select id="manualModalTeacherSelect" class="w-full p-2.5 border rounded-xl text-xs font-semibold outline-none"></select>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" onclick="saveManualReliefSelection()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition">සුරකින්න</button>
+        <button type="button" onclick="clearManualReliefSelection()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-2 px-3 rounded-xl text-xs transition">Unassign</button>
+        <button type="button" onclick="closeManualReliefModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs transition">අවලංගු</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="gradeSlotModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-3">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-sitemap text-indigo-600"></i> ශ්‍රේණි කාලච්ඡේදය (<span id="modalGradeSlotTitle" class="text-indigo-600"></span>)</h3>
+        <button type="button" onclick="closeGradeSlotModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+      <div class="flex border-b border-slate-200 mb-3">
+        <button type="button" onclick="setGradeSlotModalMode('single')" id="btnGradeModalSingle" class="flex-1 py-1.5 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600">තනි විෂය</button>
+        <button type="button" onclick="setGradeSlotModalMode('basket')" id="btnGradeModalBasket" class="flex-1 py-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600">කාණ්ඩ විෂය</button>
+      </div>
+      <div id="gradeModalSingleSection" class="space-y-3 mb-4 text-xs"><div><label class="block font-bold text-slate-700 mb-1">විෂය තෝරන්න:</label><select id="modalGradeSingleSubject" class="w-full p-2 border rounded-lg bg-white font-semibold"></select></div></div>
+      <div id="gradeModalBasketSection" class="hidden space-y-3 mb-4 text-xs"><p class="text-[11px] text-indigo-700 bg-indigo-50 p-2 rounded-lg">කාණ්ඩ විෂයන් තෝරන්න:</p><div id="gradeBasketCheckboxesContainer" class="grid grid-cols-2 gap-2 p-2 border rounded-lg max-h-40 overflow-y-auto"></div></div>
+      <div class="flex gap-2 pt-2 border-t border-slate-100"><button type="button" onclick="saveGradeSlotModalData()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition">Save</button><button type="button" onclick="clearGradeSlotModalData()" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 px-3 rounded-xl text-xs border border-red-200 transition">Clear</button><button type="button" onclick="closeGradeSlotModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs transition">Cancel</button></div>
+    </div>
+  </div>
+
+  <div id="whatsappQueueModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[100] flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-200 max-h-[90vh] flex flex-col">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2"><i class="fa-brands fa-whatsapp text-emerald-600 text-lg"></i> <span id="queueModalTitle">WhatsApp Dispatch Queue</span></h3>
+        <button type="button" onclick="closeWhatsAppQueueModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+      <div class="my-4 p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <div><span class="text-xs font-bold text-emerald-950 block">ප්‍රගතිය: <span id="queueProgressText">0 / 0 Sent</span></span><span class="text-[11px] text-emerald-800" id="queueCurrentTargetLabel">ඊළඟට යැවිය යුතු: -</span></div>
+        <button type="button" onclick="dispatchNextQueueItem()" id="btnQueueNext" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow transition flex items-center gap-2"><i class="fa-solid fa-play"></i> <span>Send Next</span></button>
+      </div>
+      <div class="overflow-y-auto flex-grow space-y-2 pr-1" id="queueItemsContainer"></div>
+      <div class="pt-3 border-t border-slate-100 mt-4 flex justify-end"><button type="button" onclick="closeWhatsAppQueueModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-4 rounded-xl text-xs">Close</button></div>
+    </div>
+  </div>
+
+  <div id="classSlotModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-200 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-indigo-600"></i> කාලච්ඡේදය සැකසීම (<span id="modalSlotDayPeriod" class="text-indigo-600 font-black"></span>)</h3>
+        <button type="button" onclick="closeClassSlotModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+      <div class="flex border-b border-slate-200 mb-4">
+        <button type="button" onclick="setSlotModalMode('single')" id="btnModalSingle" class="flex-1 py-2 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600">තනි විෂය</button>
+        <button type="button" onclick="setSlotModalMode('basket')" id="btnModalBasket" class="flex-1 py-2 text-xs font-bold text-slate-500 hover:text-indigo-600">කාණ්ඩ විෂය</button>
+      </div>
+      <div id="singleSubjectSection" class="space-y-3 mb-4 text-xs">
+        <div><label class="block font-bold text-slate-700 mb-1">විෂය තෝරන්න:</label><select id="modalSingleSubject" onchange="onModalSubjectChanged(this.value)" class="w-full p-2 border rounded-lg bg-white font-semibold"></select></div>
+        <div><label class="block font-bold text-slate-700 mb-1">ගුරුවරයා තෝරන්න:</label><select id="modalSingleTeacher" class="w-full p-2 border rounded-lg bg-white font-semibold"></select></div>
+      </div>
+      <div id="basketSubjectSection" class="hidden space-y-3 mb-4 text-xs">
+        <div id="basketItemsList" class="space-y-2"></div>
+        <button type="button" onclick="addBasketItemRow()" class="w-full py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs border border-dashed border-slate-300">+ තවත් කාණ්ඩ විෂයක්</button>
+      </div>
+      <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 my-4 text-xs">
+        <label class="flex items-center gap-2 font-bold text-amber-900 cursor-pointer"><input type="checkbox" id="modalCombinedCheckbox" onchange="toggleCombinedClassSelector()" class="w-4 h-4 text-amber-600 rounded"><span>Combined Classes (පන්ති කිහිපයක් එකට)</span></label>
+        <div id="combinedClassesListDiv" class="hidden mt-3 pt-2 border-t border-amber-200"><div id="combinedClassesCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div></div>
+      </div>
+      <div class="flex gap-2 pt-3 border-t border-slate-100"><button type="button" onclick="saveClassSlotModalData()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition">Save Slot</button><button type="button" onclick="deleteClassSlotModalData()" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 px-3 rounded-xl text-xs border border-red-200">Clear</button><button type="button" onclick="closeClassSlotModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs">Cancel</button></div>
+    </div>
+  </div>
+  
 /////////////////////////////////////////////////////
 
 <!-- SCRIPT COMPLETE ENGINE -->
