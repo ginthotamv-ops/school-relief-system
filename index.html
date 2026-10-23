@@ -513,7 +513,10 @@
         </div>
       </div>
     </div>
-
+   <!-- new insert -->
+    <div id="printable16SlipsArea" class="hidden p-2 bg-white">
+    <div id="slips16UpContainer" class="slips-16up-container"></div>
+  </div>
   </main>
 
 /////////////////////////////////////////////////////
@@ -1437,6 +1440,124 @@
     // =========================================================================
     // 7. PRINT & PDF DISPATCHERS (16 SLIPS A4 FIXED)
     // =========================================================================
+    
+///////////////////////////////////////////////
+    // =========================================================================
+    // 7. PRINT & PDF DISPATCHERS (SAFE AUTO-CONTAINER)
+    // =========================================================================
+    function getOrCreateSlipsContainer() {
+      let targetArea = document.getElementById("printable16SlipsArea");
+      if (!targetArea) {
+        targetArea = document.createElement("div");
+        targetArea.id = "printable16SlipsArea";
+        targetArea.className = "hidden p-2 bg-white";
+        document.body.appendChild(targetArea);
+      }
+      let container = document.getElementById("slips16UpContainer");
+      if (!container) {
+        container = document.createElement("div");
+        container.id = "slips16UpContainer";
+        container.className = "slips-16up-container";
+        targetArea.appendChild(container);
+      }
+      return { targetArea, container };
+    }
+
+    function build16SlipsDOM(assignedReliefs) {
+      const { container } = getOrCreateSlipsContainer();
+      const byTeacher = {};
+      assignedReliefs.forEach(r => {
+        if (!byTeacher[r.assignedId]) byTeacher[r.assignedId] = { teacherName: r.assignedName, items: [] };
+        byTeacher[r.assignedId].items.push(r);
+      });
+
+      container.innerHTML = "";
+
+      Object.keys(byTeacher).forEach(tId => {
+        const teacherData = byTeacher[tId];
+        let periodsListHtml = "";
+        teacherData.items.forEach(item => {
+          periodsListHtml += `<div style="font-size: 7.5pt; line-height: 1.25; margin-top: 1px; color: #0f172a;">• <b>Period ${item.period}</b>: <b>${item.classId}</b> - ${item.subject}</div>`;
+        });
+        const slip = document.createElement("div");
+        slip.className = "relief-cut-slip-16";
+        slip.innerHTML = `
+          <div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #475569; padding-bottom: 1px; font-weight: bold; font-size: 7.5pt;">
+              <span>පාසල් සහන පත්‍රිකාව (Relief Slip)</span>
+              <span>${DAY_LABELS[activeDay]}</span>
+            </div>
+            <div style="margin-top: 2px; font-size: 8pt;">ගුරු භවතා: <b style="font-size: 8.5pt; color: #1e1b4b;">${teacherData.teacherName}</b></div>
+            <div style="margin-top: 2px; border-top: 0.5px solid #cbd5e1; padding-top: 2px;">${periodsListHtml}</div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 6.5pt; border-top: 1px dashed #94a3b8; padding-top: 1px; color: #475569;">
+            <span>නියමිත වේලාවට පන්තියට යන්න</span><span>අත්සන: ....................</span>
+          </div>
+        `;
+        container.appendChild(slip);
+      });
+    }
+
+    function print16ReliefCutSlipsA4() {
+      if (!generatedReliefResults || generatedReliefResults.length === 0) {
+        runAutoReliefEngine();
+      }
+      const assignedReliefs = generatedReliefResults.filter(r => r.assignedId !== null);
+      if (assignedReliefs.length === 0) {
+        alert("දැනට කිසිදු ගුරුවරයෙකු නොපැමිණි ලෙස සලකුණු කර නැති බැවින් සහන කාලච්ඡේද නොමැත. පළමුව ගුරුවරුන්ගේ නිවාඩු තත්ත්වය සලකුණු කර 'සහන කාලසටහන සකසන්න' ඔබන්න.");
+        return;
+      }
+      
+      build16SlipsDOM(assignedReliefs);
+
+      const { targetArea } = getOrCreateSlipsContainer();
+      document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
+      targetArea.classList.remove("hidden");
+      targetArea.classList.add("print-target");
+      
+      window.print();
+      
+      setTimeout(() => {
+        targetArea.classList.remove("print-target");
+        targetArea.classList.add("hidden");
+      }, 500);
+    }
+
+    function download16ReliefCutSlipsPDF() {
+      if (!generatedReliefResults || generatedReliefResults.length === 0) {
+        runAutoReliefEngine();
+      }
+      const assignedReliefs = generatedReliefResults.filter(r => r.assignedId !== null);
+      if (assignedReliefs.length === 0) {
+        alert("බාගත කිරීමට සහන කාලච්ඡේද නොමැත. පළමුව ගුරුවරුන්ගේ නිවාඩු තත්ත්වය සලකුණු කර 'සහන කාලසටහන සකසන්න' ඔබන්න.");
+        return;
+      }
+
+      build16SlipsDOM(assignedReliefs);
+      const { targetArea } = getOrCreateSlipsContainer();
+      targetArea.classList.remove("hidden");
+
+      const opt = {
+        margin: [5, 5, 5, 5],
+        filename: `Relief_16_Slips_${activeDay}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(targetArea).save().then(() => {
+        targetArea.classList.add("hidden");
+        alert("A4 Slips 16 PDF ගොනුව සාර්ථකව බාගත විය!");
+      }).catch(err => {
+        targetArea.classList.add("hidden");
+        console.error("PDF Gen Error:", err);
+        alert("PDF සෑදීමේ දෝෂයක්. Print බොත්තම භාවිත කරන්න.");
+      });
+    }
+
+
+    ////////////////////////////////////////////
+    
     function build16SlipsDOM(assignedReliefs) {
       const byTeacher = {};
       assignedReliefs.forEach(r => {
