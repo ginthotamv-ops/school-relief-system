@@ -516,7 +516,9 @@
 
   </main>
 
-  <!-- SCRIPT COMPLETE ENGINE -->
+/////////////////////////////////////////////////////
+
+<!-- SCRIPT COMPLETE ENGINE -->
   <script>
     // =========================================================================
     // 1. GLOBAL VARIABLES & DEFAULT DATA (TOP SCOPE)
@@ -616,7 +618,7 @@
       return schedule;
     }
 
-    // Direct initialization to prevent any ReferenceError
+    // Direct variable initialization
     var gradeSettings = JSON.parse(JSON.stringify(DEFAULT_GRADES));
     var schoolClasses = JSON.parse(JSON.stringify(DEFAULT_CLASSES));
     var curriculumSubjects = JSON.parse(JSON.stringify(DEFAULT_CURRICULUM));
@@ -650,7 +652,6 @@
           firebaseDb = firebase.database();
           isFirebaseActive = true;
 
-          // Realtime Listener
           firebaseDb.ref("timetable_system").on("value", (snapshot) => {
             const data = snapshot.val();
             if (data && data.teachers && data.teachers.length > 0) {
@@ -805,7 +806,7 @@
     }
 
     // =========================================================================
-    // 4. CALCULATION HELPERS
+    // 4. CALCULATION HELPERS & NAVIGATION
     // =========================================================================
     function getSectionOfGrade(gradeNum) {
       if (gradeNum <= 5) return "1-5"; if (gradeNum <= 7) return "6-7"; if (gradeNum <= 11) return "8-11"; return "12-13";
@@ -921,7 +922,7 @@
     }
 
     // =========================================================================
-    // 5. ATTENDANCE & AUTO RELIEF ENGINE
+    // 5. ATTENDANCE & AUTO RELIEF
     // =========================================================================
     function getLeaveCounts() {
       let halfDays = 0, shortLeaves = 0, absent = 0, present = 0;
@@ -1297,6 +1298,9 @@
       closeManualReliefModal();
     }
 
+    // =========================================================================
+    // 6. WHATSAPP DISPATCH ENGINE
+    // =========================================================================
     function adminOpenReliefQueue() {
       const assigned = generatedReliefResults.filter(r => r.assignedId !== null);
       if (assigned.length === 0) {
@@ -1328,6 +1332,39 @@
         });
       });
       openWhatsAppQueueModal("දෛනික Relief WhatsApp Queue", queue);
+    }
+
+    function adminOpenTimetablesQueue() {
+      const queue = [];
+      teachers.forEach(t => {
+        let msg = `📅 *ගුරු පෞද්ගලික කාලසටහන (Timetable Notice)*\n═══════════════════════════\n👤 *ගුරුතුමා/ගුරුතුමිය:* ${t.name}\n📚 *ප්‍රධාන විෂය:* ${t.subject}\n═══════════════════════════\n\n`;
+        DAYS.forEach(d => {
+          let daySlots = [];
+          for (let p = 1; p <= 8; p++) {
+            const slot = masterSchedule.find(s => s.day === d && s.period === p && (
+              (!s.isBasket && s.teacherId === t.id) ||
+              (s.isBasket && s.basketItems && s.basketItems.some(b => b.teacherId === t.id))
+            ));
+            if (slot) {
+              const cls = slot.isCombined && slot.combinedWithClasses ? [slot.classId, ...slot.combinedWithClasses].join('+') : slot.classId;
+              const sub = !slot.isBasket ? slot.subject : (slot.basketItems.find(b => b.teacherId === t.id)?.subject || "Basket");
+              daySlots.push(`P${p}: ${cls} (${sub})`);
+            }
+          }
+          if (daySlots.length > 0) {
+            msg += `📌 *${DAY_LABELS[d]}*:\n${daySlots.map(s => '  • ' + s).join('\n')}\n\n`;
+          }
+        });
+        msg += `═══════════════════════════\n_සුබ දවසක් වේවා!_`;
+        queue.push({
+          teacherName: t.name,
+          phone: t.phone || '',
+          description: `සතිපතා කාලසටහන`,
+          message: msg,
+          sent: false
+        });
+      });
+      openWhatsAppQueueModal("ගුරු කාලසටහන් WhatsApp Queue", queue);
     }
 
     function adminBroadcastReliefToSchoolGroup() {
@@ -1398,71 +1435,99 @@
     }
 
     // =========================================================================
-    // 6. PRINTS & PDF EXPORT
+    // 7. PRINT & PDF DISPATCHERS (16 SLIPS A4 FIXED)
     // =========================================================================
-//
+    function build16SlipsDOM(assignedReliefs) {
+      const byTeacher = {};
+      assignedReliefs.forEach(r => {
+        if (!byTeacher[r.assignedId]) byTeacher[r.assignedId] = { teacherName: r.assignedName, items: [] };
+        byTeacher[r.assignedId].items.push(r);
+      });
 
-    
+      const container = document.getElementById("slips16UpContainer");
+      container.innerHTML = "";
 
-    //
-    
-function print16ReliefCutSlipsA4() {
-  const assignedReliefs = generatedReliefResults.filter(r => r.assignedId !== null);
-  if (assignedReliefs.length === 0) {
-    alert("මුද්‍රණය කිරීමට සහන කාලච්ඡේද නොමැත. කරුණාකර පළමුව 'සහන කාලසටහන සකසන්න' ඔබන්න.");
-    return;
-  }
-  
-  const byTeacher = {};
-  assignedReliefs.forEach(r => {
-    if (!byTeacher[r.assignedId]) byTeacher[r.assignedId] = { teacherName: r.assignedName, items: [] };
-    byTeacher[r.assignedId].items.push(r);
-  });
+      Object.keys(byTeacher).forEach(tId => {
+        const teacherData = byTeacher[tId];
+        let periodsListHtml = "";
+        teacherData.items.forEach(item => {
+          periodsListHtml += `<div style="font-size: 7.5pt; line-height: 1.25; margin-top: 1px; color: #0f172a;">• <b>Period ${item.period}</b>: <b>${item.classId}</b> - ${item.subject}</div>`;
+        });
+        const slip = document.createElement("div");
+        slip.className = "relief-cut-slip-16";
+        slip.innerHTML = `
+          <div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #475569; padding-bottom: 1px; font-weight: bold; font-size: 7.5pt;">
+              <span>පාසල් සහන පත්‍රිකාව (Relief Slip)</span>
+              <span>${DAY_LABELS[activeDay]}</span>
+            </div>
+            <div style="margin-top: 2px; font-size: 8pt;">ගුරු භවතා: <b style="font-size: 8.5pt; color: #1e1b4b;">${teacherData.teacherName}</b></div>
+            <div style="margin-top: 2px; border-top: 0.5px solid #cbd5e1; padding-top: 2px;">${periodsListHtml}</div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 6.5pt; border-top: 1px dashed #94a3b8; padding-top: 1px; color: #475569;">
+            <span>නියමිත වේලාවට පන්තියට යන්න</span><span>අත්සන: ....................</span>
+          </div>
+        `;
+        container.appendChild(slip);
+      });
+    }
 
-  const container = document.getElementById("slips16UpContainer");
-  container.innerHTML = "";
+    function print16ReliefCutSlipsA4() {
+      if (!generatedReliefResults || generatedReliefResults.length === 0) {
+        runAutoReliefEngine();
+      }
+      const assignedReliefs = generatedReliefResults.filter(r => r.assignedId !== null);
+      if (assignedReliefs.length === 0) {
+        alert("දැනට කිසිදු ගුරුවරයෙකු නොපැමිණි ලෙස සලකුණු කර නැති බැවින් සහන කාලච්ඡේද නොමැත. පළමුව ගුරුවරුන්ගේ නිවාඩු තත්ත්වය සලකුණු කර 'සහන කාලසටහන සකසන්න' ඔබන්න.");
+        return;
+      }
+      
+      build16SlipsDOM(assignedReliefs);
 
-  Object.keys(byTeacher).forEach(tId => {
-    const teacherData = byTeacher[tId];
-    let periodsListHtml = "";
-    teacherData.items.forEach(item => {
-      periodsListHtml += `<div style="font-size: 7.5pt; line-height: 1.25; margin-top: 1px; color: #0f172a;">• <b>Period ${item.period}</b>: <b>${item.classId}</b> - ${item.subject}</div>`;
-    });
-    const slip = document.createElement("div");
-    slip.className = "relief-cut-slip-16";
-    slip.innerHTML = `
-      <div>
-        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #475569; padding-bottom: 1px; font-weight: bold; font-size: 7.5pt;">
-          <span>පාසල් සහන පත්‍රිකාව (Relief Slip)</span>
-          <span>${DAY_LABELS[activeDay]}</span>
-        </div>
-        <div style="margin-top: 2px; font-size: 8pt;">ගුරු භවතා: <b style="font-size: 8.5pt; color: #1e1b4b;">${teacherData.teacherName}</b></div>
-        <div style="margin-top: 2px; border-top: 0.5px solid #cbd5e1; padding-top: 2px;">${periodsListHtml}</div>
-      </div>
-      <div style="display: flex; justify-content: space-between; font-size: 6.5pt; border-top: 1px dashed #94a3b8; padding-top: 1px; color: #475569;">
-        <span>නියමිත වේලාවට පන්තියට යන්න</span><span>අත්සන: ....................</span>
-      </div>
-    `;
-    container.appendChild(slip);
-  });
+      document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
+      const target = document.getElementById("printable16SlipsArea");
+      target.classList.remove("hidden");
+      target.classList.add("print-target");
+      
+      window.print();
+      
+      setTimeout(() => {
+        target.classList.remove("print-target");
+        target.classList.add("hidden");
+      }, 500);
+    }
 
-  // අඩුවී තිබූ ප්‍රධාන කොටස:
-  document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
-  const target = document.getElementById("printable16SlipsArea");
-  target.classList.add("print-target");
-  
-  window.print();
-  
-  target.classList.remove("print-target");
-}
-    
+    function download16ReliefCutSlipsPDF() {
+      if (!generatedReliefResults || generatedReliefResults.length === 0) {
+        runAutoReliefEngine();
+      }
+      const assignedReliefs = generatedReliefResults.filter(r => r.assignedId !== null);
+      if (assignedReliefs.length === 0) {
+        alert("බාගත කිරීමට සහන කාලච්ඡේද නොමැත. පළමුව ගුරුවරුන්ගේ නිවාඩු තත්ත්වය සලකුණු කර 'සහන කාලසටහන සකසන්න' ඔබන්න.");
+        return;
+      }
 
-     // document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
-     // const target = document.getElementById("printable16SlipsArea");
-    //  target.classList.add("print-target");
-    //  window.print();
-     // target.classList.remove("print-target");
-    //}
+      build16SlipsDOM(assignedReliefs);
+      const targetArea = document.getElementById("printable16SlipsArea");
+      targetArea.classList.remove("hidden");
+
+      const opt = {
+        margin: [5, 5, 5, 5],
+        filename: `Relief_16_Slips_${activeDay}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(targetArea).save().then(() => {
+        targetArea.classList.add("hidden");
+        alert("A4 Slips 16 PDF ගොනුව සාර්ථකව බාගත විය!");
+      }).catch(err => {
+        targetArea.classList.add("hidden");
+        console.error("PDF Gen Error:", err);
+        alert("PDF සෑදීමේ දෝෂයක්. Print බොත්තම භාවිත කරන්න.");
+      });
+    }
 
     function downloadReliefPDFForStaffGroup() {
       if (generatedReliefResults.length === 0) {
@@ -1523,9 +1588,13 @@ function print16ReliefCutSlipsA4() {
 
       document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
       const target = document.getElementById("printableReliefArea");
+      target.classList.remove("hidden");
       target.classList.add("print-target");
       window.print();
-      target.classList.remove("print-target");
+      setTimeout(() => {
+        target.classList.remove("print-target");
+        target.classList.add("hidden");
+      }, 500);
     }
 
     function print2ClassesPerA4() {
@@ -1584,9 +1653,13 @@ function print16ReliefCutSlipsA4() {
       }
       document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
       const target = document.getElementById("printable2ClassesArea");
+      target.classList.remove("hidden");
       target.classList.add("print-target");
       window.print();
-      target.classList.remove("print-target");
+      setTimeout(() => {
+        target.classList.remove("print-target");
+        target.classList.add("hidden");
+      }, 500);
     }
 
     function print2TeachersPerA4() {
@@ -1643,9 +1716,13 @@ function print16ReliefCutSlipsA4() {
       }
       document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
       const target = document.getElementById("printable2TeachersArea");
+      target.classList.remove("hidden");
       target.classList.add("print-target");
       window.print();
-      target.classList.remove("print-target");
+      setTimeout(() => {
+        target.classList.remove("print-target");
+        target.classList.add("hidden");
+      }, 500);
     }
 
     function printClassTimetableSlip() {
@@ -1683,17 +1760,25 @@ function print16ReliefCutSlipsA4() {
 
       document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
       const target = document.getElementById("printableClassArea");
+      target.classList.remove("hidden");
       target.classList.add("print-target");
       window.print();
-      target.classList.remove("print-target");
+      setTimeout(() => {
+        target.classList.remove("print-target");
+        target.classList.add("hidden");
+      }, 500);
     }
 
     function printTeacherSlipFromAdmin() {
       document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
       const target = document.getElementById("printableTeacherArea");
+      target.classList.remove("hidden");
       target.classList.add("print-target");
       window.print();
-      target.classList.remove("print-target");
+      setTimeout(() => {
+        target.classList.remove("print-target");
+        target.classList.add("hidden");
+      }, 500);
     }
 
     function renderIndividualTeacherSchedule() {
@@ -1767,7 +1852,7 @@ function print16ReliefCutSlipsA4() {
     }
 
     // =========================================================================
-    // 7. CLASS & GRADE TIMETABLE CONTROLLER
+    // 8. CLASS & GRADE TIMETABLE CONTROLLER
     // =========================================================================
     function populateClassSelects() {
       const sel = document.getElementById("activeClassSelect");
@@ -2166,7 +2251,7 @@ function print16ReliefCutSlipsA4() {
     function deleteClassSlotModalData() { if (!currentModalEditingSlot) return; deleteSingleSlotDirect(currentModalEditingSlot.classId, currentModalEditingSlot.day, currentModalEditingSlot.period); closeClassSlotModal(); }
 
     // =========================================================================
-    // 8. CLASSES & TEACHERS MANAGEMENT
+    // 9. CLASSES & TEACHERS MANAGEMENT
     // =========================================================================
     function handleSaveClass(e) {
       if (e) e.preventDefault();
@@ -2422,7 +2507,7 @@ function print16ReliefCutSlipsA4() {
     }
 
     // =========================================================================
-    // 9. CURRICULUM MANAGEMENT
+    // 10. CURRICULUM MANAGEMENT
     // =========================================================================
     function populateCurriculumGradesDropdown() {
       const sel = document.getElementById("curriculumGradeSelect");
@@ -2504,7 +2589,7 @@ function print16ReliefCutSlipsA4() {
     }
 
     function cancelCurriculumEdit() {
-      document.getElementById("editCurriculumEditId").value = "";
+      document.getElementById("curriculumEditId").value = "";
       document.getElementById("curriculumSubjectName").value = "";
       document.getElementById("curriculumMaxPeriods").value = 5;
       document.getElementById("curriculumSubmitBtn").innerHTML = '<i class="fa-solid fa-plus"></i> විෂය එක් කරන්න';
@@ -2583,7 +2668,7 @@ function print16ReliefCutSlipsA4() {
     }
 
     // =========================================================================
-    // 10. BOOTLOADER
+    // 11. BOOTLOADER
     // =========================================================================
     window.addEventListener("DOMContentLoaded", () => {
       loadAllFromStorage();
@@ -2601,9 +2686,16 @@ function print16ReliefCutSlipsA4() {
 
       switchTab('reliefTab');
 
-      // Initialize Firebase Cloud sync
       initFirebaseCloud();
     });
   </script>
+
+
+
+
+/////////////////////////////////////////////
+  
+ 
+ 
 </body>
 </html>
