@@ -1400,51 +1400,63 @@
     // =========================================================================
     // 6. PRINTS & PDF EXPORT
     // =========================================================================
-    function print16ReliefCutSlipsA4() {
-      const assignedReliefs = generatedReliefResults.filter(r => r.assignedId !== null);
-      if (assignedReliefs.length === 0) {
-        alert("මුද්‍රණය කිරීමට සහන කාලච්ඡේද නොමැත. කරුණාකර පළමුව 'සහන කාලසටහන සකසන්න' ඔබන්න.");
-        return;
-      }
-      const byTeacher = {};
-      assignedReliefs.forEach(r => {
-        if (!byTeacher[r.assignedId]) byTeacher[r.assignedId] = { teacherName: r.assignedName, items: [] };
-        byTeacher[r.assignedId].items.push(r);
-      });
+function print16ReliefCutSlipsA4() {
+  const assignedReliefs = generatedReliefResults.filter(r => r.assignedId !== null);
+  if (assignedReliefs.length === 0) {
+    alert("මුද්‍රණය කිරීමට සහන කාලච්ඡේද නොමැත. කරුණාකර පළමුව 'සහන කාලසටහන සකසන්න' ඔබන්න.");
+    return;
+  }
+  
+  const byTeacher = {};
+  assignedReliefs.forEach(r => {
+    if (!byTeacher[r.assignedId]) byTeacher[r.assignedId] = { teacherName: r.assignedName, items: [] };
+    byTeacher[r.assignedId].items.push(r);
+  });
 
-      const container = document.getElementById("slips16UpContainer");
-      container.innerHTML = "";
+  const container = document.getElementById("slips16UpContainer");
+  container.innerHTML = "";
 
-      Object.keys(byTeacher).forEach(tId => {
-        const teacherData = byTeacher[tId];
-        let periodsListHtml = "";
-        teacherData.items.forEach(item => {
-          periodsListHtml += `<div style="font-size: 7.5pt; line-height: 1.25; margin-top: 1px; color: #0f172a;">• <b>Period ${item.period}</b>: <b>${item.classId}</b> - ${item.subject}</div>`;
-        });
-        const slip = document.createElement("div");
-        slip.className = "relief-cut-slip-16";
-        slip.innerHTML = `
-          <div>
-            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #475569; padding-bottom: 1px; font-weight: bold; font-size: 7.5pt;">
-              <span>පාසල් සහන පත්‍රිකාව (Relief Slip)</span>
-              <span>${DAY_LABELS[activeDay]}</span>
-            </div>
-            <div style="margin-top: 2px; font-size: 8pt;">ගුරු භවතා: <b style="font-size: 8.5pt; color: #1e1b4b;">${teacherData.teacherName}</b></div>
-            <div style="margin-top: 2px; border-top: 0.5px solid #cbd5e1; padding-top: 2px;">${periodsListHtml}</div>
-          </div>
-          <div style="display: flex; justify-content: space-between; font-size: 6.5pt; border-top: 1px dashed #94a3b8; padding-top: 1px; color: #475569;">
-            <span>නියමිත වේලාවට පන්තියට යන්න</span><span>අත්සන: ....................</span>
-          </div>
-        `;
-        container.appendChild(slip);
-      });
+  Object.keys(byTeacher).forEach(tId => {
+    const teacherData = byTeacher[tId];
+    let periodsListHtml = "";
+    teacherData.items.forEach(item => {
+      periodsListHtml += `<div style="font-size: 7.5pt; line-height: 1.25; margin-top: 1px; color: #0f172a;">• <b>Period ${item.period}</b>: <b>${item.classId}</b> - ${item.subject}</div>`;
+    });
+    const slip = document.createElement("div");
+    slip.className = "relief-cut-slip-16";
+    slip.innerHTML = `
+      <div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #475569; padding-bottom: 1px; font-weight: bold; font-size: 7.5pt;">
+          <span>පාසල් සහන පත්‍රිකාව (Relief Slip)</span>
+          <span>${DAY_LABELS[activeDay]}</span>
+        </div>
+        <div style="margin-top: 2px; font-size: 8pt;">ගුරු භවතා: <b style="font-size: 8.5pt; color: #1e1b4b;">${teacherData.teacherName}</b></div>
+        <div style="margin-top: 2px; border-top: 0.5px solid #cbd5e1; padding-top: 2px;">${periodsListHtml}</div>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 6.5pt; border-top: 1px dashed #94a3b8; padding-top: 1px; color: #475569;">
+        <span>නියමිත වේලාවට පන්තියට යන්න</span><span>අත්සන: ....................</span>
+      </div>
+    `;
+    container.appendChild(slip);
+  });
 
-      document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
-      const target = document.getElementById("printable16SlipsArea");
-      target.classList.add("print-target");
-      window.print();
-      target.classList.remove("print-target");
-    }
+  // අඩුවී තිබූ ප්‍රධාන කොටස:
+  document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
+  const target = document.getElementById("printable16SlipsArea");
+  target.classList.add("print-target");
+  
+  window.print();
+  
+  target.classList.remove("print-target");
+}
+    
+
+     // document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
+     // const target = document.getElementById("printable16SlipsArea");
+    //  target.classList.add("print-target");
+    //  window.print();
+     // target.classList.remove("print-target");
+    //}
 
     function downloadReliefPDFForStaffGroup() {
       if (generatedReliefResults.length === 0) {
