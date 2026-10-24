@@ -363,29 +363,40 @@
             <option value="All">සියලුම ශ්‍රේණි (All)</option>
           </select>
         </div>
-        <form id="curriculumForm" onsubmit="handleSaveCurriculumSubject(event)" class="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-3 my-4">
+
+<form id="curriculumForm" onsubmit="handleSaveCurriculumSubject(event)" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 my-4">
           <input type="hidden" id="curriculumEditId" value="">
           <div>
-            <label class="text-xs font-bold text-slate-600 block mb-1">ශ්‍රේණිය:</label>
-            <select id="curriculumGradeSelect" class="w-full p-2 border rounded-lg text-xs bg-white font-semibold"></select>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs font-bold text-slate-700">අදාළ ශ්‍රේණි තෝරන්න (එක් විෂයක් ශ්‍රේණි කිහිපයකට එකවර දැමිය හැක):</label>
+              <label class="text-[11px] font-bold text-indigo-700 cursor-pointer flex items-center gap-1 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                <input type="checkbox" id="curriculumSelectAllGrades" onchange="toggleSelectAllCurriculumGrades(this)" class="w-3.5 h-3.5 text-indigo-600 rounded">
+                <span>සියලුම ශ්‍රේණි (Select All)</span>
+              </label>
+            </div>
+            <div id="curriculumGradesCheckboxContainer" class="flex flex-wrap gap-2 p-2.5 bg-white border border-slate-200 rounded-lg"></div>
           </div>
-          <div>
-            <label class="text-xs font-bold text-slate-600 block mb-1">විෂයයේ නම:</label>
-            <input type="text" id="curriculumSubjectName" placeholder="උදා: Music, Science" required class="w-full p-2 border rounded-lg text-xs bg-white">
-          </div>
-          <div>
-            <label class="text-xs font-bold text-slate-600 block mb-1">සතියකට උපරිම කාලච්ඡේද:</label>
-            <input type="number" id="curriculumMaxPeriods" min="1" max="15" value="5" required class="w-full p-2 border rounded-lg text-xs bg-white">
-          </div>
-          <div class="flex items-end gap-2">
-            <button type="submit" id="curriculumSubmitBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-3 rounded-lg shadow transition">
-              <i class="fa-solid fa-plus"></i> විෂය එක් කරන්න
-            </button>
-            <button type="button" id="curriculumCancelEditBtn" onclick="cancelCurriculumEdit()" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs py-2 px-3 rounded-lg transition">
-              අවලංගු
-            </button>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+            <div>
+              <label class="text-xs font-bold text-slate-600 block mb-1">විෂයයේ නම:</label>
+              <input type="text" id="curriculumSubjectName" placeholder="උදා: English, Science" required class="w-full p-2 border rounded-lg text-xs bg-white">
+            </div>
+            <div>
+              <label class="text-xs font-bold text-slate-600 block mb-1">සතියකට උපරිම කාලච්ඡේද (ශ්‍රේණියකට):</label>
+              <input type="number" id="curriculumMaxPeriods" min="1" max="15" value="5" required class="w-full p-2 border rounded-lg text-xs bg-white">
+            </div>
+            <div class="flex gap-2">
+              <button type="submit" id="curriculumSubmitBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-3 rounded-lg shadow transition">
+                <i class="fa-solid fa-plus"></i> විෂය එක් කරන්න
+              </button>
+              <button type="button" id="curriculumCancelEditBtn" onclick="cancelCurriculumEdit()" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs py-2 px-3 rounded-lg transition">
+                අවලංගු
+              </button>
+            </div>
           </div>
         </form>
+
+        
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse text-xs">
             <thead class="bg-slate-100 text-slate-700 font-bold border-b">
@@ -1669,8 +1680,7 @@ function resetSystemData() {
     // =========================================================================
     // 7. PRINT & PDF DISPATCHERS (16 SLIPS A4 FIXED)
     // =========================================================================
-    
-///////////////////////////////////////////////
+
     // =========================================================================
     // 7. PRINT & PDF DISPATCHERS (SAFE AUTO-CONTAINER)
     // =========================================================================
@@ -1785,7 +1795,7 @@ function resetSystemData() {
     }
 
 
-    ////////////////////////////////////////////
+    
     
     function build16SlipsDOM(assignedReliefs) {
       const byTeacher = {};
@@ -2859,20 +2869,133 @@ function resetSystemData() {
     // =========================================================================
     // 10. CURRICULUM MANAGEMENT
     // =========================================================================
-    function populateCurriculumGradesDropdown() {
-      const sel = document.getElementById("curriculumGradeSelect");
-      const filterSel = document.getElementById("curriculumFilterGradeSelect");
-      if (!sel || !filterSel) return;
-      const curFilterVal = filterSel.value;
-      sel.innerHTML = "";
-      filterSel.innerHTML = '<option value="All">සියලුම ශ්‍රේණි (All)</option>';
-      gradeSettings.filter(g => g.enabled).forEach(g => {
-        sel.innerHTML += `<option value="${g.grade}">Grade ${g.grade} (${g.group})</option>`;
-        filterSel.innerHTML += `<option value="${g.grade}">Grade ${g.grade}</option>`;
+
+
+function toggleSelectAllCurriculumGrades(masterChk) {
+      document.querySelectorAll(".curriculum-grade-chk").forEach(chk => {
+        chk.checked = masterChk.checked;
       });
-      if (curFilterVal) filterSel.value = curFilterVal;
     }
 
+    function populateCurriculumGradesDropdown() {
+      const filterSel = document.getElementById("curriculumFilterGradeSelect");
+      if (filterSel) {
+        const curFilterVal = filterSel.value;
+        filterSel.innerHTML = '<option value="All">සියලුම ශ්‍රේණි (All)</option>';
+        gradeSettings.filter(g => g.enabled).forEach(g => {
+          filterSel.innerHTML += `<option value="${g.grade}">Grade ${g.grade}</option>`;
+        });
+        if (curFilterVal) filterSel.value = curFilterVal;
+      }
+
+      const container = document.getElementById("curriculumGradesCheckboxContainer");
+      if (container) {
+        container.innerHTML = "";
+        gradeSettings.filter(g => g.enabled).forEach(g => {
+          container.innerHTML += `
+            <label class="flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer bg-slate-50 hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg border border-slate-200 transition">
+              <input type="checkbox" value="${g.grade}" class="curriculum-grade-chk w-4 h-4 text-indigo-600 rounded">
+              <span>Grade ${g.grade}</span>
+            </label>
+          `;
+        });
+      }
+    }
+
+    function handleSaveCurriculumSubject(e) {
+      e.preventDefault();
+      const editId = document.getElementById("curriculumEditId").value;
+      const subject = document.getElementById("curriculumSubjectName").value.trim();
+      const maxWeekly = parseInt(document.getElementById("curriculumMaxPeriods").value);
+
+      const checkedGrades = Array.from(document.querySelectorAll(".curriculum-grade-chk:checked")).map(c => parseInt(c.value));
+      if (checkedGrades.length === 0) {
+        alert("කරුණාකර අවම වශයෙන් එක් ශ්‍රේණියක්වත් තෝරන්න.");
+        return;
+      }
+
+      if (editId) {
+        // Edit mode - updates the specific subject record
+        const existing = curriculumSubjects.find(cs => cs.id === editId);
+        if (existing) {
+          const selectedGrade = checkedGrades[0];
+          const isDuplicate = curriculumSubjects.some(cs => cs.id !== editId && cs.grade === selectedGrade && cs.subject.trim().toLowerCase() === subject.toLowerCase());
+          if (isDuplicate) {
+            alert(`Grade ${selectedGrade} සඳහා '${subject}' විෂය දැනටමත් පවතී.`);
+            return;
+          }
+          existing.grade = selectedGrade;
+          existing.subject = subject;
+          existing.maxWeekly = maxWeekly;
+        }
+        cancelCurriculumEdit();
+      } else {
+        // Add mode - adds the subject to ALL checked grades simultaneously
+        let addedCount = 0;
+        let skippedGrades = [];
+
+        checkedGrades.forEach(grade => {
+          const alreadyExists = curriculumSubjects.some(cs => cs.grade === grade && cs.subject.trim().toLowerCase() === subject.toLowerCase());
+          if (!alreadyExists) {
+            curriculumSubjects.push({
+              id: "CS" + Date.now().toString().slice(-4) + Math.floor(Math.random() * 1000),
+              grade: grade,
+              subject: subject,
+              maxWeekly: maxWeekly
+            });
+            addedCount++;
+          } else {
+            skippedGrades.push("Grade " + grade);
+          }
+        });
+
+        document.getElementById("curriculumSubjectName").value = "";
+        document.querySelectorAll(".curriculum-grade-chk").forEach(c => c.checked = false);
+        const selectAll = document.getElementById("curriculumSelectAllGrades");
+        if (selectAll) selectAll.checked = false;
+
+        if (skippedGrades.length > 0) {
+          alert(`විෂය එක් කරන ලදි. (${skippedGrades.join(', ')} තුළ මෙම විෂය දැනටමත් තිබූ බැවින් මඟහරින ලදි).`);
+        }
+      }
+
+      saveAllToStorage();
+      renderCurriculumTable();
+      onTeacherSectionCheckboxesChange();
+      renderGradeMasterGrid();
+    }
+
+    function editCurriculumSubject(id) {
+      const cs = curriculumSubjects.find(c => c.id === id);
+      if (!cs) return;
+      document.getElementById("curriculumEditId").value = cs.id;
+      document.getElementById("curriculumSubjectName").value = cs.subject;
+      document.getElementById("curriculumMaxPeriods").value = cs.maxWeekly;
+
+      // Uncheck all and check only this record's grade
+      document.querySelectorAll(".curriculum-grade-chk").forEach(chk => {
+        chk.checked = (parseInt(chk.value) === cs.grade);
+      });
+      const selectAll = document.getElementById("curriculumSelectAllGrades");
+      if (selectAll) selectAll.checked = false;
+
+      document.getElementById("curriculumSubmitBtn").innerHTML = '<i class="fa-solid fa-check"></i> යාවත්කාලීන කරන්න';
+      document.getElementById("curriculumCancelEditBtn").classList.remove("hidden");
+    }
+
+    function cancelCurriculumEdit() {
+      document.getElementById("curriculumEditId").value = "";
+      document.getElementById("curriculumSubjectName").value = "";
+      document.getElementById("curriculumMaxPeriods").value = 5;
+      document.querySelectorAll(".curriculum-grade-chk").forEach(chk => chk.checked = false);
+      const selectAll = document.getElementById("curriculumSelectAllGrades");
+      if (selectAll) selectAll.checked = false;
+
+      document.getElementById("curriculumSubmitBtn").innerHTML = '<i class="fa-solid fa-plus"></i> විෂය එක් කරන්න';
+      document.getElementById("curriculumCancelEditBtn").classList.add("hidden");
+    }
+
+    //
     function renderCurriculumTable() {
       populateCurriculumGradesDropdown();
       const filterGrade = document.getElementById("curriculumFilterGradeSelect").value;
@@ -2896,56 +3019,11 @@ function resetSystemData() {
       });
     }
 
-    function handleSaveCurriculumSubject(e) {
-      e.preventDefault();
-      const editId = document.getElementById("curriculumEditId").value;
-      const grade = parseInt(document.getElementById("curriculumGradeSelect").value);
-      const subject = document.getElementById("curriculumSubjectName").value.trim();
-      const maxWeekly = parseInt(document.getElementById("curriculumMaxPeriods").value);
+   
 
-      if (curriculumSubjects.some(cs => cs.id !== editId && cs.grade === grade && cs.subject.trim().toLowerCase() === subject.toLowerCase())) {
-        alert("විෂය දැනටමත් ඇත.");
-        return;
-      }
+   
 
-      if (editId) {
-        const existing = curriculumSubjects.find(cs => cs.id === editId);
-        if (existing) {
-          existing.grade = grade;
-          existing.subject = subject;
-          existing.maxWeekly = maxWeekly;
-        }
-        cancelCurriculumEdit();
-      } else {
-        curriculumSubjects.push({ id: "CS" + Date.now().toString().slice(-4), grade, subject, maxWeekly });
-        document.getElementById("curriculumSubjectName").value = "";
-      }
-
-      saveAllToStorage();
-      renderCurriculumTable();
-      onTeacherSectionCheckboxesChange();
-      renderGradeMasterGrid();
-    }
-
-    function editCurriculumSubject(id) {
-      const cs = curriculumSubjects.find(c => c.id === id);
-      if (!cs) return;
-      document.getElementById("curriculumEditId").value = cs.id;
-      document.getElementById("curriculumGradeSelect").value = cs.grade;
-      document.getElementById("curriculumSubjectName").value = cs.subject;
-      document.getElementById("curriculumMaxPeriods").value = cs.maxWeekly;
-      document.getElementById("curriculumSubmitBtn").innerHTML = '<i class="fa-solid fa-check"></i> Update';
-      document.getElementById("curriculumCancelEditBtn").classList.remove("hidden");
-    }
-
-    function cancelCurriculumEdit() {
-      document.getElementById("curriculumEditId").value = "";
-      document.getElementById("curriculumSubjectName").value = "";
-      document.getElementById("curriculumMaxPeriods").value = 5;
-      document.getElementById("curriculumSubmitBtn").innerHTML = '<i class="fa-solid fa-plus"></i> විෂය එක් කරන්න';
-      document.getElementById("curriculumCancelEditBtn").classList.add("hidden");
-    }
-
+ 
     function handleDeleteCurriculum(id) {
       if (!confirm("මෙම විෂය ඉවත් කිරීමට අවශ්‍යද?")) return;
       curriculumSubjects = curriculumSubjects.filter(cs => cs.id !== id);
