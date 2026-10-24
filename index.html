@@ -2887,12 +2887,13 @@ function resetSystemData() {
     // =========================================================================
     // TEACHERS BULK UPLOAD & CSV TEMPLATE ENGINE
     // =========================================================================
+   // 1. Template එක බාගත කිරීම (Excel එකට Text ලෙස බලකිරීම සඳහා ="..." යොදා ඇත)
     function downloadTeacherCSVTemplate() {
-      // සිංහල අකුරු Excel වල කැඩී නොපෙනීම සඳහා UTF-8 BOM (\uFEFF) එක් කර ඇත
       const headers = "Name,Phone,Subject,Sections,AllowOver35,IsExempt";
-      const sampleRow1 = "කමල් පෙරේරා,0712345671,ICT,\"8-11\",No,No";
-      const sampleRow2 = "සුනිල් ශාන්ත,0712345672,Music,\"6-7,8-11\",No,No";
-      const sampleRow3 = "මාලිනී ෆොන්සේකා,0712345673,Science,All,Yes,No";
+      // ="..." යෙදීමෙන් Excel මඟින් දිනයක් බවට පත් කිරීම සහ 0 හැලීම වළක්වයි
+      const sampleRow1 = "කමල් පෙරේරා,=\"0712345671\",ICT,=\"8-11\",No,No";
+      const sampleRow2 = "සුනිල් ශාන්ත,=\"0712345672\",Music,=\"6-7, 8-11\",No,No";
+      const sampleRow3 = "මාලිනී ෆොන්සේකා,=\"0712345673\",Science,All,Yes,No";
       
       const csvContent = "\uFEFF" + [headers, sampleRow1, sampleRow2, sampleRow3].join("\n");
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -2904,6 +2905,179 @@ function resetSystemData() {
       document.body.removeChild(link);
     }
 
+    // 2. Excel මඟින් Date එකක් බවට හැරවූ අංශ නැවත නියමිත Section එකට හරවන Smart Normalizer
+    function sanitizeExcelSection(raw) {
+      if (!raw) return null;
+      let s = raw.trim().replace(/^[="'\s]+|[="'\s]+$/g, '').trim();
+
+      // කෙලින්ම නිවැරදිව තිබේ නම්
+      if (/^all$/i.test(s) || s === "සියල්ල") return "All";
+      if (/^(grade|sec|section)?\s*1[-_ ]5$/i.test(s) || s === "1 to 5") return "1-5";
+      if (/^(grade|sec|section)?\s*6[-_ ]7$/i.test(s) || s === "6 to 7") return "6-7";
+      if (/^(grade|sec|section)?\s*8[-_ ]11$/i.test(s) || s === "8 to 11") return "8-11";
+      if (/^(grade|sec|section)?\s*12[-_ ]13$/i.test(s) || s === "12 to 13") return "12-13";
+
+      // Excel මඟින් Date එකක් බවට හැරවූ අවස්ථා (Date Strings Recovery):
+      // 1-5 -> 1-May, 01-May, 5-Jan, 1/5, 5/1, 2026-05-01
+      if (/^(0?1[-/]0?5|0?5[-/]0?1|0?1[- ]?may|0?5[- ]?jan)/i.test(s) || /[-/]0?5[-/]0?1|[-/]0?1[-/]0?5/.test(s)) return "1-5";
+
+      // 6-7 -> 6-Jul, 06-Jul, 7-Jun, 07-Jun, 6/7, 7/6, 2026-07-06
+      if (/^(0?6[-/]0?7|0?7[-/]0?6|0?6[- ]?jul|0?7[- ]?jun)/i.test(s) || /[-/]0?7[-/]0?6|[-/]0?6[-/]0?7/.test(s)) return "6-7";
+
+      // 8-11 -> 8-Nov, 08-Nov, 11-Aug, 8/11, 11/8, 2026-11-08
+      if (/^(0?8[-/]11|11[-/]0?8|0?8[- ]?nov|11[- ]?aug)/i.test(s) || /[-/]11[-/]0?8|[-/]0?8[-/]11/.test(s)) return "8-11";
+
+      // 12-13 -> 12-Dec, 13-Dec
+      if (/^(12[-/]13|13[-/]12|12[- ]?dec|13[- ]?dec)/i.test(s) || /[-/]12[-/]13|[-/]13[-/]12/.test(s)) return "12-13";
+
+      return null;
+    }
+
+    // 3. Upload පාලනය සහ Data Validation
+    function handleTeacherCSVUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const content = e.target.result;
+          const lines = content.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+          
+          if (lines.length <= 1) {
+            alert("CSV ගොනුවේ ගුරු විස්තර කිසිවක් හමු නොවීය.");
+            return;
+          }
+
+          let maxId = 0;
+          teachers.forEach(t => {
+            const num = parseInt(String(t.id).replace(/\D/g, ''));
+            if (!isNaN(num) && num > maxId) maxId = num;
+          });
+
+          let validTeachersToAdd = [];
+          let errorReport = [];
+
+          for (let i = 1; i < lines.length; i++) {
+            const rowNumber = i + 1;
+            const cols = parseCSVLine(lines[i]);
+            
+            if (cols.length < 3) {
+              errorReport.push(`පේළිය ${rowNumber}: තීරු ප්‍රමාණය ප්‍රමාණවත් නොවේ.`);
+              continue;
+            }
+
+            const name = (cols[0] || "").replace(/^[="'\s]+|[="'\s]+$/g, '').trim();
+            let phone = (cols[1] || "").replace(/^[="'\s]+|[="'\s]+$/g, '').replace(/[\s\-]/g, '').trim();
+            const subject = (cols[2] || "").replace(/^[="'\s]+|[="'\s]+$/g, '').trim();
+            const sectionsRaw = (cols[3] || "All").trim();
+            const allowOver35Raw = (cols[4] || "No").trim();
+            const isExemptRaw = (cols[5] || "No").trim();
+
+            if (!name) {
+              errorReport.push(`පේළිය ${rowNumber}: ගුරු නම හිස්ව පවතී.`);
+              continue;
+            }
+            if (!subject) {
+              errorReport.push(`පේළිය ${rowNumber} (${name}): ප්‍රධාන විෂය හිස්ව පවතී.`);
+              continue;
+            }
+
+            // Duplicate Check
+            const isDuplicate = teachers.some(t => t.name.trim().toLowerCase() === name.toLowerCase()) ||
+                                validTeachersToAdd.some(t => t.name.trim().toLowerCase() === name.toLowerCase());
+            if (isDuplicate) {
+              errorReport.push(`පේළිය ${rowNumber} (${name}): මෙම නමින් ගුරුවරයෙකු දැනටමත් ලියාපදිංචි කර ඇත.`);
+              continue;
+            }
+
+            // Phone Number Auto-Correction (Excel එකෙන් 0 හැලී ඇත්නම් නැවත 0 එක් කිරීම)
+            if (phone) {
+              if (/^7\d{8}$/.test(phone)) {
+                phone = "0" + phone;
+              }
+              const isValidPhone = /^(07\d{8}|947\d{8})$/.test(phone);
+              if (!isValidPhone) {
+                errorReport.push(`පේළිය ${rowNumber} (${name}): දුරකථන අංකය වැරදියි ('${phone}').`);
+                continue;
+              }
+            }
+
+            // Section Smart Sanitization
+            let sections = [];
+            if (sectionsRaw.toLowerCase() === "all" || sectionsRaw === "සියල්ල") {
+              sections = ["All"];
+            } else {
+              const rawParts = sectionsRaw.split(/[,;|]/).map(s => s.trim()).filter(Boolean);
+              let hasInvalid = false;
+              let invalidVal = "";
+
+              for (let part of rawParts) {
+                const cleanSec = sanitizeExcelSection(part);
+                if (cleanSec) {
+                  if (!sections.includes(cleanSec)) sections.push(cleanSec);
+                } else {
+                  hasInvalid = true;
+                  invalidVal = part;
+                  break;
+                }
+              }
+
+              if (hasInvalid) {
+                errorReport.push(`පේළිය ${rowNumber} (${name}): නොගැලපෙන අංශයක් හමු විය ('${invalidVal}'). (වලංගු අංශ: 1-5, 6-7, 8-11, 12-13, All)`);
+                continue;
+              }
+              if (sections.length === 0) sections = ["All"];
+            }
+
+            const allowOver35 = ["yes", "true", "1", "ඔව්"].includes(allowOver35Raw.toLowerCase());
+            const isExempt = ["yes", "true", "1", "ඔව්"].includes(isExemptRaw.toLowerCase());
+
+            maxId++;
+            const teacherId = "T" + String(maxId).padStart(2, '0');
+
+            validTeachersToAdd.push({
+              id: teacherId,
+              name: name,
+              phone: phone,
+              subject: subject,
+              sections: sections,
+              leaveStatus: "present",
+              isExempt: isExempt,
+              allowOver35: allowOver35
+            });
+          }
+
+          if (errorReport.length > 0) {
+            const showCount = Math.min(errorReport.length, 6);
+            const errSummary = errorReport.slice(0, showCount).join("\n• ");
+            const moreCount = errorReport.length - showCount;
+            alert(`⚠️ පහත පේළිවල දෝෂ හමු වූ බැවින් ඒවා මඟහරින ලදි:\n\n• ${errSummary}${moreCount > 0 ? `\n...සහ තවත් දෝෂ ${moreCount} ක්` : ''}`);
+          }
+
+          if (validTeachersToAdd.length > 0) {
+            teachers.push(...validTeachersToAdd);
+            saveAllToStorage();
+            renderTeachersMasterList();
+            renderGradeToggles();
+            populateClassTeacherSelect();
+            renderReliefAttendance();
+            alert(`✅ සාර්ථකයි! ගුරුවරුන් ${validTeachersToAdd.length} දෙනෙකු පද්ධතියට එක් කරන ලදි.`);
+          } else {
+            alert("කිසිදු නිවැරදි ගුරු වාර්තාවක් ඇතුළත් කිරීමට නොහැකි විය.");
+          }
+        } catch (err) {
+          console.error("CSV Upload Error:", err);
+          alert("CSV ගොනුව කියවීමේදී දෝෂයක් හටගැනිණි.");
+        }
+      };
+
+      reader.readAsText(file, "UTF-8");
+    }
+
+
+
+    
     function triggerTeacherCSVUpload() {
       const input = document.getElementById("teacherCsvFileInput");
       if (input) {
