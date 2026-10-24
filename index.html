@@ -966,16 +966,38 @@
       } catch (err) { console.warn(err); }
       ensureDataIntegrity();
     }
+////////////////
+function resetSystemData() {
+      if (!confirm("සියලුම ගුරුවරුන්ගේ නිවාඩු තත්ත්වයන් ඉවත් කර 'පැමිණි' (Present) ලෙස සලකුණු කිරීමට අවශ්‍යද?")) return;
 
-    function resetSystemData() {
-      if (!confirm("පද්ධතියේ දත්ත සියල්ල Reset කර පෙරනිමි කාලසටහන නැවත පූරණය කිරීමට අවශ්‍යද?")) return;
-      localStorage.clear();
-      if (isFirebaseActive && firebaseDb) {
-        firebaseDb.ref("timetable_system").remove();
+      // 1. සියලුම ගුරුවරුන් Present ලෙස සකස් කිරීම
+      teachers.forEach(t => {
+        t.leaveStatus = "present";
+      });
+
+      // 2. සහන කාලසටහන (Relief list) හිස් කිරීම
+      generatedReliefResults = [];
+
+      // 3. වෙනස්කම් LocalStorage සහ Firebase වෙත Save කිරීම
+      saveAllToStorage();
+
+      // 4. තිරය (UI) අලුත් කිරීම
+      renderReliefAttendance();
+
+      const tbody = document.getElementById("reliefResultsTableBody");
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400">තවමත් Relief Generate කර නොමැත. ඉහත \'සහන කාලසටහන සකසන්න\' ඔබන්න.</td></tr>';
       }
-      location.reload();
-    }
 
+      const unassignedContainer = document.getElementById("unassignedReliefContainer");
+      if (unassignedContainer) {
+        unassignedContainer.classList.add("hidden");
+      }
+
+      alert("සියලුම ගුරුවරුන් සාර්ථකව 'පැමිණි' (Present) ලෙස සලකුණු කරන ලදි!");
+    }
+    
+/////////////////////////////////////
     function exportDataBackup() {
       const backupData = {
         grades: gradeSettings, classes: schoolClasses, curriculum: curriculumSubjects,
