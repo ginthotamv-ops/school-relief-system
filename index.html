@@ -465,6 +465,27 @@
     <div id="teachersTab" class="hidden space-y-6">
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
         <h2 class="text-lg font-bold text-slate-800 mb-1">ගුරුවරුන් ලියාපදිංචිය, අංශ සහ WhatsApp අංකය</h2>
+------
+        <!-- Bulk Upload & Template Actions -->
+        <div class="my-3 p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span class="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+              <i class="fa-solid fa-file-excel text-emerald-600 text-sm"></i> ගුරුවරුන් එකවර ඇතුළත් කිරීම (Bulk Upload)
+            </span>
+            <p class="text-[11px] text-slate-500">පළමුව Template එක බාගත කර, එහි ගුරු විස්තර පුරවා CSV ගොනුව Upload කරන්න.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="downloadTeacherCSVTemplate()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-3 rounded-lg shadow transition flex items-center gap-1.5">
+              <i class="fa-solid fa-download"></i> 📥 Template එක බාගත කරන්න
+            </button>
+            <button type="button" onclick="triggerTeacherCSVUpload()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-3.5 rounded-lg shadow transition flex items-center gap-1.5">
+              <i class="fa-solid fa-file-csv"></i> 📤 CSV Upload කරන්න
+            </button>
+            <input type="file" id="teacherCsvFileInput" accept=".csv" onchange="handleTeacherCSVUpload(event)" class="hidden">
+          </div>
+        </div>
+        -----
+        
         <form id="teacherForm" onsubmit="handleSaveTeacher(event)" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4 mb-6">
           <input type="hidden" id="editTeacherId" value="">
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -531,7 +552,7 @@
   </main>
   
   
-  /////////////////////////////////////////////////
+
 
 <!-- ==================== PRINT CONTAINERS ==================== -->
   <div id="printableClassArea" class="hidden p-4 bg-white">
@@ -737,7 +758,7 @@
     </div>
   </div>
   
-/////////////////////////////////////////////////////
+ 
 
 <!-- SCRIPT COMPLETE ENGINE -->
   <script>
@@ -1677,9 +1698,6 @@ function resetSystemData() {
       window.open(waUrl, "_blank");
     }
 
-    // =========================================================================
-    // 7. PRINT & PDF DISPATCHERS (16 SLIPS A4 FIXED)
-    // =========================================================================
 
     // =========================================================================
     // 7. PRINT & PDF DISPATCHERS (SAFE AUTO-CONTAINER)
@@ -2867,6 +2885,149 @@ function resetSystemData() {
     }
 
     // =========================================================================
+    // TEACHERS BULK UPLOAD & CSV TEMPLATE ENGINE
+    // =========================================================================
+    function downloadTeacherCSVTemplate() {
+      // සිංහල අකුරු Excel වල කැඩී නොපෙනීම සඳහා UTF-8 BOM (\uFEFF) එක් කර ඇත
+      const headers = "Name,Phone,Subject,Sections,AllowOver35,IsExempt";
+      const sampleRow1 = "කමල් පෙරේරා,0712345671,ICT,\"8-11\",No,No";
+      const sampleRow2 = "සුනිල් ශාන්ත,0712345672,Music,\"6-7,8-11\",No,No";
+      const sampleRow3 = "මාලිනී ෆොන්සේකා,0712345673,Science,All,Yes,No";
+      
+      const csvContent = "\uFEFF" + [headers, sampleRow1, sampleRow2, sampleRow3].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute("download", "Teachers_Upload_Template.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function triggerTeacherCSVUpload() {
+      const input = document.getElementById("teacherCsvFileInput");
+      if (input) {
+        input.value = "";
+        input.click();
+      }
+    }
+
+    function parseCSVLine(textLine) {
+      const result = [];
+      let cur = '';
+      let inQuotes = false;
+      for (let i = 0; i < textLine.length; i++) {
+        const char = textLine[i];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          result.push(cur.trim());
+          cur = '';
+        } else {
+          cur += char;
+        }
+      }
+      result.push(cur.trim());
+      return result.map(v => v.replace(/^"|"$/g, '').trim());
+    }
+
+    function handleTeacherCSVUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const content = e.target.result;
+          const lines = content.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+          
+          if (lines.length <= 1) {
+            alert("CSV ගොනුවේ ගුරු විස්තර කිසිවක් හමු නොවීය.");
+            return;
+          }
+
+          // දැනට ඇති ඉහළම ගුරු ID අංකය හඳුනාගැනීම
+          let maxId = 0;
+          teachers.forEach(t => {
+            const num = parseInt(String(t.id).replace(/\D/g, ''));
+            if (!isNaN(num) && num > maxId) maxId = num;
+          });
+
+          let addedCount = 0;
+          let skippedCount = 0;
+
+          // Header පේළිය මඟහැර දත්ත පේළි කියවීම (Starting from index 1)
+          for (let i = 1; i < lines.length; i++) {
+            const cols = parseCSVLine(lines[i]);
+            if (cols.length < 3) continue;
+
+            const name = cols[0];
+            const phone = cols[1] || "";
+            const subject = cols[2];
+            const sectionsRaw = cols[3] || "All";
+            const allowOver35Raw = cols[4] || "No";
+            const isExemptRaw = cols[5] || "No";
+
+            if (!name || !subject) {
+              skippedCount++;
+              continue;
+            }
+
+            // එකම නම සහිත ගුරුවරයෙකු දැනටමත් සිටීදැයි පරීක්ෂාව
+            if (teachers.some(t => t.name.trim().toLowerCase() === name.trim().toLowerCase())) {
+              skippedCount++;
+              continue;
+            }
+
+            // අංශ (Sections) වෙන්කර හඳුනාගැනීම
+            let sections = [];
+            if (sectionsRaw.trim().toLowerCase() === "all" || sectionsRaw.trim() === "සියල්ල") {
+              sections = ["All"];
+            } else {
+              sections = sectionsRaw.split(/[,;|]/).map(s => s.trim()).filter(Boolean);
+              if (sections.length === 0) sections = ["All"];
+            }
+
+            const allowOver35 = ["yes", "true", "1", "ඔව්"].includes(allowOver35Raw.trim().toLowerCase());
+            const isExempt = ["yes", "true", "1", "ඔව්"].includes(isExemptRaw.trim().toLowerCase());
+
+            maxId++;
+            const teacherId = "T" + String(maxId).padStart(2, '0');
+
+            teachers.push({
+              id: teacherId,
+              name: name,
+              phone: phone,
+              subject: subject,
+              sections: sections,
+              leaveStatus: "present",
+              isExempt: isExempt,
+              allowOver35: allowOver35
+            });
+
+            addedCount++;
+          }
+
+          if (addedCount > 0) {
+            saveAllToStorage();
+            renderTeachersMasterList();
+            renderGradeToggles();
+            populateClassTeacherSelect();
+            renderReliefAttendance();
+            alert(`සාර්ථකයි! ගුරුවරුන් ${addedCount} දෙනෙකු පද්ධතියට එකතු කරන ලදි. ${skippedCount > 0 ? `(${skippedCount} ක් මඟහරින ලදි - දැනටමත් ලියාපදිංචි හෝ අසම්පූර්ණ)` : ''}`);
+          } else {
+            alert("අලුතින් එක් කිරීමට සුදුසු නව ගුරු වාර්තා කිසිවක් හමු නොවීය.");
+          }
+        } catch (err) {
+          console.error("CSV Upload Error:", err);
+          alert("CSV ගොනුව කියවීමේදී දෝෂයක් හටගැනිණි. කරුණාකර Template ගොනුව නිවැරදි ආකෘතියෙන් පවතීදැයි බලන්න.");
+        }
+      };
+
+      reader.readAsText(file, "UTF-8");
+    }
+
+    // =========================================================================
     // 10. CURRICULUM MANAGEMENT
     // =========================================================================
 
@@ -3118,10 +3279,6 @@ function toggleSelectAllCurriculumGrades(masterChk) {
     });
   </script>
 
-
-
-
-/////////////////////////////////////////////
   
  
  
