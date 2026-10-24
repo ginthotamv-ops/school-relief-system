@@ -2991,18 +2991,27 @@ function resetSystemData() {
               continue;
             }
 
-            // Phone Number Auto-Correction (Excel එකෙන් 0 හැලී ඇත්නම් නැවත 0 එක් කිරීම)
+            
+             // Phone Number Check (අංකයක් නැතත් / හිස් වුවත් ගැටලුවක් නොවන පරිදි)
             if (phone) {
-              if (/^7\d{8}$/.test(phone)) {
-                phone = "0" + phone;
-              }
-              const isValidPhone = /^(07\d{8}|947\d{8})$/.test(phone);
-              if (!isValidPhone) {
-                errorReport.push(`පේළිය ${rowNumber} (${name}): දුරකථන අංකය වැරදියි ('${phone}').`);
-                continue;
+              // '-', 'n/a', 'none', 'no' ආදී දේ තිබුණහොත් එය හිස් අගයක් බවට පත් කරයි
+              if (/^(n\/?a|none|no|-)$/i.test(phone)) {
+                phone = "";
+              } else {
+                // Excel මඟින් මුල බිංදුව හැලී 7XXXXXXXX ලෙස තිබුණහොත් 0 එක් කරයි
+                if (/^7\d{8}$/.test(phone)) {
+                  phone = "0" + phone;
+                }
+                // වැරදි ආකෘතියක අංකයක් තිබුණහොත් Upload එක නතර නොකර එය හිස් කර ඉදිරියට යයි
+                const isValidPhone = /^(07\d{8}|947\d{8})$/.test(phone);
+                if (!isValidPhone) {
+                  phone = ""; 
+                }
               }
             }
 
+
+            
             // Section Smart Sanitization
             let sections = [];
             if (sectionsRaw.toLowerCase() === "all" || sectionsRaw === "සියල්ල") {
