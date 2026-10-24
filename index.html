@@ -481,6 +481,9 @@
             <button type="button" onclick="triggerTeacherCSVUpload()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-3.5 rounded-lg shadow transition flex items-center gap-1.5">
               <i class="fa-solid fa-file-csv"></i> 📤 CSV Upload කරන්න
             </button>
+            <button type="button" onclick="exportTeachersToCSV()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2 px-3 rounded-lg shadow transition flex items-center gap-1.5">
+  <i class="fa-solid fa-file-export"></i> 📊 ගුරු ලැයිස්තුව Download (CSV)
+</button>
             <input type="file" id="teacherCsvFileInput" accept=".csv" onchange="handleTeacherCSVUpload(event)" class="hidden">
           </div>
         </div>
@@ -3084,7 +3087,51 @@ function resetSystemData() {
       reader.readAsText(file, "UTF-8");
     }
 
+// =========================================================================
+    // EXPORT ALL CURRENT TEACHERS TO CSV
+    // =========================================================================
+    function exportTeachersToCSV() {
+      if (!teachers || teachers.length === 0) {
+        alert("බාගත කිරීමට ගුරු විස්තර කිසිවක් පද්ධතියේ නොමැත.");
+        return;
+      }
 
+      // තීරු ශීර්ෂ (Headers)
+      const headers = ["Teacher ID", "Name", "WhatsApp Phone", "Main Subject", "Sections", "Weekly Workload", "Allow Over 35", "Relief Exempt"];
+      const rows = [];
+
+      teachers.forEach(t => {
+        const id = t.id || "";
+        const name = `"${(t.name || "").replace(/"/g, '""')}"`;
+        
+        // Excel මඟින් මුල බිංදුව හැලීම වැළැක්වීමට ="07XXXXXXXX" ලෙස සකසයි
+        const phone = t.phone ? `="${t.phone}"` : `"-"`;
+        const subject = `"${(t.subject || "").replace(/"/g, '""')}"`;
+        
+        // Excel මඟින් දිනයක් බවට පත් කිරීම වැළැක්වීමට ="8-11" ලෙස සකසයි
+        const sectionsStr = Array.isArray(t.sections) ? t.sections.join(", ") : (t.sections || "All");
+        const sections = `="${sectionsStr}"`;
+        
+        // සතිපතා කාලච්ඡේද ගණන
+        const load = typeof calculateTeacherWeeklyWorkload === "function" ? calculateTeacherWeeklyWorkload(t.id) : 0;
+        const allowOver35 = t.allowOver35 ? "Yes" : "No";
+        const isExempt = t.isExempt ? "Yes" : "No";
+
+        rows.push([id, name, phone, subject, sections, `${load} / 35`, allowOver35, isExempt].join(","));
+      });
+
+      // සිංහල යුනිකෝඩ් නිවැරදිව පෙන්වීමට UTF-8 BOM (\uFEFF)
+      const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const today = new Date().toISOString().slice(0, 10);
+      
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute("download", `Teachers_Master_List_${today}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
 
     
     function triggerTeacherCSVUpload() {
