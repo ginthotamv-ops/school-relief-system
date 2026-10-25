@@ -423,6 +423,29 @@
         </div>
         <div class="pt-4 border-t border-slate-200">
           <h3 class="text-sm font-bold text-slate-700 mb-3" id="classFormHeading">නව පන්තියක් ඇතුළත් කිරීම</h3>
+/////////
+          <!-- Classes Bulk Actions & Export Bar -->
+        <div class="my-4 p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span class="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+              <i class="fa-solid fa-file-excel text-emerald-600 text-sm"></i> පන්ති සහ ගුරුවරුන් Bulk Upload & Export
+            </span>
+            <p class="text-[11px] text-slate-500">පන්ති යාවත්කාලීන කිරීමට හෝ අලුතින් දැමීමට CSV ගොනුව Upload කරන්න (ගුරු නම දත්ත සමුදායේ තිබිය යුතුය).</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" onclick="exportClassesToCSV()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2 px-3 rounded-lg shadow transition flex items-center gap-1.5">
+              <i class="fa-solid fa-file-export"></i> 📊 දැනට ඇති පන්ති Download (CSV)
+            </button>
+            <button type="button" onclick="downloadClassCSVTemplate()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-3 rounded-lg shadow transition flex items-center gap-1.5">
+              <i class="fa-solid fa-download"></i> 📥 Template එක බාගත කරන්න
+            </button>
+            <button type="button" onclick="triggerClassCSVUpload()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-3.5 rounded-lg shadow transition flex items-center gap-1.5">
+              <i class="fa-solid fa-file-csv"></i> 📤 CSV Upload කරන්න
+            </button>
+            <input type="file" id="classCsvFileInput" accept=".csv" onchange="handleClassCSVUpload(event)" class="hidden">
+          </div>
+        </div>
+          ///////
           <form id="classForm" onsubmit="handleSaveClass(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end mb-4">
             <input type="hidden" id="editClassId" value="">
             <div>
@@ -2886,6 +2909,193 @@ function resetSystemData() {
       renderClassesList();
       renderReliefAttendance();
     }
+
+// =========================================================================
+    // CLASSES BULK UPLOAD, VALIDATION & EXPORT ENGINE
+    // =========================================================================
+
+    // 1. දැනට පද්ධතියේ ආදේශ කර ඇති පන්ති ලැයිස්තුව CSV ලෙස බාගත කිරීම
+    function exportClassesToCSV() {
+      if (!schoolClasses || schoolClasses.length === 0) {
+        alert("බාගත කිරීමට පන්ති කිසිවක් පද්ධතියේ නොමැත.");
+        return;
+      }
+
+      const headers = ["Grade", "Section", "Full Class Name", "Class Teacher Name", "Teacher ID", "Allow 2nd Class"];
+      const rows = [];
+
+      schoolClasses.forEach(c => {
+        const teacher = teachers.find(t => t.id === c.classTeacherId);
+        const grade = c.grade;
+        const parts = String(c.name).split("-");
+        const section = parts.length > 1 ? parts.slice(1).join("-") : c.name;
+        const teacherName = teacher ? `"${teacher.name.replace(/"/g, '""')}"` : `""`;
+        const teacherId = teacher ? teacher.id : "-";
+        const allowSecond = c.allowSecondClass ? "Yes" : "No";
+
+        rows.push([grade, `"${section}"`, `"${c.name}"`, teacherName, teacherId, allowSecond].join(","));
+      });
+
+      const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const today = new Date().toISOString().slice(0, 10);
+
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute("download", `Classes_Master_List_${today}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // 2. පන්ති ඇතුළත් කිරීමේ Template ගොනුව බාගත කිරීම
+    function downloadClassCSVTemplate() {
+      const headers = "Grade,Section,ClassTeacherName,AllowSecondClass";
+      const sampleRow1 = "10,A,\"කමල් පෙරේරා\",No";
+      const sampleRow2 = "10,B,\"නිමල් සිල්වා\",No";
+      const sampleRow3 = "6,A,\"මාලිනී ෆොන්සේකා\",No";
+
+      const csvContent = "\uFEFF" + [headers, sampleRow1, sampleRow2, sampleRow3].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute("download", "Classes_Upload_Template.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // 3. File Input Trigger
+    function triggerClassCSVUpload() {
+      const input = document.getElementById("classCsvFileInput");
+      if (input) {
+        input.value = "";
+        input.click();
+      }
+    }
+
+    // 4. CSV කියවීම, ගුරුවරුන් පරීක්ෂාව සහ පන්ති Update / Add කිරීම
+    function handleClassCSVUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const content = e.target.result;
+          const lines = content.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+
+          if (lines.length <= 1) {
+            alert("CSV ගොනුවේ පන්ති විස්තර කිසිවක් හමු නොවීය.");
+            return;
+          }
+
+          let addedCount = 0;
+          let updatedCount = 0;
+          let errorReport = [];
+
+          for (let i = 1; i < lines.length; i++) {
+            const rowNumber = i + 1;
+            const cols = parseCSVLine(lines[i]);
+
+            if (cols.length < 2) {
+              errorReport.push(`පේළිය ${rowNumber}: ශ්‍රේණිය සහ පන්තියේ අකුර/නම අනිවාර්ය වේ.`);
+              continue;
+            }
+
+            const gradeRaw = parseInt(cols[0].replace(/\D/g, ''));
+            const section = (cols[1] || "").replace(/^[="'\s]+|[="'\s]+$/g, '').trim();
+            const teacherNameRaw = (cols[2] || "").replace(/^[="'\s]+|[="'\s]+$/g, '').trim();
+            const allowSecondRaw = (cols[3] || "No").trim();
+
+            // ශ්‍රේණිය පරීක්ෂාව (1 සිට 13 දක්වා)
+            if (isNaN(gradeRaw) || gradeRaw < 1 || gradeRaw > 13) {
+              errorReport.push(`පේළිය ${rowNumber}: වලංගු නොවන ශ්‍රේණියකි ('${cols[0]}').`);
+              continue;
+            }
+
+            if (!section) {
+              errorReport.push(`පේළිය ${rowNumber}: පන්තියේ නම/අකුර හිස්ව පවතී.`);
+              continue;
+            }
+
+            const className = `${gradeRaw}-${section}`;
+            let assignedTeacherId = null;
+
+            // ගුරුවරයා දත්ත සමුදායේ සිටීදැයි පරීක්ෂා කිරීම (Strict Check)
+            if (teacherNameRaw && !/^(n\/?a|none|no|-)$/i.test(teacherNameRaw)) {
+              const matchedTeacher = teachers.find(t => t.name.trim().toLowerCase() === teacherNameRaw.toLowerCase());
+              
+              if (!matchedTeacher) {
+                // දත්ත සමුදායේ නැති නමක් නම් පන්තිය ඇතුළත් නොකර ප්‍රතික්ෂේප කරයි
+                errorReport.push(`පේළිය ${rowNumber} (${className}): '${teacherNameRaw}' නමින් ගුරුවරයෙකු දත්ත සමුදායේ නොමැත. පන්තිය ඇතුළත් නොකරන ලදි.`);
+                continue;
+              }
+
+              // එම ගුරුවරයා දැනටමත් වෙනත් පන්තියක පන්තිභාරව සිටීදැයි බැලීම
+              const alreadyAssigned = schoolClasses.filter(c => c.classTeacherId === matchedTeacher.id && c.name !== className);
+              const allowSecond = ["yes", "true", "1", "ඔව්"].includes(allowSecondRaw.toLowerCase());
+
+              if (alreadyAssigned.length >= 1 && !allowSecond && !alreadyAssigned.some(c => c.allowSecondClass)) {
+                errorReport.push(`පේළිය ${rowNumber} (${className}): '${matchedTeacher.name}' දැනටමත් '${alreadyAssigned[0].name}' පන්තිය භාරව සිටී (Allow 2nd Class 'Yes' ලෙස සකසන්න).`);
+                continue;
+              }
+
+              assignedTeacherId = matchedTeacher.id;
+            }
+
+            const allowSecondClass = ["yes", "true", "1", "ඔව්"].includes(allowSecondRaw.toLowerCase());
+
+            // පන්තිය දැනටමත් තිබේ නම් Update කරයි, නැතහොත් අලුතින් එක් කරයි
+            const existingClass = schoolClasses.find(c => c.name.toLowerCase() === className.toLowerCase() || c.id.toLowerCase() === className.toLowerCase());
+
+            if (existingClass) {
+              existingClass.grade = gradeRaw;
+              existingClass.name = className;
+              existingClass.classTeacherId = assignedTeacherId;
+              existingClass.allowSecondClass = allowSecondClass;
+              updatedCount++;
+            } else {
+              schoolClasses.push({
+                id: className,
+                grade: gradeRaw,
+                name: className,
+                classTeacherId: assignedTeacherId,
+                allowSecondClass: allowSecondClass
+              });
+              addedCount++;
+            }
+          }
+
+          // දෝෂ වාර්තාව පරිශීලකයාට පෙන්වීම
+          if (errorReport.length > 0) {
+            const showCount = Math.min(errorReport.length, 6);
+            const errSummary = errorReport.slice(0, showCount).join("\n• ");
+            const moreCount = errorReport.length - showCount;
+            alert(`⚠️ පහත පන්තිවල දෝෂ හමු වූ බැවින් ඒවා ප්‍රතික්ෂේප කර මඟහරින ලදි:\n\n• ${errSummary}${moreCount > 0 ? `\n...සහ තවත් දෝෂ ${moreCount} ක්` : ''}`);
+          }
+
+          if (addedCount > 0 || updatedCount > 0) {
+            saveAllToStorage();
+            renderClassesList();
+            populateClassSelects();
+            renderClassTimetableGrid();
+            alert(`✅ සාර්ථකයි!\n• අලුතින් එක් කළ පන්ති: ${addedCount}\n• යාවත්කාලීන කළ පන්ති: ${updatedCount}`);
+          } else if (errorReport.length === 0) {
+            alert("ගොනුවේ කිසිදු නව හෝ යාවත්කාලීන කිරීමට සුදුසු පන්ති දත්ත හමු නොවීය.");
+          }
+        } catch (err) {
+          console.error("Classes CSV Upload Error:", err);
+          alert("CSV ගොනුව කියවීමේදී දෝෂයක් හටගැනිණි.");
+        }
+      };
+
+      reader.readAsText(file, "UTF-8");
+    }
+
+
+    
 
     // =========================================================================
     // TEACHERS BULK UPLOAD & CSV TEMPLATE ENGINE
