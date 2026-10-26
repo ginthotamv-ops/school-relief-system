@@ -511,6 +511,9 @@
             <button type="button" onclick="openSchoolNoManagerModal()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-2 px-3 rounded-lg shadow transition flex items-center gap-1.5">
   <i class="fa-solid fa-list-ol"></i> 🔢 වාර්ෂික අංක වෙනස් කිරීම / Clear
 </button>
+            <button type="button" onclick="sortTeachersBySchoolNo()" class="bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs py-2 px-3 rounded-lg shadow transition flex items-center gap-1.5" title="ගුරුවරුන් අංකය අනුව පෙළගස්වන්න">
+  <i class="fa-solid fa-arrow-down-1-9"></i> අංකය අනුව Sort කරන්න
+</button>
             
             <input type="file" id="teacherCsvFileInput" accept=".csv" onchange="handleTeacherCSVUpload(event)" class="hidden">
           </div>
@@ -3699,7 +3702,38 @@ function handleTeacherCSVUpload(event) {
       reader.readAsText(file, "UTF-8");
     }
 
+// =========================================================================
+    // SORT TEACHERS BY SCHOOL NUMBER (EMPTY NUMBERS TO BOTTOM)
+    // =========================================================================
+    function sortTeachersBySchoolNo() {
+      if (!teachers || teachers.length === 0) {
+        alert("පෙළගැස්වීමට ගුරුවරුන් පද්ධතියේ නොමැත.");
+        return;
+      }
 
+      teachers.sort((a, b) => {
+        const noA = (a.schoolNo || "").trim();
+        const noB = (b.schoolNo || "").trim();
+
+        // 1. අංක නොමැති (හිස්) අය ලැයිස්තුවේ අවසානයට යැවීම
+        if (!noA && !noB) return 0;
+        if (!noA) return 1;
+        if (!noB) return -1;
+
+        // 2. ස්වභාවික සංඛ්‍යාත්මක පෙළගැස්ම (Natural numeric sort: 1, 2, 05, 10, 100...)
+        return noA.localeCompare(noB, undefined, { numeric: true, sensitivity: 'base' });
+      });
+
+      // වෙනස් වූ පිළිවෙළ LocalStorage සහ Firebase වෙත සුරැකීම
+      saveAllToStorage();
+      
+      // තිරයේ ලැයිස්තුව නැවත පෙන්වීම
+      renderTeachersMasterList();
+      populateClassTeacherSelect();
+      renderReliefAttendance();
+
+      alert("ගුරුවරුන් පාසල් අංකය අනුව සාර්ථකව පෙළගස්වන ලදි! (අංක රහිත අය ලැයිස්තුවේ අවසානයට යොමු කරන ලදි)");
+    }
     
     // =========================================================================
     // 10. CURRICULUM MANAGEMENT
