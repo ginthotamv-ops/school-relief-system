@@ -507,6 +507,11 @@
             <button type="button" onclick="exportTeachersToCSV()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2 px-3 rounded-lg shadow transition flex items-center gap-1.5">
   <i class="fa-solid fa-file-export"></i> 📊 ගුරු ලැයිස්තුව Download (CSV)
 </button>
+            
+            <button type="button" onclick="openSchoolNoManagerModal()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-2 px-3 rounded-lg shadow transition flex items-center gap-1.5">
+  <i class="fa-solid fa-list-ol"></i> 🔢 වාර්ෂික අංක වෙනස් කිරීම / Clear
+</button>
+            
             <input type="file" id="teacherCsvFileInput" accept=".csv" onchange="handleTeacherCSVUpload(event)" class="hidden">
           </div>
         </div>
@@ -788,7 +793,59 @@
     </div>
   </div>
   
- 
+
+<!-- Modal: Annual School Numbers Manager -->
+  <div id="schoolNoManagerModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-slate-200 max-h-[90vh] flex flex-col">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-list-ol text-amber-600"></i> වාර්ෂික ගුරු අංක එකවර වෙනස් කිරීම (Bulk Edit)
+        </h3>
+        <button type="button" onclick="closeSchoolNoManagerModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="my-3 p-3 bg-amber-50 rounded-xl border border-amber-200 flex flex-wrap items-center justify-between gap-2">
+        <span class="text-xs text-amber-900 font-semibold">
+          ගුරුවරුන්ගේ පාසල් අංක පහත කොටු තුළ වෙනස් කර එකවර සුරකින්න:
+        </span>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="autoAssignSchoolNumbers()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold py-1.5 px-2.5 rounded-lg transition shadow-sm">
+            ⚡ ස්වයංක්‍රීයව අංක යොදන්න (01, 02...)
+          </button>
+          <button type="button" onclick="clearAllSchoolNoInputs()" class="bg-red-100 hover:bg-red-200 text-red-700 text-[11px] font-bold py-1.5 px-2.5 rounded-lg transition border border-red-200">
+            🗑️ සියල්ල හිස් කරන්න
+          </button>
+        </div>
+      </div>
+
+      <!-- Teachers List Table -->
+      <div class="overflow-y-auto flex-grow my-2 border border-slate-200 rounded-xl">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead class="bg-slate-100 text-slate-700 font-bold sticky top-0 border-b">
+            <tr>
+              <th class="p-2.5 w-16 text-center">ID</th>
+              <th class="p-2.5">ගුරුවරයාගේ නම</th>
+              <th class="p-2.5">ප්‍රධාන විෂය</th>
+              <th class="p-2.5 w-40 text-center">පාසල් ගුරු අංකය (New)</th>
+            </tr>
+          </thead>
+          <tbody id="schoolNoManagerTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="pt-3 border-t border-slate-100 mt-2 flex justify-end gap-2">
+        <button type="button" onclick="saveAllSchoolNumbersBulk()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-xl text-xs transition shadow flex items-center gap-1.5">
+          <i class="fa-solid fa-check"></i> සියලු අංක සුරකින්න
+        </button>
+        <button type="button" onclick="closeSchoolNoManagerModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-4 rounded-xl text-xs transition">
+          අවලංගු
+        </button>
+      </div>
+    </div>
+  </div>
+  
 
 <!-- SCRIPT COMPLETE ENGINE -->
   <script>
@@ -3161,7 +3218,79 @@ function handleSaveTeacher(e) {
       reader.readAsText(file, "UTF-8");
     }
 
+// =========================================================================
+    // BULK ANNUAL SCHOOL NUMBERS MANAGER
+    // =========================================================================
 
+    function openSchoolNoManagerModal() {
+      const tbody = document.getElementById("schoolNoManagerTableBody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      if (!teachers || teachers.length === 0) {
+        alert("පද්ධතියේ ලියාපදිංචි ගුරුවරුන් නොමැත.");
+        return;
+      }
+
+      teachers.forEach((t, idx) => {
+        const currentVal = t.schoolNo || "";
+        tbody.innerHTML += `
+          <tr class="border-b hover:bg-slate-50 transition">
+            <td class="p-2.5 text-center font-bold text-slate-400">${t.id}</td>
+            <td class="p-2.5 font-bold text-slate-800">${t.name}</td>
+            <td class="p-2.5 text-slate-600">${t.subject}</td>
+            <td class="p-2 text-center">
+              <input type="text" data-teacher-id="${t.id}" value="${currentVal}" placeholder="අංකය" 
+                class="bulk-school-no-input w-28 p-1.5 border border-slate-300 rounded-lg text-xs font-black text-center text-indigo-950 focus:border-indigo-600 focus:bg-indigo-50/30 outline-none">
+            </td>
+          </tr>
+        `;
+      });
+
+      document.getElementById("schoolNoManagerModal").classList.remove("hidden");
+    }
+
+    function closeSchoolNoManagerModal() {
+      document.getElementById("schoolNoManagerModal").classList.add("hidden");
+    }
+
+    // සියලුම කොටු එකවර හිස් කිරීම
+    function clearAllSchoolNoInputs() {
+      if (!confirm("සියලුම ගුරුවරුන්ගේ අංක කොටු හිස් කිරීමට අවශ්‍ය බව තහවුරු කරන්න?")) return;
+      document.querySelectorAll(".bulk-school-no-input").forEach(input => {
+        input.value = "";
+      });
+    }
+
+    // 01, 02, 03... ලෙස ස්වයංක්‍රීයව අංක පිරවීම
+    function autoAssignSchoolNumbers() {
+      if (!confirm("ලැයිස්තුවේ පිළිවෙළට 01, 02, 03... ලෙස අංක ස්වයංක්‍රීයව පිරවීමට අවශ්‍යද?")) return;
+      const inputs = document.querySelectorAll(".bulk-school-no-input");
+      inputs.forEach((input, index) => {
+        input.value = String(index + 1).padStart(2, '0');
+      });
+    }
+
+    // වෙනස් කළ සියලුම අංක එකවර පද්ධතියට සහ Firebase වෙත සුරැකීම
+    function saveAllSchoolNumbersBulk() {
+      const inputs = document.querySelectorAll(".bulk-school-no-input");
+      let updatedCount = 0;
+
+      inputs.forEach(input => {
+        const tId = input.getAttribute("data-teacher-id");
+        const newVal = input.value.trim();
+        const teacher = teachers.find(t => t.id === tId);
+        if (teacher) {
+          teacher.schoolNo = newVal;
+          updatedCount++;
+        }
+      });
+
+      saveAllToStorage();
+      renderTeachersMasterList();
+      closeSchoolNoManagerModal();
+      alert(`සාර්ථකයි! ගුරුවරුන් ${updatedCount} දෙනෙකුගේ පාසල් අංක යාවත්කාලීන කරන ලදි.`);
+    }
     
 
     // =========================================================================
