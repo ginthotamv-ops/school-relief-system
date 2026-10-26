@@ -514,13 +514,17 @@
         
         <form id="teacherForm" onsubmit="handleSaveTeacher(event)" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4 mb-6">
           <input type="hidden" id="editTeacherId" value="">
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+              <label class="text-xs font-bold text-slate-700 block mb-1">පාසල් ගුරු අංකය (වාර්ෂික):</label>
+              <input type="text" id="newTeacherSchoolNo" placeholder="උදා: 05 හෝ 124" required class="w-full p-2 border rounded-lg text-xs bg-white font-bold text-indigo-900 border-indigo-200">
+            </div>
             <div>
               <label class="text-xs font-bold text-slate-600 block mb-1">ගුරු නම:</label>
               <input type="text" id="newTeacherName" placeholder="උදා: කමල් පෙරේරා" required class="w-full p-2 border rounded-lg text-xs bg-white">
             </div>
             <div>
-              <label class="text-xs font-bold text-slate-600 block mb-1">WhatsApp අංකය (උදා: 0712345678):</label>
+              <label class="text-xs font-bold text-slate-600 block mb-1">WhatsApp අංකය:</label>
               <input type="text" id="newTeacherPhone" placeholder="0712345678" class="w-full p-2 border rounded-lg text-xs bg-white">
             </div>
             <div>
@@ -2828,9 +2832,10 @@ function resetSystemData() {
       }
     }
 
-    function handleSaveTeacher(e) {
+function handleSaveTeacher(e) {
       if (e) e.preventDefault();
       const editId = document.getElementById("editTeacherId").value;
+      const schoolNo = document.getElementById("newTeacherSchoolNo").value.trim();
       const name = document.getElementById("newTeacherName").value.trim();
       const phone = document.getElementById("newTeacherPhone").value.trim();
       const subject = document.getElementById("newTeacherSubjectSelect").value;
@@ -2840,17 +2845,43 @@ function resetSystemData() {
       if (isAll) sections = ["All"];
       else document.querySelectorAll(".tch-sec-chk:checked").forEach(chk => { sections.push(chk.value); });
 
+      if (!schoolNo) { alert("කරුණාකර පාසල් ගුරු අංකය ඇතුළත් කරන්න."); return; }
       if (!name) { alert("කරුණාකර ගුරු නම ඇතුළත් කරන්න."); return; }
       if (sections.length === 0) { alert("අංශයක් තෝරන්න."); return; }
       if (!subject) { alert("ප්‍රධාන විෂය තෝරන්න."); return; }
 
+      // එකම පාසල් ගුරු අංකය වෙනත් ගුරුවරයෙකුට ලබා දී ඇත්දැයි පරීක්ෂාව
+      const duplicateSchoolNo = teachers.find(t => t.schoolNo && t.schoolNo.toLowerCase() === schoolNo.toLowerCase() && t.id !== editId);
+      if (duplicateSchoolNo) {
+        if (!confirm(`අවවාදයයි: '${schoolNo}' ගුරු අංකය දැනටමත් '${duplicateSchoolNo.name}' සඳහා ලබා දී ඇත. මෙම අංකයම සුරැකීමට අවශ්‍යද?`)) {
+          return;
+        }
+      }
+
       if (editId) {
         const t = teachers.find(x => x.id === editId);
-        if (t) { t.name = name; t.phone = phone; t.subject = subject; t.sections = sections; }
+        if (t) {
+          t.schoolNo = schoolNo;
+          t.name = name;
+          t.phone = phone;
+          t.subject = subject;
+          t.sections = sections;
+        }
         cancelTeacherEdit();
       } else {
         const id = "T" + String(teachers.length + 1).padStart(2, '0');
-        teachers.push({ id, name, phone, subject, sections, leaveStatus: "present", isExempt: false, allowOver35: false });
+        teachers.push({
+          id,
+          schoolNo,
+          name,
+          phone,
+          subject,
+          sections,
+          leaveStatus: "present",
+          isExempt: false,
+          allowOver35: false
+        });
+        document.getElementById("newTeacherSchoolNo").value = "";
         document.getElementById("newTeacherName").value = "";
         document.getElementById("newTeacherPhone").value = "";
       }
@@ -2867,6 +2898,7 @@ function resetSystemData() {
       const t = teachers.find(x => x.id === id);
       if (!t) return;
       document.getElementById("editTeacherId").value = t.id;
+      document.getElementById("newTeacherSchoolNo").value = t.schoolNo || "";
       document.getElementById("newTeacherName").value = t.name;
       document.getElementById("newTeacherPhone").value = t.phone || "";
 
@@ -2884,12 +2916,47 @@ function resetSystemData() {
 
     function cancelTeacherEdit() {
       document.getElementById("editTeacherId").value = "";
+      document.getElementById("newTeacherSchoolNo").value = "";
       document.getElementById("newTeacherName").value = "";
       document.getElementById("newTeacherPhone").value = "";
       document.getElementById("teacherSubmitBtn").innerHTML = '<i class="fa-solid fa-user-plus"></i> ගුරුවරයා එක් කරන්න';
       document.getElementById("teacherCancelEditBtn").classList.add("hidden");
     }
 
+    function renderTeachersMasterList() {
+      const tbody = document.getElementById("teachersMasterTableBody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      teachers.forEach(t => {
+        const load = calculateTeacherWeeklyWorkload(t.id);
+        const isCapped = load >= 35;
+        const sectionsBadges = (t.sections || []).map(s => `<span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 mr-1">${s}</span>`).join('');
+        
+        // පාසල් ගුරු අංකය විශේෂයෙන් පෙන්වීම
+        const displaySchoolNo = t.schoolNo ? `<span class="font-black text-indigo-900 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">${t.schoolNo}</span>` : `<span class="text-slate-400 italic">${t.id}</span>`;
+
+        tbody.innerHTML += `
+          <tr class="border-b hover:bg-slate-50">
+            <td class="p-2.5 text-center">${displaySchoolNo}</td>
+            <td class="p-2.5 font-bold text-slate-800">${t.name}</td>
+            <td class="p-2.5 text-slate-600 font-semibold">${t.phone || '-'}</td>
+            <td class="p-2.5">${t.subject}</td>
+            <td class="p-2.5">${sectionsBadges}</td>
+            <td class="p-2.5 font-black ${isCapped ? 'text-amber-600' : 'text-slate-800'}">${load} / 35</td>
+            <td class="p-2.5"><label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" ${t.allowOver35 ? 'checked' : ''} onchange="toggleOver35Allowance('${t.id}', this.checked)" class="w-4 h-4 text-indigo-600 rounded"><span class="text-[11px] font-semibold">Over 35 Allow</span></label></td>
+            <td class="p-2.5"><span class="px-2 py-0.5 text-[10px] font-semibold rounded-full border ${t.isExempt ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}">${t.isExempt ? 'Exempt' : 'Active'}</span></td>
+            <td class="p-2.5 text-center flex justify-center gap-2">
+              <button type="button" onclick="editTeacher('${t.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-[11px]">Edit</button>
+              <button type="button" onclick="handleDeleteTeacher('${t.id}')" class="text-red-600 hover:text-red-800 font-bold text-[11px]">මකන්න</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+
+
+    
     function toggleOver35Allowance(id, allowed) {
       const t = teachers.find(x => x.id === id);
       if (t) { t.allowOver35 = allowed; saveAllToStorage(); renderTeachersMasterList(); }
@@ -3101,14 +3168,12 @@ function resetSystemData() {
     // TEACHERS BULK UPLOAD & CSV TEMPLATE ENGINE
     // =========================================================================
    // 1. Template එක බාගත කිරීම (Excel එකට Text ලෙස බලකිරීම සඳහා ="..." යොදා ඇත)
-    function downloadTeacherCSVTemplate() {
-      const headers = "Name,Phone,Subject,Sections,AllowOver35,IsExempt";
-      // ="..." යෙදීමෙන් Excel මඟින් දිනයක් බවට පත් කිරීම සහ 0 හැලීම වළක්වයි
-      const sampleRow1 = "කමල් පෙරේරා,=\"0712345671\",ICT,=\"8-11\",No,No";
-      const sampleRow2 = "සුනිල් ශාන්ත,=\"0712345672\",Music,=\"6-7, 8-11\",No,No";
-      const sampleRow3 = "මාලිනී ෆොන්සේකා,=\"0712345673\",Science,All,Yes,No";
+function downloadTeacherCSVTemplate() {
+      const headers = "SchoolNo,Name,Phone,Subject,Sections,AllowOver35,IsExempt";
+      const sampleRow1 = "=\"01\",කමල් පෙරේරා,=\"0712345671\",ICT,=\"8-11\",No,No";
+      const sampleRow2 = "=\"02\",සුනිල් ශාන්ත,=\"0712345672\",Music,=\"6-7, 8-11\",No,No";
       
-      const csvContent = "\uFEFF" + [headers, sampleRow1, sampleRow2, sampleRow3].join("\n");
+      const csvContent = "\uFEFF" + [headers, sampleRow1, sampleRow2].join("\n");
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -3117,7 +3182,6 @@ function resetSystemData() {
       link.click();
       document.body.removeChild(link);
     }
-
     // 2. Excel මඟින් Date එකක් බවට හැරවූ අංශ නැවත නියමිත Section එකට හරවන Smart Normalizer
     function sanitizeExcelSection(raw) {
       if (!raw) return null;
