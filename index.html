@@ -3178,6 +3178,40 @@ function handleSaveTeacher(e) {
     }
 
 // =========================================================================
+    // TEACHER SECTION CHECKBOXES CONTROLLER
+    // =========================================================================
+    function onTeacherSectionCheckboxesChange(target) {
+      const allChk = document.querySelector(".tch-sec-chk-all") || document.getElementById("tchSecAll");
+      const sectionChks = document.querySelectorAll(".tch-sec-chk");
+
+      if (!target && window.event) {
+        target = window.event.target;
+      }
+
+      // "සියල්ල (All)" තේරූ විට අනෙකුත් සියලුම අංශ Uncheck කිරීම
+      if (target === allChk || (target && target.value === "All") || (target && target.classList && target.classList.contains("tch-sec-chk-all"))) {
+        if (allChk && allChk.checked) {
+          sectionChks.forEach(chk => { chk.checked = false; });
+        }
+      } else {
+        // විශේෂිත අංශයක් (1-5, 6-7, ආදී) තේරූ විට "All" යන්න Uncheck කිරීම
+        if (target && target.checked && allChk) {
+          allChk.checked = false;
+        }
+
+        // කිසිදු විශේෂිත අංශයක් තෝරා නැතිනම් ස්වයංක්‍රීයව "All" සක්‍රීය කිරීම
+        const anyChecked = Array.from(sectionChks).some(chk => chk.checked);
+        if (!anyChecked && allChk) {
+          allChk.checked = true;
+        }
+      }
+    }
+
+    // Global scope එකට සම්බන්ධ කිරීම (Inline HTML Event handlers සඳහා)
+    window.onTeacherSectionCheckboxesChange = onTeacherSectionCheckboxesChange;
+    
+
+// =========================================================================
     // CLASSES BULK UPLOAD, VALIDATION & EXPORT ENGINE
     // =========================================================================
 
