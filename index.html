@@ -4264,8 +4264,47 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       populateSubjectTeacherDropdown();
     }
 
+// ගුරුවරයෙකු සක්‍රිය/අක්‍රිය (Active/Inactive) කිරීමේ ශ්‍රිතය
+    function toggleTeacherActiveStatus(teacherId) {
+      const t = teachers.find(tch => String(tch.id) === String(teacherId));
+      if (!t) return;
+
+      // Active තත්ත්වය මාරු කිරීම
+      t.isActive = t.isActive === false ? true : false;
+
+      // ගුරුවරයා අක්‍රිය කළහොත් (Inactive)
+      if (!t.isActive) {
+        // 1. විෂය නිර්දේශයේ (Curriculum) සියලු විෂයන්ගෙන් ඉවත් කිරීම
+        if (curriculumSubjects && Array.isArray(curriculumSubjects)) {
+          curriculumSubjects.forEach(cs => {
+            if (cs.teacherIds) {
+              cs.teacherIds = getNormalizedTeacherIds(cs.teacherIds).filter(id => String(id) !== String(teacherId));
+            }
+          });
+        }
+
+        // 2. මුළු පාසල් කාලසටහනෙන්ම (masterSchedule) ගුරුවරයාව ඉවත් කිරීම
+        if (masterSchedule && Array.isArray(masterSchedule)) {
+          masterSchedule.forEach(slot => {
+            if (!slot.isBasket && String(slot.teacherId) === String(teacherId)) {
+              slot.teacherId = null;
+            }
+            if (slot.isBasket && Array.isArray(slot.basketItems)) {
+              slot.basketItems.forEach(b => {
+                if (String(b.teacherId) === String(teacherId)) b.teacherId = null;
+              });
+            }
+          });
+        }
+      }
+
+      saveAllToStorage();
+      refreshAllUI();
+      alert(`ගුරුවරයා ${t.isActive ? "සක්‍රිය" : "අක්‍රිය"} කරන ලදි. ${!t.isActive ? "කාලසටහනෙන් සහ විෂයයන්ගෙන් ස්වයංක්‍රීයව ඉවත් විය." : ""}`);
+    }
+    
     // 11. තෝරාගත් ගුරුවරුන් සුරැකීම සහ Cloud සමමුහුර්ත කිරීම
-    function saveSubjectTeachersAssignment() {
+   function saveSubjectTeachersAssignment() {
       if (!window.currentSubjectCurriculumId) return;
       const cs = curriculumSubjects.find(c => String(c.id) === String(window.currentSubjectCurriculumId));
       if (!cs) {
@@ -4273,14 +4312,67 @@ function toggleSelectAllCurriculumGrades(masterChk) {
         return;
       }
 
-      cs.teacherIds = [...window.tempAssignedTeacherIds];
+      // කලින් සිටි ගුරුවරුන් සහ අලුතින් තෝරාගත් ගුරුවරුන්
+      const previousTeacherIds = getNormalizedTeacherIds(cs.teacherIds);
+      const newTeacherIds = [...window.tempAssignedTeacherIds];
+      cs.teacherIds = newTeacherIds;
 
+      // මෙම විෂයෙන් අක්‍රිය කළ / ඉවත් කළ ගුරුවරුන් හඳුනාගැනීම
+      const removedTeacherIds = previousTeacherIds.filter(tId => !newTeacherIds.includes(tId));
+
+      let unassignedSlotsCount = 0;
+
+      // 1. අක්‍රිය කළ ගුරුවරුන්ව කාලසටහනෙන් (masterSchedule) ස්වයංක්‍රීයව ඉවත් කිරීම
+      if (removedTeacherIds.length > 0 && typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) {
+        const gradeClasses = (typeof schoolClasses !== "undefined" && Array.isArray(schoolClasses))
+          ? schoolClasses.filter(c => Number(c.grade) === Number(cs.grade)).map(c => c.id)
+          : [];
+
+        const targetSub = String(cs.subject || "").trim().toLowerCase();
+
+        masterSchedule.forEach(slot => {
+          // අදාළ ශ්‍රේණියේ පන්ති සඳහා පමණක් පරීක්ෂා කිරීම
+          if (gradeClasses.includes(slot.classId)) {
+            // සාමාන්‍ය කාලච්ඡේද (Regular Periods)
+            if (!slot.isBasket && slot.subject && String(slot.subject).trim().toLowerCase() === targetSub) {
+              if (slot.teacherId && removedTeacherIds.includes(slot.teacherId)) {
+                slot.teacherId = null; // කාලසටහනෙන් ගුරුවරයා ස්වයංක්‍රීයව ඉවත් කෙරේ
+                unassignedSlotsCount++;
+              }
+            }
+            // කාණ්ඩ විෂය කාලච්ඡේද (Basket Periods)
+            if (slot.isBasket && Array.isArray(slot.basketItems)) {
+              slot.basketItems.forEach(b => {
+                if (b.subject && String(b.subject).trim().toLowerCase() === targetSub) {
+                  if (b.teacherId && removedTeacherIds.includes(b.teacherId)) {
+                    b.teacherId = null;
+                    unassignedSlotsCount++;
+                  }
+                }
+              });
+            }
+          }
+        });
+      }
+
+      // 2. දත්ත Firebase සහ LocalStorage වෙත සුරැකීම
       saveAllToStorage();
-      renderCurriculumTable();
-      closeSubjectTeachersModal();
-      alert(`සාර්ථකයි! '${cs.subject}' විෂය සඳහා ගුරුවරුන් ${cs.teacherIds.length} දෙනෙකු සුරකින ලදි.`);
-    }
 
+      // 3. අදාළ සියලු UI වගු යාවත්කාලීන කිරීම
+      renderCurriculumTable();
+      if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+      if (typeof renderGradeMasterGrid === "function") renderGradeMasterGrid();
+      if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+      
+      closeSubjectTeachersModal();
+
+      let msg = `සාර්ථකයි! '${cs.subject}' විෂය සඳහා ගුරුවරුන් ${cs.teacherIds.length} දෙනෙකු සුරකින ලදි.`;
+      if (unassignedSlotsCount > 0) {
+        msg += `\n\n⚠️ ඉවත් කළ ගුරුවරයාගේ කාලසටහන් කාලච්ඡේද ${unassignedSlotsCount}ක් ස්වයංක්‍රීයව නිදහස් (Unassigned) කරන ලදි.`;
+      }
+      alert(msg);
+    }
+    
     // 12. ගුරුවරයෙකු මැකූ විට විෂය නිර්දේශයෙන්ද ස්වයංක්‍රීයව ඉවත් කිරීම
     function handleDeleteTeacher(id) {
       if (!confirm("මෙම ගුරුවරයා ඉවත් කිරීමට අවශ්‍ය බව තහවුරු කරන්න?")) return;
