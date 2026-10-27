@@ -1129,8 +1129,60 @@
         if (typeof t.isExempt === "undefined") t.isExempt = false;
       });
     }
-
+    // =========================================================================
+    // ENHANCED & FAIL-SAFE STORAGE SYNC (FIREBASE + LOCALSTORAGE)
+    // =========================================================================
     function saveAllToStorage() {
+      // 1. කිසිදු undefined අගයක් Firebase වෙත නොයන ලෙස ආරක්ෂිත payload එකක් සකස් කිරීම
+      const rawPayload = {
+        grades: gradeSettings || [],
+        classes: schoolClasses || [],
+        curriculum: (curriculumSubjects || []).map(cs => ({
+          id: cs.id,
+          grade: cs.grade,
+          subject: cs.subject,
+          maxWeekly: cs.maxWeekly,
+          teacherIds: Array.isArray(cs.teacherIds) ? cs.teacherIds : []
+        })),
+        gradeMaster: gradeMasterSchedule || [],
+        teachers: (teachers || []).map(t => ({
+          id: t.id,
+          schoolNo: t.schoolNo || "",
+          name: t.name || "",
+          phone: t.phone || "",
+          subject: t.subject || "",
+          sections: t.sections || ["All"],
+          leaveStatus: t.leaveStatus || "present",
+          isExempt: !!t.isExempt,
+          allowOver35: !!t.allowOver35
+        })),
+        schedule: masterSchedule || []
+      };
+
+      // undefined අගයන් සම්පූර්ණයෙන්ම ඉවත් කිරීම සඳහා JSON Clean එකක් සිදු කිරීම
+      const cleanPayload = JSON.parse(JSON.stringify(rawPayload));
+
+      // LocalStorage වෙත Save කිරීම
+      try {
+        localStorage.setItem("sch_app_data_v2026_final", JSON.stringify(cleanPayload));
+      } catch (err) {
+        console.error("LocalStorage Save Error:", err);
+      }
+
+      // Firebase Realtime Database වෙත Save කිරීම
+      if (isFirebaseActive && firebaseDb) {
+        firebaseDb.ref("timetable_system").set(cleanPayload, (error) => {
+          if (error) {
+            console.error("❌ Firebase Database Update Error:", error);
+            alert("⚠️ Cloud දත්ත සුරැකීමේදී දෝෂයක් හටගැනිණි: " + error.message);
+          } else {
+            console.log("✅ Firebase Database Updated Successfully (including teacherIds)!");
+          }
+        });
+      }
+    }
+
+/*    function saveAllToStorage() {
       try {
         const payload = {
           grades: gradeSettings, classes: schoolClasses, curriculum: curriculumSubjects,
@@ -1141,7 +1193,7 @@
           firebaseDb.ref("timetable_system").set(payload);
         }
       } catch (err) { console.error(err); }
-    }
+    }*/
 
     function loadAllFromStorage() {
       try {
@@ -3958,8 +4010,29 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       renderAssignedTeachersTags();
       populateSubjectTeacherDropdown();
     }
-
+    // =========================================================================
+    // SUBJECT TEACHERS ASSIGNMENT SAVE FUNCTION
+    // =========================================================================
     function saveSubjectTeachersAssignment() {
+      if (!currentSubjectCurriculumId) return;
+      const cs = curriculumSubjects.find(c => c.id === currentSubjectCurriculumId);
+      if (!cs) {
+        alert("විෂය දත්ත හඳුනාගත නොහැකි විය.");
+        return;
+      }
+
+      // තෝරාගත් ගුරුවරුන්ගේ IDs Array එකක් ලෙස විෂය වෙත පැවරීම
+      cs.teacherIds = Array.isArray(tempAssignedTeacherIds) ? [...tempAssignedTeacherIds] : [];
+
+      // දත්ත සමුදාය සහ LocalStorage වෙත සුරැකීම
+      saveAllToStorage();
+      renderCurriculumTable();
+      closeSubjectTeachersModal();
+
+      alert(`සාර්ථකයි! '${cs.subject}' විෂය සඳහා ගුරුවරුන් ${cs.teacherIds.length} දෙනෙකු දත්ත සමුදායට (Database) සුරකින ලදි.`);
+    }
+
+/*    function saveSubjectTeachersAssignment() {
       if (!currentSubjectCurriculumId) return;
       const cs = curriculumSubjects.find(c => c.id === currentSubjectCurriculumId);
       if (!cs) return;
@@ -3971,7 +4044,8 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       closeSubjectTeachersModal();
       alert(`සාර්ථකයි! ${cs.subject} විෂය සඳහා ගුරුවරුන් ${cs.teacherIds.length} දෙනෙකු සුරකින ලදි.`);
     }
-
+*/
+    
     // 2. විෂය වගුවේ බොත්තම ඉදිරියෙන් ගුරුවරුන් ගණන පෙන්වීම
     function renderCurriculumTable() {
       populateCurriculumGradesDropdown();
