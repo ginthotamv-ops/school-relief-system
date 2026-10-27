@@ -1056,51 +1056,7 @@
     let firebaseDb = null;
     let isFirebaseActive = false;
 
-    function initFirebaseCloud() {
-      const badge = document.getElementById("cloudStatusBadge");
-      try {
-        if (firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey.startsWith("AIzaSy")) {
-          firebase.initializeApp(firebaseConfig);
-          firebaseDb = firebase.database();
-          isFirebaseActive = true;
-
-          firebaseDb.ref("timetable_system").on("value", (snapshot) => {
-            const data = snapshot.val();
-            if (data && data.teachers && data.teachers.length > 0) {
-              if (data.grades) gradeSettings = data.grades;
-              if (data.classes) schoolClasses = data.classes;
-              if (data.curriculum) curriculumSubjects = data.curriculum;
-              if (data.gradeMaster) gradeMasterSchedule = data.gradeMaster;
-              if (data.teachers) teachers = data.teachers;
-              if (data.schedule) masterSchedule = data.schedule;
-
-              localStorage.setItem("sch_app_data_v2026_final", JSON.stringify(data));
-              if (badge) {
-                badge.className = "bg-emerald-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm";
-                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-white"></span> Live Cloud (Firebase)';
-              }
-              refreshAllUI();
-            } else {
-              if (badge) {
-                badge.className = "bg-emerald-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm";
-                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-white"></span> Live Cloud (Seeded)';
-              }
-              saveAllToStorage();
-              refreshAllUI();
-            }
-          }, (err) => {
-            console.warn("Firebase Read Warning:", err);
-            markLocalStorageMode();
-          });
-        } else {
-          markLocalStorageMode();
-        }
-      } catch (err) {
-        console.warn("Firebase Init Error:", err);
-        markLocalStorageMode();
-      }
-    }
-
+   
     function markLocalStorageMode() {
       const badge = document.getElementById("cloudStatusBadge");
       if (badge) {
@@ -1139,21 +1095,42 @@
         if (typeof t.isExempt === "undefined") t.isExempt = false;
       });
     }
+
     // =========================================================================
-    // ENHANCED & FAIL-SAFE STORAGE SYNC (FIREBASE + LOCALSTORAGE)
+    // FAIL-SAFE FIREBASE & LOCALSTORAGE SYNC ENGINE
     // =========================================================================
+
+    // Helper: ඕනෑම ආකාරයකින් එන teacherIds නිවැරදි Array එකක් බවට හැරවීම
+    function getNormalizedTeacherIds(teacherIds) {
+      if (!teacherIds) return [];
+      let list = [];
+      if (Array.isArray(teacherIds)) {
+        list = teacherIds;
+      } else if (typeof teacherIds === "object") {
+        list = Object.values(teacherIds);
+      } else if (typeof teacherIds === "string") {
+        list = [teacherIds];
+      }
+      return list.map(item => {
+        if (!item) return null;
+        if (typeof item === "object" && item.id) return String(item.id).trim();
+        return String(item).trim();
+      }).filter(Boolean);
+    }
+
     function saveAllToStorage() {
-      // 1. කිසිදු undefined අගයක් Firebase වෙත නොයන ලෙස ආරක්ෂිත payload එකක් සකස් කිරීම
+      const cleanCurriculum = (Array.isArray(curriculumSubjects) ? curriculumSubjects : Object.values(curriculumSubjects || {})).map((cs, idx) => ({
+        id: cs.id || (typeof getSubjectUniqueId === "function" ? getSubjectUniqueId(cs, idx) : `cs_${cs.grade}_${idx}`),
+        grade: cs.grade,
+        subject: cs.subject,
+        maxWeekly: cs.maxWeekly,
+        teacherIds: getNormalizedTeacherIds(cs.teacherIds) // කිසිවිටෙක හිස් නොවේ
+      }));
+
       const rawPayload = {
         grades: gradeSettings || [],
         classes: schoolClasses || [],
-        curriculum: (curriculumSubjects || []).map(cs => ({
-          id: cs.id,
-          grade: cs.grade,
-          subject: cs.subject,
-          maxWeekly: cs.maxWeekly,
-          teacherIds: Array.isArray(cs.teacherIds) ? cs.teacherIds : []
-        })),
+        curriculum: cleanCurriculum,
         gradeMaster: gradeMasterSchedule || [],
         teachers: (teachers || []).map(t => ({
           id: t.id,
@@ -1169,41 +1146,72 @@
         schedule: masterSchedule || []
       };
 
-      // undefined අගයන් සම්පූර්ණයෙන්ම ඉවත් කිරීම සඳහා JSON Clean එකක් සිදු කිරීම
       const cleanPayload = JSON.parse(JSON.stringify(rawPayload));
 
-      // LocalStorage වෙත Save කිරීම
       try {
         localStorage.setItem("sch_app_data_v2026_final", JSON.stringify(cleanPayload));
       } catch (err) {
         console.error("LocalStorage Save Error:", err);
       }
 
-      // Firebase Realtime Database වෙත Save කිරීම
       if (isFirebaseActive && firebaseDb) {
         firebaseDb.ref("timetable_system").set(cleanPayload, (error) => {
           if (error) {
-            console.error("❌ Firebase Database Update Error:", error);
-            alert("⚠️ Cloud දත්ත සුරැකීමේදී දෝෂයක් හටගැනිණි: " + error.message);
+            console.error("❌ Firebase Sync Error:", error);
           } else {
-            console.log("✅ Firebase Database Updated Successfully (including teacherIds)!");
+            console.log("✅ Firebase Synchronized (Data Protected)!");
           }
         });
       }
     }
 
-/*    function saveAllToStorage() {
+    function initFirebaseCloud() {
+      const badge = document.getElementById("cloudStatusBadge");
       try {
-        const payload = {
-          grades: gradeSettings, classes: schoolClasses, curriculum: curriculumSubjects,
-          gradeMaster: gradeMasterSchedule, teachers: teachers, schedule: masterSchedule
-        };
-        localStorage.setItem("sch_app_data_v2026_final", JSON.stringify(payload));
-        if (isFirebaseActive && firebaseDb) {
-          firebaseDb.ref("timetable_system").set(payload);
+        if (typeof firebase !== "undefined" && firebaseConfig && firebaseConfig.apiKey) {
+          if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+          firebaseDb = firebase.database();
+          isFirebaseActive = true;
+
+          firebaseDb.ref("timetable_system").on("value", (snapshot) => {
+            const data = snapshot.val();
+            if (data && data.teachers && data.teachers.length > 0) {
+              if (data.grades) gradeSettings = data.grades;
+              if (data.classes) schoolClasses = data.classes;
+              
+              // Firebase Object එක Array එකක් බවට තහවුරු කිරීම
+              if (data.curriculum) {
+                curriculumSubjects = Array.isArray(data.curriculum) ? data.curriculum : Object.values(data.curriculum);
+                curriculumSubjects.forEach(cs => {
+                  cs.teacherIds = getNormalizedTeacherIds(cs.teacherIds);
+                });
+              }
+
+              if (data.gradeMaster) gradeMasterSchedule = data.gradeMaster;
+              if (data.teachers) teachers = data.teachers;
+              if (data.schedule) masterSchedule = data.schedule;
+
+              localStorage.setItem("sch_app_data_v2026_final", JSON.stringify(data));
+              if (badge) {
+                badge.className = "bg-emerald-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm";
+                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-white"></span> Live Cloud (Firebase)';
+              }
+              refreshAllUI();
+            } else {
+              saveAllToStorage();
+              refreshAllUI();
+            }
+          }, (err) => {
+            console.warn("Firebase Read Error:", err);
+            if (typeof markLocalStorageMode === "function") markLocalStorageMode();
+          });
         }
-      } catch (err) { console.error(err); }
-    }*/
+      } catch (err) {
+        console.warn("Firebase Init Error:", err);
+        if (typeof markLocalStorageMode === "function") markLocalStorageMode();
+      }
+    }
+   //***************************
 
     function loadAllFromStorage() {
       try {
@@ -3927,31 +3935,62 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       });
     }
 
-    // 3. විෂයට අදාළ ගුරුවරුන් ස්වයංක්‍රීයව හඳුනාගැනීම (Auto-Resolve)
-    function resolveTeachersForSubject(cs) {
-      if (!cs) return [];
-      const manualIds = getNormalizedTeacherIds(cs.teacherIds);
+    // =========================================================================
+    // INTELLIGENT TEACHER RESOLVER (RECOVERS TIMETABLE & MASTER DATA)
+    // =========================================================================
 
-      // Manual ලෙස ගුරුවරුන් පවරා ඇත්නම් ඔවුන් ලබාගැනීම
-      if (manualIds.length > 0) {
-        const found = manualIds.map(id => teachers.find(t => String(t.id).trim().toLowerCase() === String(id).trim().toLowerCase())).filter(Boolean);
-        if (found.length > 0) return found;
+    function getSubjectUniqueId(cs, fallbackIdx = 0) {
+      if (cs.id && cs.id !== "undefined" && String(cs.id).trim().length > 0) {
+        return String(cs.id);
       }
-
-      // Manual ලෙස පවරා නැතිනම්, එම අංශයේ එම විෂය උගන්වන ගුරුවරුන් පෙරනිමියෙන් ලබාගැනීම
-      const section = typeof getSectionOfGrade === "function" ? getSectionOfGrade(cs.grade) : "All";
-      const targetSub = String(cs.subject || "").trim().toLowerCase();
-
-      return teachers.filter(t => {
-        const inSec = typeof isTeacherInTargetSection === "function" ? isTeacherInTargetSection(t, section) : true;
-        const subMatch = t.subject && String(t.subject).trim().toLowerCase() === targetSub;
-        return inSec && subMatch;
-      });
+      const safeSub = encodeURIComponent(String(cs.subject || "sub").trim()).replace(/%/g, "_");
+      return `cs_${cs.grade}_${safeSub}_${fallbackIdx}`;
     }
 
-    // 4. විෂය නිර්දේශ වගුව (Curriculum Table) සහ ආදේශිත ගුරු Badges පෙන්වීම
+    // කලින් කාලසටහනෙන්, ගුරු ලැයිස්තුවෙන් සහ Modal එකෙන් ගුරුවරුන් ස්වයංක්‍රීයව ලබාගැනීම
+    function resolveTeachersForSubject(cs) {
+      if (!cs) return [];
+      const assignedTeacherMap = new Map(); // Duplicates වැළැක්වීමට Map එකක් භාවිත වේ
+
+      // 1. Modal එක මඟින් Save කළ ගුරුවරුන් (Saved IDs)
+      const directIds = getNormalizedTeacherIds(cs.teacherIds);
+      directIds.forEach(id => {
+        const t = teachers.find(tch => String(tch.id).trim().toLowerCase() === id.toLowerCase());
+        if (t) assignedTeacherMap.set(String(t.id).toLowerCase(), t);
+      });
+
+      const targetSub = String(cs.subject || "").trim().toLowerCase();
+      const section = typeof getSectionOfGrade === "function" ? getSectionOfGrade(cs.grade) : "All";
+
+      // 2. කලින් පන්ති කාලසටහනේ (masterSchedule) මෙම ශ්‍රේණියට හා විෂයට පවරා ඇති ගුරුවරුන් ස්වයංක්‍රීයව Recovery කිරීම
+      if (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule) && typeof schoolClasses !== "undefined") {
+        const gradeClasses = schoolClasses.filter(c => Number(c.grade) === Number(cs.grade)).map(c => c.id);
+        masterSchedule.forEach(slot => {
+          if (gradeClasses.includes(slot.classId) && slot.subject && String(slot.subject).trim().toLowerCase() === targetSub && slot.teacherId) {
+            const t = teachers.find(tch => String(tch.id).trim().toLowerCase() === String(slot.teacherId).trim().toLowerCase());
+            if (t) assignedTeacherMap.set(String(t.id).toLowerCase(), t);
+          }
+        });
+      }
+
+      // 3. ගුරු ලැයිස්තුවේ (Teachers) මෙම විෂය උගන්වන ගුරුවරුන්
+      teachers.forEach(t => {
+        const tSub = String(t.subject || "").trim().toLowerCase();
+        const isSubMatch = (tSub === targetSub) || (tSub && targetSub && (tSub.includes(targetSub) || targetSub.includes(tSub)));
+        const inSec = typeof isTeacherInTargetSection === "function" ? isTeacherInTargetSection(t, section) : true;
+
+        if (isSubMatch && inSec) {
+          assignedTeacherMap.set(String(t.id).toLowerCase(), t);
+        }
+      });
+
+      return Array.from(assignedTeacherMap.values());
+    }
+
+    // විෂය නිර්දේශ වගුව නැවත ඇඳීම
     function renderCurriculumTable() {
-      ensureCurriculumSubjectIds();
+      if (!curriculumSubjects) return;
+      if (!Array.isArray(curriculumSubjects)) curriculumSubjects = Object.values(curriculumSubjects);
 
       if (typeof populateCurriculumGradesDropdown === "function") {
         populateCurriculumGradesDropdown();
@@ -3964,7 +4003,7 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       tbody.innerHTML = "";
 
       let list = filterGrade !== "All" 
-        ? curriculumSubjects.filter(c => c.grade === parseInt(filterGrade)) 
+        ? curriculumSubjects.filter(c => Number(c.grade) === Number(filterGrade)) 
         : curriculumSubjects;
 
       if (list.length === 0) {
@@ -4015,18 +4054,16 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       });
     }
 
-    // 5. Modal එක විවෘත කිරීම (බොත්තම එබූ සැනින් අදාළ ගුරුවරුන් පෙන්වීම)
+    // Modal එක විවෘත වන විට කලින් පවරා ඇති සියලුම ගුරුවරුන් ක්ෂණිකව පූරණය කිරීම
     function openSubjectTeachersModal(curriculumId) {
-      ensureCurriculumSubjectIds();
       window.currentSubjectCurriculumId = curriculumId;
-
       const cs = curriculumSubjects.find(c => String(c.id) === String(curriculumId));
       if (!cs) {
         alert("විෂය දත්ත හඳුනාගත නොහැකි විය. කරුණාකර පිටුව Refresh කරන්න.");
         return;
       }
 
-      // පෙරනිමියෙන් හඳුනාගත් ගුරුවරුන් ලැයිස්තුවට පූරණය කිරීම
+      // කලින් පවරා තිබූ සියලුම ගුරුවරුන් ස්වයංක්‍රීයව එකතු කරගනී
       const resolvedTeachers = resolveTeachersForSubject(cs);
       window.tempAssignedTeacherIds = resolvedTeachers.map(t => t.id);
 
@@ -4051,6 +4088,13 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       if (modal) modal.classList.remove("hidden");
     }
 
+    
+    // 3. විෂයට අදාළ ගුරුවරුන් ස්වයංක්‍රීයව හඳුනාගැනීම (Auto-Resolve)
+   
+    // 4. විෂය නිර්දේශ වගුව (Curriculum Table) සහ ආදේශිත ගුරු Badges පෙන්වීම
+    
+    // 5. Modal එක විවෘත කිරීම (බොත්තම එබූ සැනින් අදාළ ගුරුවරුන් පෙන්වීම)
+    
     // 6. Modal එක වැසීම
     function closeSubjectTeachersModal() {
       const modal = document.getElementById("subjectTeachersModal");
