@@ -3448,8 +3448,16 @@ function handleSaveTeacher(e) {
               errorReport.push(`පේළිය ${rowNumber}: ගුරු නම හිස්ව පවතී.`);
               continue;
             }
+
             if (!subject) {
               errorReport.push(`පේළිය ${rowNumber} (${name}): ප්‍රධාන විෂය හිස්ව පවතී.`);
+              continue;
+            }
+
+            // දත්ත සමුදායේ (Curriculum) විෂය පවතීදැයි පරීක්ෂා කිරීම (Strict Subject Validation)
+            const subjectExists = curriculumSubjects.some(cs => cs.subject.trim().toLowerCase() === subject.toLowerCase());
+            if (!subjectExists) {
+              errorReport.push(`පේළිය ${rowNumber} (${name}): '${subject}' නමින් විෂයක් පද්ධතියේ විෂය නිර්දේශය (Curriculum) තුළ නොමැත.`);
               continue;
             }
 
