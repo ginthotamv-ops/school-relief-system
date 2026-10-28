@@ -1076,6 +1076,11 @@
       renderGradeMasterGrid();
       renderClassTimetableGrid();
       renderIndividualTeacherSchedule();
+      if (typeof populateTeacherSubjectDropdown === "function") populateTeacherSubjectDropdown();
+      if (typeof renderTeachersMasterList === "function") renderTeachersMasterList();
+      if (typeof renderCurriculumTable === "function") renderCurriculumTable();
+      if (typeof renderClassesList === "function") renderClassesList();
+      // ...
     }
 
     // =========================================================================
@@ -3121,6 +3126,7 @@ function handleSaveTeacher(e) {
       document.getElementById("newTeacherPhone").value = "";
       document.getElementById("teacherSubmitBtn").innerHTML = '<i class="fa-solid fa-user-plus"></i> ගුරුවරයා එක් කරන්න';
       document.getElementById("teacherCancelEditBtn").classList.add("hidden");
+      populateTeacherSubjectDropdown();
     }
 
     function renderTeachersMasterList() {
@@ -3799,6 +3805,58 @@ function handleSaveTeacher(e) {
 
       alert("ගුරුවරුන් පාසල් අංකය අනුව සාර්ථකව පෙළගස්වන ලදි! (අංක රහිත අය ලැයිස්තුවේ අවසානයට යොමු කරන ලදි)");
     }
+
+    //
+    
+    // =========================================================================
+    // POPULATE TEACHER SUBJECT SELECT DROPDOWN
+    // =========================================================================
+    function populateTeacherSubjectDropdown() {
+      const select = document.getElementById("newTeacherSubjectSelect");
+      if (!select) return;
+
+      const currentVal = select.value;
+      select.innerHTML = '<option value="">-- ප්‍රධාන විෂය තෝරන්න --</option>';
+
+      const subjectsSet = new Set();
+
+      // 1. විෂය නිර්දේශයෙන් (Curriculum) විෂයන් ලබාගැනීම
+      if (curriculumSubjects && Array.isArray(curriculumSubjects)) {
+        curriculumSubjects.forEach(cs => {
+          if (cs && cs.subject && String(cs.subject).trim()) {
+            subjectsSet.add(String(cs.subject).trim());
+          }
+        });
+      }
+
+      // 2. දැනට සිටින ගුරුවරුන්ගේ විෂයන්ද ලබාගැනීම (කිසිදු විෂයක් මඟ නොහැරීමට)
+      if (teachers && Array.isArray(teachers)) {
+        teachers.forEach(t => {
+          if (t && t.subject && String(t.subject).trim()) {
+            subjectsSet.add(String(t.subject).trim());
+          }
+        });
+      }
+
+      const sortedSubjects = Array.from(subjectsSet).sort((a, b) => a.localeCompare(b));
+
+      if (sortedSubjects.length === 0) {
+        select.innerHTML = '<option value="">⚠️ විෂයන් හමු නොවීය (Curriculum හි විෂයන් එක් කරන්න)</option>';
+        return;
+      }
+
+      sortedSubjects.forEach(sub => {
+        const opt = document.createElement("option");
+        opt.value = sub;
+        opt.textContent = sub;
+        if (sub === currentVal) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    // Global scope වෙත සම්බන්ධ කිරීම
+    window.populateTeacherSubjectDropdown = populateTeacherSubjectDropdown;
+
     
     // =========================================================================
     // 10. CURRICULUM MANAGEMENT
