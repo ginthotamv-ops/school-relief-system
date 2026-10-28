@@ -3771,7 +3771,39 @@ function handleSaveTeacher(e) {
 
     
 
+// =========================================================================
+    // TOGGLE ALL SECTIONS CHECKBOX CONTROLLER
+    // =========================================================================
+    function toggleAllSectionsCheckbox(master) {
+      const allChk = master || document.querySelector(".tch-sec-chk-all") || document.getElementById("tchSecAll");
+      const sectionChks = document.querySelectorAll(".tch-sec-chk");
 
+      if (allChk && allChk.checked) {
+        // "සියල්ල (All)" තේරූ විට අනෙකුත් තනි අංශ Uncheck කිරීම
+        sectionChks.forEach(chk => { chk.checked = false; });
+      }
+    }
+
+    // HTML inline onchange සඳහා window object එකට සම්බන්ධ කිරීම
+    window.toggleAllSectionsCheckbox = toggleAllSectionsCheckbox;
+
+function onTeacherSectionCheckboxesChange(target) {
+      const allChk = document.querySelector(".tch-sec-chk-all") || document.getElementById("tchSecAll");
+      const sectionChks = document.querySelectorAll(".tch-sec-chk");
+
+      if (target && target.checked && allChk) {
+        allChk.checked = false;
+      }
+
+      // කිසිවක් තෝරා නැතිනම් නැවත "All" සක්‍රීය කිරීම
+      const anyChecked = Array.from(sectionChks).some(chk => chk.checked);
+      if (!anyChecked && allChk) {
+        allChk.checked = true;
+      }
+    }
+
+    window.onTeacherSectionCheckboxesChange = onTeacherSectionCheckboxesChange;
+    
 
 // =========================================================================
     // SORT TEACHERS BY SCHOOL NUMBER (EMPTY NUMBERS TO BOTTOM)
