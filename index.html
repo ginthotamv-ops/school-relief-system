@@ -3100,6 +3100,7 @@ function handleSaveTeacher(e) {
     }
 
     function editTeacher(id) {
+      
       const t = teachers.find(x => x.id === id);
       if (!t) return;
       document.getElementById("editTeacherId").value = t.id;
@@ -3113,6 +3114,7 @@ function handleSaveTeacher(e) {
         chk.disabled = isAll;
         chk.checked = !isAll && (t.sections || []).includes(chk.value);
       });
+      populateTeacherSubjectDropdown();
       onTeacherSectionCheckboxesChange();
       document.getElementById("newTeacherSubjectSelect").value = t.subject;
       document.getElementById("teacherSubmitBtn").innerHTML = '<i class="fa-solid fa-check"></i> යාවත්කාලීන කරන්න';
@@ -3839,7 +3841,82 @@ function onTeacherSectionCheckboxesChange(target) {
     }
 
     //
+// =========================================================================
+    // GET SELECTED TEACHER SECTIONS HELPER FUNCTION
+    // =========================================================================
+    function getSelectedTeacherSections() {
+      // 1. "සියල්ල (All)" Checkbox එක පරීක්ෂා කිරීම
+      const allChk = document.querySelector(".tch-sec-chk-all") || document.getElementById("tchSecAll");
+      if (allChk && allChk.checked) {
+        return ["All"];
+      }
+
+      // 2. තනි තනිව තෝරා ඇති අංශ (Checkboxes) ලබාගැනීම
+      const sectionChks = document.querySelectorAll(".tch-sec-chk:checked");
+      const selected = Array.from(sectionChks).map(chk => chk.value.trim());
+
+      // කිසිදු අංශයක් තෝරා නැතිනම් පෙරනිමියෙන් "All" ලබාදීම
+      return selected.length > 0 ? selected : ["All"];
+    }
+
+    // Global scope එකට සම්බන්ධ කිරීම
+    window.getSelectedTeacherSections = getSelectedTeacherSections;
     
+
+// 2. අදාළ අංශයට පමණක් ගැලපෙන විෂයන් Dropdown එකට පිරවීම
+    function populateTeacherSubjectDropdown() {
+      const select = document.getElementById("newTeacherSubjectSelect");
+      if (!select) return;
+
+      const currentVal = select.value;
+      select.innerHTML = '<option value="">-- ප්‍රධාන විෂය තෝරන්න --</option>';
+
+      const selectedSections = getSelectedTeacherSections();
+      const subjectsSet = new Set();
+
+      if (curriculumSubjects && Array.isArray(curriculumSubjects)) {
+        curriculumSubjects.forEach(cs => {
+          if (!cs || !cs.subject || !String(cs.subject).trim()) return;
+
+          // තෝරාගත් අංශයට මෙම විෂය අයත් දැයි බැලීම
+          const matches = selectedSections.includes("All") || selectedSections.some(sec => {
+            if (typeof getSectionOfGrade === "function" && getSectionOfGrade(cs.grade) === sec) {
+              return true;
+            }
+            const g = Number(cs.grade);
+            if (sec === "1-5" && g >= 1 && g <= 5) return true;
+            if (sec === "6-7" && g >= 6 && g <= 7) return true;
+            if (sec === "8-11" && g >= 8 && g <= 11) return true;
+            if (sec === "12-13" && g >= 12 && g <= 13) return true;
+            return false;
+          });
+
+          if (matches) {
+            subjectsSet.add(String(cs.subject).trim());
+          }
+        });
+      }
+
+      const sortedSubjects = Array.from(subjectsSet).sort((a, b) => a.localeCompare(b));
+
+      if (sortedSubjects.length === 0) {
+        select.innerHTML = '<option value="">⚠️ මෙම අංශයට අදාළ විෂයන් විෂය නිර්දේශයේ හමු නොවීය</option>';
+        return;
+      }
+
+      sortedSubjects.forEach(sub => {
+        const opt = document.createElement("option");
+        opt.value = sub;
+        opt.textContent = sub;
+        if (sub === currentVal) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    window.getSelectedTeacherSections = getSelectedTeacherSections;
+    window.populateTeacherSubjectDropdown = populateTeacherSubjectDropdown;
+    
+ /*   
     // =========================================================================
     // POPULATE TEACHER SUBJECT SELECT DROPDOWN
     // =========================================================================
@@ -3888,7 +3965,7 @@ function onTeacherSectionCheckboxesChange(target) {
 
     // Global scope වෙත සම්බන්ධ කිරීම
     window.populateTeacherSubjectDropdown = populateTeacherSubjectDropdown;
-
+*/
     
     // =========================================================================
     // 10. CURRICULUM MANAGEMENT
@@ -4021,9 +4098,9 @@ function toggleSelectAllCurriculumGrades(masterChk) {
 
     //
   
-// =========================================================================
-    // SUBJECT TEACHERS POOL CONTROLLER (MULTI-TEACHER POOL)
-    // =========================================================================
+
+
+    
 
    // JavaScript
     // =========================================================================
@@ -4494,322 +4571,7 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       renderReliefAttendance();
       alert("ගුරුවරයා පද්ධතියෙන් සහ අදාළ විෂය ලැයිස්තුවලින් සාර්ථකව ඉවත් කරන ලදි.");
     }
-/*/
-window.currentSubjectCurriculumId = window.currentSubjectCurriculumId || null;
-window.tempAssignedTeacherIds = window.tempAssignedTeacherIds || [];
-    
-    function openSubjectTeachersModal(curriculumId) {
-      currentSubjectCurriculumId = curriculumId;
-      const cs = curriculumSubjects.find(c => String(c.id) === String(curriculumId));
-      if (!cs) {
-        alert("විෂය සොයාගත නොහැකි විය.");
-        return;
-      }
 
-      // Firebase Object/Array Fix
-      cs.teacherIds = getNormalizedTeacherIds(cs.teacherIds);
-      tempAssignedTeacherIds = [...cs.teacherIds];
-
-      const grade = cs.grade;
-      const section = typeof getSectionOfGrade === "function" ? getSectionOfGrade(grade) : "All";
-
-      const elSubName = document.getElementById("subModalSubjectName");
-      const elGradeSec = document.getElementById("subModalGradeSection");
-      const elPeriods = document.getElementById("subModalPeriodsBadge");
-
-      if (elSubName) elSubName.innerText = cs.subject;
-      if (elGradeSec) elGradeSec.innerText = `(Grade ${grade} | අංශය: ${section})`;
-      if (elPeriods) elPeriods.innerText = `${cs.maxWeekly} Periods / සතියට`;
-
-      const chkShowAll = document.getElementById("chkShowAllTeachersForSubject");
-      if (chkShowAll) chkShowAll.checked = false;
-
-      renderAssignedTeachersTags();
-      populateSubjectTeacherDropdown();
-
-      const modal = document.getElementById("subjectTeachersModal");
-      if (modal) modal.classList.remove("hidden");
-    }
-
-    function renderAssignedTeachersTags() {
-      const container = document.getElementById("assignedTeachersList");
-      const badge = document.getElementById("assignedTeachersCountBadge");
-      if (!container) return;
-      container.innerHTML = "";
-
-      if (badge) badge.innerText = `${tempAssignedTeacherIds.length} දෙනෙකි`;
-
-      if (tempAssignedTeacherIds.length === 0) {
-        container.innerHTML = `<span class="text-xs text-rose-500 italic p-2 font-semibold">තවමත් මෙම විෂයට කිසිදු ගුරුවරයෙකු ආදේශ කර නොමැත. පහතින් ගුරුවරයෙකු තෝරා 'එක් කරන්න' ඔබන්න.</span>`;
-        return;
-      }
-
-      tempAssignedTeacherIds.forEach(tId => {
-        const teacher = teachers.find(t => String(t.id) === String(tId));
-        const name = teacher ? teacher.name : `Teacher ID: ${tId}`;
-        const schoolNoDisplay = teacher && teacher.schoolNo ? `[${teacher.schoolNo}]` : `[${tId}]`;
-        const subDisplay = teacher && teacher.subject ? teacher.subject : "සාමාන්‍ය";
-
-        const tag = document.createElement("div");
-        tag.className = "flex items-center gap-1.5 bg-white border border-indigo-200 text-indigo-950 px-2.5 py-1.5 rounded-lg shadow-sm text-xs font-semibold";
-        tag.innerHTML = `
-          <span>${name} <b class="text-indigo-600">${schoolNoDisplay}</b> <span class="text-[10px] text-slate-400 font-normal">(${subDisplay})</span></span>
-          <button type="button" onclick="removeTeacherFromCurrentSubject('${tId}')" class="text-rose-500 hover:text-rose-700 ml-1.5 p-0.5 transition" title="ඉවත් කරන්න">
-            <i class="fa-solid fa-circle-xmark text-sm"></i>
-          </button>
-        `;
-        container.appendChild(tag);
-      });
-    }
-
-    function populateSubjectTeacherDropdown() {
-      if (!currentSubjectCurriculumId) return;
-      const cs = curriculumSubjects.find(c => String(c.id) === String(currentSubjectCurriculumId));
-      if (!cs) return;
-
-      const section = typeof getSectionOfGrade === "function" ? getSectionOfGrade(cs.grade) : "All";
-      const chk = document.getElementById("chkShowAllTeachersForSubject");
-      const isShowAll = chk ? chk.checked : false;
-      const dropdown = document.getElementById("subTeacherSelectDropdown");
-      const note = document.getElementById("subTeacherFilterNote");
-      if (!dropdown) return;
-
-      dropdown.innerHTML = "";
-      
-      // දැනටමත් මෙම විෂයට තෝරාගෙන ඇති අය Dropdown එකෙන් ඉවත් කරයි
-      const availableTeachers = teachers.filter(t => !tempAssignedTeacherIds.some(id => String(id) === String(t.id)));
-
-      if (availableTeachers.length === 0) {
-        dropdown.innerHTML = '<option value="">සියලුම ගුරුවරුන් දැනටමත් ආදේශ කර ඇත</option>';
-        return;
-      }
-
-      // ප්‍රමුඛතාවය 1: අදාළ අංශයේ එම විෂයම උගන්වන ගුරුවරුන්
-      const primaryMatch = availableTeachers.filter(t => {
-        const inSec = typeof isTeacherInTargetSection === "function" ? isTeacherInTargetSection(t, section) : true;
-        const subMatch = t.subject && t.subject.trim().toLowerCase() === cs.subject.trim().toLowerCase();
-        return inSec && subMatch;
-      });
-
-      // ප්‍රමුඛතාවය 2: අදාළ අංශයේ අනෙකුත් විෂය උගන්වන ගුරුවරුන්
-      const sectionOthers = availableTeachers.filter(t => {
-        const inSec = typeof isTeacherInTargetSection === "function" ? isTeacherInTargetSection(t, section) : true;
-        const subMatch = t.subject && t.subject.trim().toLowerCase() === cs.subject.trim().toLowerCase();
-        return inSec && !subMatch;
-      });
-
-      // ප්‍රමුඛතාවය 3: වෙනත් අංශවල ගුරුවරුන්
-      const otherSectionTeachers = availableTeachers.filter(t => {
-        return typeof isTeacherInTargetSection === "function" ? !isTeacherInTargetSection(t, section) : false;
-      });
-
-      if (!isShowAll) {
-        if (primaryMatch.length > 0) {
-          dropdown.innerHTML += `<optgroup label="⭐ ${section} අංශයේ ${cs.subject} උගන්වන ගුරුවරුන්">`;
-          primaryMatch.forEach(t => {
-            const no = t.schoolNo ? `[${t.schoolNo}]` : `[${t.id}]`;
-            dropdown.innerHTML += `<option value="${t.id}">${t.name} ${no} (${t.subject})</option>`;
-          });
-          dropdown.innerHTML += `</optgroup>`;
-        }
-
-        if (sectionOthers.length > 0) {
-          dropdown.innerHTML += `<optgroup label="👥 ${section} අංශයේ අනෙකුත් ගුරුවරුන්">`;
-          sectionOthers.forEach(t => {
-            const no = t.schoolNo ? `[${t.schoolNo}]` : `[${t.id}]`;
-            dropdown.innerHTML += `<option value="${t.id}">${t.name} ${no} (${t.subject})</option>`;
-          });
-          dropdown.innerHTML += `</optgroup>`;
-        }
-
-        if (primaryMatch.length === 0 && sectionOthers.length === 0) {
-          dropdown.innerHTML = '<option value="">අදාළ අංශයේ ගුරුවරුන් නොමැත (පහත විකල්පය Tick කරන්න)</option>';
-        }
-
-        if (note) note.innerText = `* මුලින් පෙන්වන්නේ '${section}' අංශයේ ගුරුවරුන් පමණි.`;
-      } else {
-        // සියලුම ගුරුවරුන් පෙන්වීම
-        dropdown.innerHTML += `<optgroup label="🏫 පාසලේ සියලුම ගුරුවරුන්">`;
-        availableTeachers.forEach(t => {
-          const no = t.schoolNo ? `[${t.schoolNo}]` : `[${t.id}]`;
-          dropdown.innerHTML += `<option value="${t.id}">${t.name} ${no} (${t.subject})</option>`;
-        });
-        dropdown.innerHTML += `</optgroup>`;
-        if (note) note.innerText = `* සියලුම ගුරුවරුන් පෙන්වයි.`;
-      }
-    }
-
-    function addTeacherToCurrentSubject() {
-      const dropdown = document.getElementById("subTeacherSelectDropdown");
-      if (!dropdown) return;
-      const selectedId = dropdown.value;
-      if (!selectedId) {
-        alert("කරුණාකර ගුරුවරයෙකු තෝරන්න.");
-        return;
-      }
-
-      if (!tempAssignedTeacherIds.some(id => String(id) === String(selectedId))) {
-        tempAssignedTeacherIds.push(selectedId);
-        renderAssignedTeachersTags();
-        populateSubjectTeacherDropdown();
-      }
-    }
-
-    function removeTeacherFromCurrentSubject(teacherId) {
-      tempAssignedTeacherIds = tempAssignedTeacherIds.filter(id => String(id) !== String(teacherId));
-      renderAssignedTeachersTags();
-      populateSubjectTeacherDropdown();
-    }
-
-    function saveSubjectTeachersAssignment() {
-      if (!currentSubjectCurriculumId) return;
-      const cs = curriculumSubjects.find(c => String(c.id) === String(currentSubjectCurriculumId));
-      if (!cs) return;
-
-      cs.teacherIds = [...tempAssignedTeacherIds];
-
-      saveAllToStorage();
-      renderCurriculumTable();
-      closeSubjectTeachersModal();
-      alert(`සාර්ථකයි! '${cs.subject}' විෂය සඳහා ගුරුවරුන් ${cs.teacherIds.length} දෙනෙකු සාර්ථකව පවරන ලදි.`);
-    }
-
-    
-
-    
-    function closeSubjectTeachersModal() {
-      document.getElementById("subjectTeachersModal").classList.add("hidden");
-      currentSubjectCurriculumId = null;
-      tempAssignedTeacherIds = [];
-    }
-
-
-
-// Helper: Firebase Array/Object ගැටලුව විසඳන ශ්‍රිතය
-    function getNormalizedTeacherIds(teacherIds) {
-      if (!teacherIds) return [];
-      if (Array.isArray(teacherIds)) return teacherIds;
-      if (typeof teacherIds === "object") return Object.values(teacherIds);
-      return [];
-    }
-
-    // 1. විෂය නිර්දේශ වගුව සහ ආදේශ කළ ගුරුවරුන් සෘජුවම ප්‍රදර්ශනය කිරීම
-    function renderCurriculumTable() {
-      if (typeof populateCurriculumGradesDropdown === "function") {
-        populateCurriculumGradesDropdown();
-      }
-
-      const filterGradeEl = document.getElementById("curriculumFilterGradeSelect");
-      const filterGrade = filterGradeEl ? filterGradeEl.value : "All";
-      const tbody = document.getElementById("curriculumTableBody");
-      if (!tbody) return;
-      tbody.innerHTML = "";
-
-      let list = filterGrade !== "All" 
-        ? curriculumSubjects.filter(c => c.grade === parseInt(filterGrade)) 
-        : curriculumSubjects;
-
-      if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">විෂයන් කිසිවක් හමු නොවීය.</td></tr>';
-        return;
-      }
-
-      list.forEach(cs => {
-        // Firebase වෙතින් එන දත්ත Array එකක් බවට තහවුරු කරගැනීම
-        cs.teacherIds = getNormalizedTeacherIds(cs.teacherIds);
-
-        // ආදේශ කළ ගුරුවරුන්ගේ නම් සහ අංක ලැයිස්තුව සකස් කිරීම
-        let assignedTeachersBadges = "";
-        if (cs.teacherIds.length > 0) {
-          assignedTeachersBadges = cs.teacherIds.map(tId => {
-            const t = teachers.find(tch => String(tch.id) === String(tId));
-            const name = t ? t.name : tId;
-            const no = t && t.schoolNo ? `[${t.schoolNo}]` : "";
-            return `<span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-900 border border-indigo-200 px-2 py-0.5 rounded text-[11px] font-bold shadow-sm mb-1 mr-1">
-                      <i class="fa-solid fa-user-check text-indigo-600 text-[10px]"></i> ${name} ${no}
-                    </span>`;
-          }).join("");
-        } else {
-          assignedTeachersBadges = `<span class="text-rose-500 font-bold text-[11px] flex items-center gap-1">
-                                      <i class="fa-solid fa-triangle-exclamation"></i> ගුරුවරුන් පවරා නැත
-                                    </span>`;
-        }
-
-        const secName = typeof getSectionOfGrade === "function" ? getSectionOfGrade(cs.grade) : "-";
-
-        tbody.innerHTML += `
-          <tr class="border-b hover:bg-slate-50/80 transition">
-            <td class="p-2.5 font-bold text-indigo-700 text-xs">Grade ${cs.grade}</td>
-            <td class="p-2.5 font-bold text-slate-500 text-xs">${secName}</td>
-            <td class="p-2.5 font-bold text-slate-800 text-xs">${cs.subject}</td>
-            <td class="p-2.5 font-bold text-slate-600 text-xs">${cs.maxWeekly} Periods</td>
-            <td class="p-2.5">
-              <div class="flex flex-wrap items-center">
-                ${assignedTeachersBadges}
-              </div>
-            </td>
-            <td class="p-2.5 text-center flex flex-wrap justify-center items-center gap-1.5">
-              <button type="button" onclick="openSubjectTeachersModal('${cs.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shadow-sm" title="ගුරුවරුන් කළමනාකරණය">
-                <i class="fa-solid fa-user-pen"></i> ගුරුවරුන් (${cs.teacherIds.length})
-              </button>
-              <button type="button" onclick="editCurriculumSubject('${cs.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-[11px] px-1.5 py-1">Edit</button>
-              <button type="button" onclick="handleDeleteCurriculum('${cs.id}')" class="text-red-600 hover:text-red-800 font-bold text-[11px] px-1.5 py-1">Delete</button>
-            </td>
-          </tr>
-        `;
-      });
-    }
-
-    
-
-    //
-
- 
-    function handleDeleteCurriculum(id) {
-      if (!confirm("මෙම විෂය ඉවත් කිරීමට අවශ්‍යද?")) return;
-      curriculumSubjects = curriculumSubjects.filter(cs => cs.id !== id);
-      saveAllToStorage();
-      renderCurriculumTable();
-      onTeacherSectionCheckboxesChange();
-      renderGradeMasterGrid();
-    }
-
-    function toggleAllSectionsCheckbox(allCheckbox) {
-      document.querySelectorAll(".tch-sec-chk").forEach(chk => {
-        chk.checked = false;
-        chk.disabled = allCheckbox.checked;
-      });
-      onTeacherSectionCheckboxesChange();
-    }
-
-    function onTeacherSectionCheckboxesChange() {
-      const select = document.getElementById("newTeacherSubjectSelect");
-      if (!select) return;
-      const curSubject = select.value;
-      select.innerHTML = '<option value="">-- ප්‍රධාන විෂය තෝරන්න --</option>';
-
-      const isAll = document.querySelector(".tch-sec-chk-all").checked;
-      let checkedSections = [];
-      if (isAll) checkedSections = ["All"];
-      else document.querySelectorAll(".tch-sec-chk:checked").forEach(chk => { checkedSections.push(chk.value); });
-
-      let matchingGrades = [];
-      checkedSections.forEach(sec => {
-        if (sec === "1-5") matchingGrades.push(1,2,3,4,5);
-        else if (sec === "6-7") matchingGrades.push(6,7);
-        else if (sec === "8-11") matchingGrades.push(8,9,10,11);
-        else if (sec === "12-13") matchingGrades.push(12,13);
-        else if (sec === "All") matchingGrades = gradeSettings.map(g => g.grade);
-      });
-
-      const subjectsSet = new Set();
-      curriculumSubjects.filter(cs => matchingGrades.includes(cs.grade)).forEach(cs => { subjectsSet.add(cs.subject); });
-
-      if (subjectsSet.size === 0) select.innerHTML += '<option value="General">සාමාන්‍ය (General)</option>';
-      else subjectsSet.forEach(sub => { select.innerHTML += `<option value="${sub}" ${sub === curSubject ? 'selected' : ''}>${sub}</option>`; });
-    }
-*/
-//
     // =========================================================================
     // SUBJECT TEACHERS SELECTION & ASSIGNMENT CONTROLLER
     // =========================================================================
