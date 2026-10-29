@@ -1239,8 +1239,17 @@
 
               if (data.gradeMaster) gradeMasterSchedule = data.gradeMaster;
               if (data.teachers) teachers = data.teachers;
-              if (data.schedule) masterSchedule = data.schedule;
+       
 
+              // Schedule දත්ත කියවීම (Strict Empty Array Enforcement)
+              if (data.schedule && (Array.isArray(data.schedule) || typeof data.schedule === "object")) {
+                masterSchedule = Array.isArray(data.schedule) ? data.schedule : Object.values(data.schedule);
+              } else {
+                // Cloud එකේ schedule නොමැති නම් අනිවාර්යයෙන්ම හිස් Array එකක් විය යුතුය (Fallback වැළැක්වීම)
+                masterSchedule = [];
+              }
+
+              
               if (data.classSubjectAllocations) {
       window.classSubjectAllocations = data.classSubjectAllocations;
     }
