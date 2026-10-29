@@ -121,6 +121,17 @@
       <button type="button" onclick="switchTab('classTimetableTab')" id="tab-classTimetableTab" class="py-3 px-3 font-bold text-xs sm:text-sm text-slate-500 hover:text-indigo-600 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
         <i class="fa-solid fa-chalkboard-user"></i> පන්තියේ කාලසටහන & Print
       </button>
+
+      <!-- මෙම පන්තිය පමණක් Clear කිරීමේ බොත්තම -->
+            <button type="button" onclick="clearCurrentClassSchedule()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow transition flex items-center gap-1.5" title="තෝරාගත් පන්තියේ කාලසටහන පමණක් ඉවත් කරන්න">
+              <i class="fa-solid fa-eraser"></i> පන්තිය Clear
+            </button>
+
+            <!-- සියලු පන්ති Reset කිරීමේ බොත්තම -->
+            <button type="button" onclick="clearAllMasterSchedule()" class="bg-slate-700 hover:bg-slate-800 text-rose-300 font-bold text-xs py-2 px-3 rounded-xl shadow transition flex items-center gap-1.5" title="පාසලේ සියලුම පන්තිවල කාලසටහන Reset කරන්න">
+              <i class="fa-solid fa-trash-can"></i> All Reset
+            </button>
+      
       <button type="button" onclick="switchTab('gradeMasterTab')" id="tab-gradeMasterTab" class="py-3 px-3 font-bold text-xs sm:text-sm text-slate-500 hover:text-indigo-600 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
         <i class="fa-solid fa-sitemap"></i> ශ්‍රේණියේ කාලසටහන
       </button>
@@ -2503,6 +2514,80 @@ function resetSystemData() {
     // =========================================================================
     // 8. CLASS & GRADE TIMETABLE CONTROLLER
     // =========================================================================
+
+// =========================================================================
+    // CLEAR SCHEDULE CONTROLLER (SINGLE CLASS & ALL CLASSES)
+    // =========================================================================
+
+    // 1. තෝරාගත් පන්තියේ කාලසටහන පමණක් ඉවත් කිරීම
+    function clearCurrentClassSchedule() {
+      const select = document.getElementById("activeClassSelect") || document.getElementById("classTimetableSelectClass");
+      if (!select || !select.value) {
+        alert("කරුණාකර පළමුව පන්තියක් තෝරන්න.");
+        return;
+      }
+
+      const classId = select.value;
+      const cls = (schoolClasses || []).find(c => String(c.id) === String(classId));
+      const className = cls ? cls.name : classId;
+
+      // දැනට මෙම පන්තියට කාලච්ඡේද වෙන් කර ඇත්දැයි බැලීම
+      const currentSlots = (masterSchedule || []).filter(s => String(s.classId) === String(classId));
+      if (currentSlots.length === 0) {
+        alert(`'${className}' පන්තියේ ඉවත් කිරීමට කාලච්ඡේද කිසිවක් වෙන් කර නොමැත.`);
+        return;
+      }
+
+      const confirmed = confirm(`අවවාදයයි!\n\n'${className}' පන්තියේ දැනට සකසා ඇති සියලුම කාලච්ඡේද (${currentSlots.length}) ඉවත් කිරීමට අවශ්‍ය බව තහවුරු කරන්නද?`);
+      if (!confirmed) return;
+
+      // masterSchedule වෙතින් මෙම classId එකට අදාළ සියලු කාලච්ඡේද ඉවත් කිරීම
+      masterSchedule = (masterSchedule || []).filter(s => String(s.classId) !== String(classId));
+
+      // Firebase සහ LocalStorage වෙත සුරැකීම
+      saveAllToStorage();
+
+      // කාලසටහන සහ විෂය සංචිතය (Quota Tray) ක්ෂණිකව Re-render කිරීම
+      renderClassTimetableGrid();
+      if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+
+      alert(`සාර්ථකයි! '${className}' පන්තියේ සියලු කාලච්ඡේද ඉවත් කරන ලදි. (විෂය සංචිතය නැවත මුල් තත්ත්වයට පත් විය).`);
+    }
+
+    // 2. පාසලේ සියලුම පන්තිවල මුළු කාලසටහනම එකවර Reset කිරීම
+    function clearAllMasterSchedule() {
+      if (!masterSchedule || masterSchedule.length === 0) {
+        alert("කාලසටහනේ ඉවත් කිරීමට කිසිදු දත්තයක් නොමැත.");
+        return;
+      }
+
+      const confirmed = confirm(`බරපතල අනතුරු ඇඟවීමයි!\n\nපාසලේ සියලුම පන්තිවල සකසා ඇති මුළු කාලච්ඡේද ${masterSchedule.length} ම සම්පූර්ණයෙන්ම මැකී යනු ඇත.\n\nඔබට මුළු කාලසටහනම Reset කිරීමට අවශ්‍ය බව තහවුරුද?`);
+      if (!confirmed) return;
+
+      const doubleConfirm = prompt("මෙය ආපසු හැරවිය නොහැක! තහවුරු කිරීම සඳහා 'RESET' ලෙස English අකුරින් Type කර OK ඔබන්න:");
+      if (doubleConfirm !== "RESET") {
+        alert("තහවුරු කිරීම අසාර්ථකයි. කාලසටහන Reset කිරීම අවලංගු කරන ලදි.");
+        return;
+      }
+
+      // සම්පූර්ණ කාලසටහනම හිස් කිරීම
+      masterSchedule = [];
+
+      // Firebase සහ LocalStorage වෙත සුරැකීම
+      saveAllToStorage();
+
+      // UI Re-render කිරීම
+      renderClassTimetableGrid();
+      if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+
+      alert("සාර්ථකයි! පාසලේ සියලුම පන්ති කාලසටහන් සම්පූර්ණයෙන්ම ඉවත් කර Reset කරන ලදි.");
+    }
+
+    window.clearCurrentClassSchedule = clearCurrentClassSchedule;
+    window.clearAllMasterSchedule = clearAllMasterSchedule;
+
+
+    
     function populateClassSelects() {
       const sel = document.getElementById("activeClassSelect");
       if (!sel) return;
