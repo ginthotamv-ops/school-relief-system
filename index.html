@@ -2807,6 +2807,189 @@ function resetSystemData() {
       });
     }
 
+
+// =========================================================================
+    // TIMETABLE SLOT MODAL CONTROLLER (GLOBAL SCOPE ATTACHED)
+    // =========================================================================
+
+    window.currentSlotEdit = { classId: null, day: null, period: null };
+
+    // 1. කාලච්ඡේදය මත ක්ලික් කළ විට Modal එක විවෘත කිරීම
+    function openTimetableSlotModal(classId, day, period) {
+      window.currentSlotEdit = { classId: String(classId), day: Number(day), period: Number(period) };
+
+      const cls = (schoolClasses || []).find(c => String(c.id) === String(classId));
+      const days = ["සඳුදා", "අඟහරුවාදා", "බදාදා", "බ්‍රහස්පතින්දා", "සිකුරාදා"];
+
+      const elTitle = document.getElementById("slotModalTitle");
+      const elSubTitle = document.getElementById("slotModalSubTitle");
+      if (elTitle) elTitle.innerText = `${cls ? cls.name : classId} - කාලච්ඡේදය වෙන් කිරීම`;
+      if (elSubTitle) elSubTitle.innerText = `${days[day] || ''} | ${period} වන කාලච්ඡේදය`;
+
+      // දැනට මෙම කාලච්ඡේදයට වෙන් කර ඇති දත්ත ලබාගැනීම
+      const currentSlot = (masterSchedule || []).find(s => 
+        String(s.classId) === String(classId) && 
+        (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, day) : Number(s.day) === Number(day)) && 
+        Number(s.period) === Number(period)
+      );
+
+      // විෂය Dropdown එක පිරවීම (එම ශ්‍රේණියේ විෂයන් පමණි)
+      const selectSub = document.getElementById("slotSubjectSelect");
+      if (selectSub) {
+        selectSub.innerHTML = '<option value="">-- විෂය තෝරන්න --</option>';
+
+        if (cls && curriculumSubjects && Array.isArray(curriculumSubjects)) {
+          const gradeSubjects = curriculumSubjects.filter(c => Number(c.grade) === Number(cls.grade));
+          gradeSubjects.forEach(cs => {
+            const opt = document.createElement("option");
+            opt.value = cs.subject;
+            opt.textContent = `${cs.subject} (${cs.maxWeekly} Periods)`;
+            if (currentSlot && currentSlot.subject && currentSlot.subject.trim().toLowerCase() === cs.subject.trim().toLowerCase()) {
+              opt.selected = true;
+            }
+            selectSub.appendChild(opt);
+          });
+        }
+      }
+
+      // විෂය අනුව ගුරුවරයා සහ Clashes පරීක්ෂාව
+      if (typeof onSlotSubjectChange === "function") {
+        onSlotSubjectChange();
+      }
+
+      const modal = document.getElementById("timetableSlotModal");
+      if (modal) modal.classList.remove("hidden");
+    }
+
+    // 2. Modal එක වැසීම
+    function closeTimetableSlotModal() {
+      const modal = document.getElementById("timetableSlotModal");
+      if (modal) modal.classList.add("hidden");
+      window.currentSlotEdit = { classId: null, day: null, period: null };
+    }
+
+    // 3. විෂය තේරූ විට ගුරුවරයා Lock කර Clashes පරීක්ෂා කිරීම
+    function onSlotSubjectChange() {
+      const selectSub = document.getElementById("slotSubjectSelect");
+      const subjectName = selectSub ? selectSub.value.trim() : "";
+      const { classId, day, period } = window.currentSlotEdit;
+
+      const teacherNameSpan = document.getElementById("slotAssignedTeacherName");
+      const teacherBadge = document.getElementById("slotTeacherStatusBadge");
+      const lockedTeacherInput = document.getElementById("slotLockedTeacherId");
+      const clashBox = document.getElementById("slotClashAlertBox");
+      const clashMsg = document.getElementById("slotClashAlertMessage");
+      const btnSave = document.getElementById("btnSaveSlot");
+
+      if (clashBox) clashBox.classList.add("hidden");
+      if (btnSave) btnSave.disabled = false;
+      if (lockedTeacherInput) lockedTeacherInput.value = "";
+
+      if (!subjectName) {
+        if (teacherNameSpan) teacherNameSpan.innerHTML = '<span class="text-slate-400 italic">පළමුව විෂයයක් තෝරන්න</span>';
+        if (teacherBadge) teacherBadge.classList.add("hidden");
+        if (btnSave) btnSave.disabled = true;
+        return;
+      }
+
+      // විෂයන් සහ සීමා මඟින් නියම කර ඇති ගුරුවරයා ලබාගැනීම
+      const assignedTeacher = typeof getAssignedTeacherForClassSubject === "function" 
+        ? getAssignedTeacherForClassSubject(classId, subjectName) 
+        : null;
+
+      if (!assignedTeacher) {
+        if (teacherNameSpan) teacherNameSpan.innerHTML = '<span class="text-rose-600 font-bold"><i class="fa-solid fa-circle-exclamation mr-1"></i>මෙම විෂයට ගුරුවරයෙකු පවරා නැත</span>';
+        if (teacherBadge) teacherBadge.classList.add("hidden");
+        if (btnSave) btnSave.disabled = true;
+        return;
+      }
+
+      const no = assignedTeacher.schoolNo ? `[${assignedTeacher.schoolNo}]` : `[${assignedTeacher.id}]`;
+      if (teacherNameSpan) teacherNameSpan.innerHTML = `<span class="text-indigo-950 font-bold"><i class="fa-solid fa-user-tie text-indigo-600 mr-1.5"></i>${assignedTeacher.name} ${no}</span>`;
+      if (teacherBadge) teacherBadge.classList.remove("hidden");
+      if (lockedTeacherInput) lockedTeacherInput.value = assignedTeacher.id;
+
+      // කාලච්ඡේද ගැටුම් (Clash) පරීක්ෂාව
+      const clash = typeof checkTeacherTimeClash === "function" 
+        ? checkTeacherTimeClash(assignedTeacher.id, day, period, classId) 
+        : null;
+
+      if (clash) {
+        if (clashMsg) clashMsg.innerText = `'${assignedTeacher.name}' ගුරුතුමා මෙම වේලාවේදී දැනටමත් ${clash.className} පන්තියේ (${clash.subject}) උගන්වයි. එබැවින් වෙන් කළ නොහැක.`;
+        if (clashBox) clashBox.classList.remove("hidden");
+        if (btnSave) btnSave.disabled = true;
+      }
+    }
+
+    // 4. තෝරාගත් කාලච්ඡේදය සුරැකීම
+    function saveCurrentSlot() {
+      const { classId, day, period } = window.currentSlotEdit;
+      const selectSub = document.getElementById("slotSubjectSelect");
+      const subject = selectSub ? selectSub.value.trim() : "";
+      const teacherId = document.getElementById("slotLockedTeacherId") ? document.getElementById("slotLockedTeacherId").value : "";
+
+      if (!subject || !teacherId) {
+        alert("කරුණාකර වලංගු ගුරුවරයෙකු සිටින විෂයයක් තෝරන්න.");
+        return;
+      }
+
+      let slot = (masterSchedule || []).find(s => 
+        String(s.classId) === String(classId) && 
+        (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, day) : Number(s.day) === Number(day)) && 
+        Number(s.period) === Number(period)
+      );
+
+      if (slot) {
+        slot.subject = subject;
+        slot.teacherId = teacherId;
+        slot.isBasket = false;
+      } else {
+        masterSchedule.push({
+          classId: classId,
+          day: day,
+          period: period,
+          subject: subject,
+          teacherId: teacherId,
+          isBasket: false
+        });
+      }
+
+      saveAllToStorage();
+      if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+      if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+
+      closeTimetableSlotModal();
+    }
+
+    // 5. කාලච්ඡේදය හිස් කිරීම
+    function clearCurrentSlot() {
+      const { classId, day, period } = window.currentSlotEdit;
+      if (!confirm("මෙම කාලච්ඡේදය හිස් කිරීමට අවශ්‍ය බව තහවුරු කරන්න?")) return;
+
+      masterSchedule = (masterSchedule || []).filter(s => 
+        !(String(s.classId) === String(classId) && 
+          (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, day) : Number(s.day) === Number(day)) && 
+          Number(s.period) === Number(period))
+      );
+
+      saveAllToStorage();
+      if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+      if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+
+      closeTimetableSlotModal();
+    }
+
+    // =========================================================================
+    // GLOBAL EXPORTS (HTML inline onclick සඳහා window object එකට සම්බන්ධ කිරීම)
+    // =========================================================================
+    window.openTimetableSlotModal = openTimetableSlotModal;
+    window.closeTimetableSlotModal = closeTimetableSlotModal;
+    window.onSlotSubjectChange = onSlotSubjectChange;
+    window.saveCurrentSlot = saveCurrentSlot;
+    window.clearCurrentSlot = clearCurrentSlot;
+
+
+    
     // 3. කාලසටහනේ දින 5ම Render කිරීම සහ Drop Zones සැකසීම
     function renderClassTimetableGrid() {
       if (typeof populateClassTimetableDropdown === "function") populateClassTimetableDropdown();
@@ -3025,6 +3208,8 @@ function resetSystemData() {
 
 
 
+
+    
 
     
 
