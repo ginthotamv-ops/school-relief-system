@@ -2584,6 +2584,182 @@ function resetSystemData() {
       });
     }
 
+// =========================================================================
+    // 5-DAY UNIFIED CLASS TIMETABLE GRID CONTROLLER (FIXED ID & DUAL DAY MATCH)
+    // =========================================================================
+
+    // දිනය අංකයක් (0-4) හෝ වචනයක් ("Monday") වුවද නිවැරදිව ගළපන Helper ශ්‍රිතය
+    function isSlotMatchingDay(slotDay, targetDayIndex) {
+      if (slotDay === undefined || slotDay === null) return false;
+      const s = String(slotDay).trim().toLowerCase();
+      
+      const dayAliases = {
+        0: ["0", 0, "monday", "mon", "සඳුදා"],
+        1: ["1", 1, "tuesday", "tue", "අඟහරුවාදා"],
+        2: ["2", 2, "wednesday", "wed", "බදාදා"],
+        3: ["3", 3, "thursday", "thu", "බ්‍රහස්පතින්දා"],
+        4: ["4", 4, "friday", "fri", "සිකුරාදා"]
+      };
+
+      const validList = dayAliases[targetDayIndex] || [];
+      return validList.some(v => String(v).toLowerCase() === s);
+    }
+
+    // පන්ති Dropdown එක පිරවීම (activeClassSelect භාවිතයෙන්)
+    function populateClassTimetableDropdown() {
+      // HTML හි ඇති නිවැරදි ID එක: activeClassSelect
+      const select = document.getElementById("activeClassSelect") || document.getElementById("classTimetableSelectClass");
+      if (!select) return;
+
+      const currentVal = select.value;
+      
+      // Dropdown එක දැනටමත් පිරී ඇත්නම් නැවත නැවත Options හැදීම වැළැක්වීම
+      if (select.options.length > 0 && currentVal) {
+        return;
+      }
+
+      select.innerHTML = "";
+
+      if (!schoolClasses || schoolClasses.length === 0) {
+        select.innerHTML = '<option value="">පන්ති හමු නොවීය</option>';
+        return;
+      }
+
+      const sortedClasses = [...schoolClasses].sort((a, b) => Number(a.grade) - Number(b.grade) || a.name.localeCompare(b.name));
+
+      sortedClasses.forEach((c, idx) => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = `${c.name} (Grade ${c.grade})`;
+        if (c.id === currentVal || (!currentVal && idx === 0)) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+      });
+    }
+
+    // දින 5ම එකවර පෙන්වන කාලසටහන Render කිරීම
+    function renderClassTimetableGrid() {
+      populateClassTimetableDropdown();
+
+      // HTML හි ඇති නිවැරදි ID එකෙන් ලබාගැනීම
+      const select = document.getElementById("activeClassSelect") || document.getElementById("classTimetableSelectClass");
+      const tbody = document.getElementById("classTimetableGridBody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      if (!select || !select.value) {
+        tbody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-slate-400 font-bold">කරුණාකර පන්තියක් තෝරන්න (පන්ති ලැයිස්තුව හිස්ව පවතී).</td></tr>';
+        return;
+      }
+
+      const selectedClassId = select.value;
+
+      // 1. තෝරාගත් පන්තියේ පන්තිභාර ගුරුතුමා පෙන්වීම
+      const cls = (schoolClasses || []).find(c => String(c.id) === String(selectedClassId));
+      const masterTeacherEl = document.getElementById("classMasterTeacherName");
+      if (masterTeacherEl) {
+        if (cls && cls.classTeacherId) {
+          const ct = (teachers || []).find(t => String(t.id).trim().toLowerCase() === String(cls.classTeacherId).trim().toLowerCase());
+          masterTeacherEl.innerText = ct ? ct.name : cls.classTeacherId;
+        } else {
+          masterTeacherEl.innerText = "පත් කර නැත";
+        }
+      }
+
+      // 2. සතිපතා විෂය සීමා තීරුව (Quota Status) තිබේ නම් යාවත්කාලීන කිරීම
+      if (typeof renderClassSubjectQuota === "function") {
+        renderClassSubjectQuota(selectedClassId);
+      }
+
+      const days = [
+        { id: 0, name: "සඳුදා (Mon)", short: "සඳුදා" },
+        { id: 1, name: "අඟහරුවාදා (Tue)", short: "අඟහරුවාදා" },
+        { id: 2, name: "බදාදා (Wed)", short: "බදාදා" },
+        { id: 3, name: "බ්‍රහස්පතින්දා (Thu)", short: "බ්‍රහස්පතින්දා" },
+        { id: 4, name: "සිකුරාදා (Fri)", short: "සිකුරාදා" }
+      ];
+
+      // 3. දින 5 සඳහා පේළි 5 සැකසීම
+      days.forEach((d, dayIndex) => {
+        let rowHtml = `<tr class="hover:bg-slate-50/60 transition border-b border-slate-200">`;
+        
+        // දිනය තීරුව
+        rowHtml += `
+          <td class="p-3 font-bold text-slate-800 bg-slate-100/70 border-r border-slate-200 whitespace-nowrap">
+            <span class="text-xs block text-indigo-900">${d.short}</span>
+          </td>
+        `;
+
+        // කාලච්ඡේද 1 සිට 8 දක්වා
+        for (let p = 1; p <= 8; p++) {
+
+          // විවේකය තීරුව (Interval - 4 වන වාරයට පසු)
+          if (p === 5 && dayIndex === 0) {
+            rowHtml += `
+              <td rowspan="5" class="bg-amber-50/90 border-r border-slate-200 text-amber-800 font-extrabold text-[11px] p-1 tracking-widest uppercase select-none shadow-inner" style="writing-mode: vertical-rl; text-orientation: mixed;">
+                වි වේ ක ය
+              </td>
+            `;
+          }
+
+          // masterSchedule තුළ මෙම කාලච්ඡේදය තිබේදැයි පරීක්ෂාව
+          const slot = (masterSchedule || []).find(s => 
+            String(s.classId) === String(selectedClassId) && 
+            isSlotMatchingDay(s.day, d.id) && 
+            Number(s.period) === Number(p)
+          );
+
+          if (slot && slot.subject) {
+            // ගුරුවරයාගේ නම ලබාගැනීම
+            let teacherText = '<span class="text-rose-500 font-bold text-[10px]">ගුරුවරයෙකු නැත</span>';
+            if (slot.teacherId) {
+              const tch = (teachers || []).find(t => String(t.id).trim().toLowerCase() === String(slot.teacherId).trim().toLowerCase());
+              if (tch) {
+                const no = tch.schoolNo ? `[${tch.schoolNo}]` : "";
+                teacherText = `<span class="text-indigo-900 font-semibold text-[10px] block truncate" title="${tch.name}">${tch.name} ${no}</span>`;
+              }
+            }
+
+            // පිරවූ කොටුව (Clickable)
+            rowHtml += `
+              <td onclick="openTimetableSlotModal('${selectedClassId}', ${d.id}, ${p})" class="p-2 border-r border-slate-200 cursor-pointer bg-indigo-50/40 hover:bg-indigo-100/80 transition relative group">
+                <div class="font-bold text-xs text-indigo-950 truncate" title="${slot.subject}">
+                  ${slot.subject}
+                </div>
+                <div class="mt-0.5">
+                  ${teacherText}
+                </div>
+                <span class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-[9px] text-indigo-600 transition">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </span>
+              </td>
+            `;
+          } else {
+            // හිස් කොටුව (Clickable to Add)
+            rowHtml += `
+              <td onclick="openTimetableSlotModal('${selectedClassId}', ${d.id}, ${p})" class="p-2 border-r border-slate-200 cursor-pointer hover:bg-slate-100/80 transition text-slate-300 hover:text-indigo-600 group">
+                <span class="text-xs group-hover:hidden">-</span>
+                <span class="hidden group-hover:inline-flex items-center gap-0.5 text-[10px] font-bold text-indigo-600">
+                  <i class="fa-solid fa-plus text-[9px]"></i> එක් කරන්න
+                </span>
+              </td>
+            `;
+          }
+        }
+
+        rowHtml += `</tr>`;
+        tbody.innerHTML += rowHtml;
+      });
+    }
+
+    window.isSlotMatchingDay = isSlotMatchingDay;
+    window.populateClassTimetableDropdown = populateClassTimetableDropdown;
+    window.renderClassTimetableGrid = renderClassTimetableGrid;
+    
+
+/*
+    
     // දින 5ම එකවර පෙන්වන කාලසටහන් Grid එක Render කිරීම
     function renderClassTimetableGrid() {
       populateClassTimetableDropdown();
@@ -2685,6 +2861,8 @@ function resetSystemData() {
 
     window.renderClassTimetableGrid = renderClassTimetableGrid;
     window.populateClassTimetableDropdown = populateClassTimetableDropdown;
+
+*/
     
  /*   
     function renderClassTimetableGrid() {
