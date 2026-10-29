@@ -3100,6 +3100,37 @@ function handleSaveTeacher(e) {
     }
 
     function editTeacher(id) {
+      const t = teachers.find(x => String(x.id) === String(id));
+      if (!t) return;
+
+      document.getElementById("editTeacherId").value = t.id;
+      document.getElementById("newTeacherSchoolNo").value = t.schoolNo || "";
+      document.getElementById("newTeacherName").value = t.name || "";
+      document.getElementById("newTeacherPhone").value = t.phone || "";
+
+      // 1. අංශ Checkboxes සලකුණු කිරීම
+      const isAll = t.sections && (t.sections.includes("All") || t.sections.length === 0);
+      const allChk = document.querySelector(".tch-sec-chk-all");
+      if (allChk) allChk.checked = isAll;
+
+      document.querySelectorAll(".tch-sec-chk").forEach(chk => {
+        chk.checked = !isAll && t.sections && t.sections.includes(chk.value);
+      });
+
+      // 2. තෝරාගත් අංශවලට පමණක් විෂය Dropdown එක පිරවීම
+      populateTeacherSubjectDropdown();
+
+      // 3. ගුරුවරයාගේ ප්‍රධාන විෂය Dropdown එක තුළ Select කිරීම
+      const subSelect = document.getElementById("newTeacherSubjectSelect");
+      if (subSelect && t.subject) {
+        subSelect.value = t.subject;
+      }
+
+      const btnSave = document.getElementById("btnSaveTeacher");
+      if (btnSave) btnSave.innerHTML = '<i class="fa-solid fa-pen-to-square mr-1"></i> යාවත්කාලීන කරන්න';
+    }
+/*
+    function editTeacher(id) {
       
       const t = teachers.find(x => x.id === id);
       if (!t) return;
@@ -3120,6 +3151,7 @@ function handleSaveTeacher(e) {
       document.getElementById("teacherSubmitBtn").innerHTML = '<i class="fa-solid fa-check"></i> යාවත්කාලීන කරන්න';
       document.getElementById("teacherCancelEditBtn").classList.remove("hidden");
     }
+    */
 
     function cancelTeacherEdit() {
       document.getElementById("editTeacherId").value = "";
@@ -3776,6 +3808,145 @@ function handleSaveTeacher(e) {
 // =========================================================================
     // TOGGLE ALL SECTIONS CHECKBOX CONTROLLER
     // =========================================================================
+
+// =========================================================================
+    // STRICT SECTION-BASED TEACHER SUBJECT CONTROLLER
+    // =========================================================================
+
+    // 1. පෝරමයේ දැනට සලකුණු කර ඇති අංශ නිවැරදිව ලබාගැනීම
+    function getSelectedTeacherSections() {
+      const allChk = document.querySelector(".tch-sec-chk-all") || document.getElementById("tchSecAll");
+      const sectionChks = document.querySelectorAll(".tch-sec-chk:checked");
+      
+      // විශේෂිත අංශ තෝරා ඇත්නම් ඒවා පමණක් ලබාගනී
+      if (sectionChks.length > 0) {
+        return Array.from(sectionChks).map(chk => chk.value.trim());
+      }
+      
+      // "සියල්ල (All)" තෝරා ඇත්නම් පමණක් "All" ලබාදේ
+      if (allChk && allChk.checked) {
+        return ["All"];
+      }
+
+      // කිසිවක් තෝරා නැත
+      return [];
+    }
+
+    // 2. විෂයක් අදාළ අංශයට අයත් දැයි තහවුරු කිරීමේ Helper ශ්‍රිතය
+    function isSubjectInSpecificSection(cs, selectedSections) {
+      if (!cs) return false;
+      if (selectedSections.includes("All")) return true;
+
+      // පද්ධතියේ gradeSettings මඟින් අංශය හඳුනාගැනීම
+      let secName = null;
+      if (typeof gradeSettings !== "undefined" && Array.isArray(gradeSettings)) {
+        const gSetting = gradeSettings.find(g => Number(g.grade) === Number(cs.grade));
+        if (gSetting && gSetting.section) secName = gSetting.section;
+      }
+      if (!secName && typeof getSectionOfGrade === "function") {
+        secName = getSectionOfGrade(cs.grade);
+      }
+
+      // අංශ නම සෘජුව ගැලපේ නම් (උදා: "8-11" === "8-11")
+      if (secName && selectedSections.includes(secName)) {
+        return true;
+      }
+
+      // Fallback: ශ්‍රේණි අංක පරාස අනුව පරීක්ෂා කිරීම
+      const g = Number(cs.grade);
+      return selectedSections.some(sec => {
+        if (sec === "1-5" && g >= 1 && g <= 5) return true;
+        if (sec === "6-7" && g >= 6 && g <= 7) return true;
+        if (sec === "8-11" && g >= 8 && g <= 11) return true;
+        if (sec === "12-13" && g >= 12 && g <= 13) return true;
+        return false;
+      });
+    }
+
+    // 3. තෝරාගත් අංශයට පමණක් අදාළ විෂයන් Dropdown එකට පිරවීම
+    function populateTeacherSubjectDropdown() {
+      const select = document.getElementById("newTeacherSubjectSelect");
+      if (!select) return;
+
+      const currentVal = select.value;
+      const selectedSections = getSelectedTeacherSections();
+
+      // කිසිදු අංශයක් තෝරා නැතිනම් විෂය තේරීම අවහිර කරයි
+      if (selectedSections.length === 0) {
+        select.innerHTML = '<option value="">-- පළමුව ඉහතින් අංශයක් (Section) තෝරන්න --</option>';
+        select.disabled = true;
+        return;
+      }
+
+      select.disabled = false;
+      select.innerHTML = '<option value="">-- ප්‍රධාන විෂය තෝරන්න --</option>';
+
+      const subjectsSet = new Set();
+
+      // විෂය නිර්දේශයෙන් (curriculumSubjects) අදාළ අංශයේ විෂයන් පමණක් පෙරා ගැනීම
+      if (curriculumSubjects && Array.isArray(curriculumSubjects)) {
+        curriculumSubjects.forEach(cs => {
+          if (cs && cs.subject && String(cs.subject).trim()) {
+            if (isSubjectInSpecificSection(cs, selectedSections)) {
+              subjectsSet.add(String(cs.subject).trim());
+            }
+          }
+        });
+      }
+
+      const sortedSubjects = Array.from(subjectsSet).sort((a, b) => a.localeCompare(b));
+
+      // අදාළ අංශයට විෂයන් නැතිනම්
+      if (sortedSubjects.length === 0) {
+        const secLabel = selectedSections.join(", ");
+        select.innerHTML = `<option value="">⚠️ [${secLabel}] අංශයට අදාළ විෂයන් විෂය නිර්දේශයේ හමු නොවීය</option>`;
+        return;
+      }
+
+      // පෙරහන් වූ විෂයන් Dropdown එකට එක් කිරීම
+      sortedSubjects.forEach(sub => {
+        const opt = document.createElement("option");
+        opt.value = sub;
+        opt.textContent = sub;
+        if (sub === currentVal) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    // 4. "සියල්ල (All)" Checkbox වෙනස් වන විට
+    function toggleAllSectionsCheckbox(master) {
+      const allChk = master || document.querySelector(".tch-sec-chk-all") || document.getElementById("tchSecAll");
+      const sectionChks = document.querySelectorAll(".tch-sec-chk");
+
+      if (allChk && allChk.checked) {
+        sectionChks.forEach(chk => { chk.checked = false; });
+      }
+
+      // විෂය Dropdown එක අලුත් කිරීම
+      populateTeacherSubjectDropdown();
+    }
+
+    // 5. තනි අංශ Checkboxes (1-5, 6-7, 8-11, 12-13) වෙනස් වන විට
+    function onTeacherSectionCheckboxesChange(target) {
+      const allChk = document.querySelector(".tch-sec-chk-all") || document.getElementById("tchSecAll");
+      const sectionChks = document.querySelectorAll(".tch-sec-chk");
+
+      if (target && target.checked && allChk) {
+        allChk.checked = false;
+      }
+
+      // සියලු තනි අංශ Uncheck කළහොත් ස්වයංක්‍රීයව කිසිවක් තෝරා නොමැති තත්ත්වයට පත් වේ
+      populateTeacherSubjectDropdown();
+    }
+
+    window.getSelectedTeacherSections = getSelectedTeacherSections;
+    window.isSubjectInSpecificSection = isSubjectInSpecificSection;
+    window.populateTeacherSubjectDropdown = populateTeacherSubjectDropdown;
+    window.toggleAllSectionsCheckbox = toggleAllSectionsCheckbox;
+    window.onTeacherSectionCheckboxesChange = onTeacherSectionCheckboxesChange;
+
+    
+    /*
     function toggleAllSectionsCheckbox(master) {
       const allChk = master || document.querySelector(".tch-sec-chk-all") || document.getElementById("tchSecAll");
       const sectionChks = document.querySelectorAll(".tch-sec-chk");
@@ -3805,7 +3976,7 @@ function onTeacherSectionCheckboxesChange(target) {
     }
 
     window.onTeacherSectionCheckboxesChange = onTeacherSectionCheckboxesChange;
-    
+    */
 
 // =========================================================================
     // SORT TEACHERS BY SCHOOL NUMBER (EMPTY NUMBERS TO BOTTOM)
@@ -3844,6 +4015,7 @@ function onTeacherSectionCheckboxesChange(target) {
 // =========================================================================
     // GET SELECTED TEACHER SECTIONS HELPER FUNCTION
     // =========================================================================
+/*   
     function getSelectedTeacherSections() {
       // 1. "සියල්ල (All)" Checkbox එක පරීක්ෂා කිරීම
       const allChk = document.querySelector(".tch-sec-chk-all") || document.getElementById("tchSecAll");
@@ -3862,6 +4034,8 @@ function onTeacherSectionCheckboxesChange(target) {
     // Global scope එකට සම්බන්ධ කිරීම
     window.getSelectedTeacherSections = getSelectedTeacherSections;
     
+
+
 
 // 2. අදාළ අංශයට පමණක් ගැලපෙන විෂයන් Dropdown එකට පිරවීම
     function populateTeacherSubjectDropdown() {
@@ -3916,56 +4090,8 @@ function onTeacherSectionCheckboxesChange(target) {
     window.getSelectedTeacherSections = getSelectedTeacherSections;
     window.populateTeacherSubjectDropdown = populateTeacherSubjectDropdown;
     
- /*   
-    // =========================================================================
-    // POPULATE TEACHER SUBJECT SELECT DROPDOWN
-    // =========================================================================
-    function populateTeacherSubjectDropdown() {
-      const select = document.getElementById("newTeacherSubjectSelect");
-      if (!select) return;
+ */
 
-      const currentVal = select.value;
-      select.innerHTML = '<option value="">-- ප්‍රධාන විෂය තෝරන්න --</option>';
-
-      const subjectsSet = new Set();
-
-      // 1. විෂය නිර්දේශයෙන් (Curriculum) විෂයන් ලබාගැනීම
-      if (curriculumSubjects && Array.isArray(curriculumSubjects)) {
-        curriculumSubjects.forEach(cs => {
-          if (cs && cs.subject && String(cs.subject).trim()) {
-            subjectsSet.add(String(cs.subject).trim());
-          }
-        });
-      }
-
-      // 2. දැනට සිටින ගුරුවරුන්ගේ විෂයන්ද ලබාගැනීම (කිසිදු විෂයක් මඟ නොහැරීමට)
-      if (teachers && Array.isArray(teachers)) {
-        teachers.forEach(t => {
-          if (t && t.subject && String(t.subject).trim()) {
-            subjectsSet.add(String(t.subject).trim());
-          }
-        });
-      }
-
-      const sortedSubjects = Array.from(subjectsSet).sort((a, b) => a.localeCompare(b));
-
-      if (sortedSubjects.length === 0) {
-        select.innerHTML = '<option value="">⚠️ විෂයන් හමු නොවීය (Curriculum හි විෂයන් එක් කරන්න)</option>';
-        return;
-      }
-
-      sortedSubjects.forEach(sub => {
-        const opt = document.createElement("option");
-        opt.value = sub;
-        opt.textContent = sub;
-        if (sub === currentVal) opt.selected = true;
-        select.appendChild(opt);
-      });
-    }
-
-    // Global scope වෙත සම්බන්ධ කිරීම
-    window.populateTeacherSubjectDropdown = populateTeacherSubjectDropdown;
-*/
     
     // =========================================================================
     // 10. CURRICULUM MANAGEMENT
