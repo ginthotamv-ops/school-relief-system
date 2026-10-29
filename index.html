@@ -232,27 +232,32 @@
     </div>
 
     <!-- TAB 2: CLASS TIMETABLE -->
+
+    <!-- Class Timetable: 5-Day Weekly View -->
     <div id="classTimetableTab" class="hidden space-y-6">
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        
+        <!-- Header & Top Action Bar -->
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center pb-4 border-b border-slate-100 gap-3 no-print">
           <div>
             <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <i class="fa-solid fa-chalkboard text-indigo-600"></i> පන්තියේ කාලසටහන & Re-shuffle
+              <i class="fa-solid fa-chalkboard text-indigo-600"></i> පන්තියේ කාලසටහන (සතිපතා දසුන)
             </h2>
-            <div class="flex items-center gap-3 mt-1">
-              <span class="text-xs text-slate-500">ඕනෑම කාලච්ඡේදයක් Re-shuffle (Swap) කිරීමට හෝ Edit කිරීමට හැක.</span>
+            <div class="flex items-center gap-3 mt-1 flex-wrap">
+              <span class="text-xs text-slate-500">ඕනෑම කාලච්ඡේදයක් මත ක්ලික් කර විෂය වෙන් කිරීමට හෝ Re-shuffle කිරීමට හැක.</span>
               <span class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full font-bold border border-indigo-200">
                 පන්තිභාර ගුරුතුමා: <span id="classMasterTeacherName">-</span>
               </span>
             </div>
           </div>
+
           <div class="flex flex-wrap items-center gap-2">
-            <select id="activeClassSelect" onchange="renderClassTimetableGrid()" class="bg-slate-50 border border-slate-300 font-bold text-xs sm:text-sm rounded-lg p-2 outline-none"></select>
-            <select id="classViewDaySelect" onchange="renderClassTimetableGrid()" class="bg-slate-50 border border-slate-300 font-bold text-xs sm:text-sm rounded-lg p-2 outline-none">
-              <option value="Monday">සඳුදා</option><option value="Tuesday">අඟහරුවාදා</option>
-              <option value="Wednesday">බදාදා</option><option value="Thursday">බ්‍රහස්පතින්දා</option>
-              <option value="Friday">සිකුරාදා</option>
+            <!-- පන්තිය තෝරන Dropdown එක -->
+            <select id="activeClassSelect" onchange="renderClassTimetableGrid()" class="bg-slate-50 border border-slate-300 font-bold text-xs sm:text-sm rounded-lg p-2 outline-none focus:border-indigo-600">
+              <!-- JavaScript මඟින් පන්ති ලැයිස්තුව පිරවේ -->
             </select>
+
+            <!-- Re-shuffle & Print බොත්තම් -->
             <button type="button" onclick="openReshuffleModal()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow transition flex items-center gap-1.5">
               <i class="fa-solid fa-shuffle"></i> Periods Re-shuffle
             </button>
@@ -264,11 +269,37 @@
             </button>
           </div>
         </div>
+
+        <!-- සතිපතා විෂය සීමා තත්ත්වය (Subject Quota Status) -->
         <div id="classSubjectQuotaStatus" class="my-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 text-xs flex flex-wrap gap-2 items-center no-print"></div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-4 no-print" id="classPeriodSlotsContainer"></div>
+
+        <!-- නව 5-Day Weekly Timetable Grid Table -->
+        <div class="overflow-x-auto mt-4 border border-slate-200 rounded-xl shadow-sm">
+          <table class="w-full text-xs text-center border-collapse bg-white" id="classTimetableGridTable">
+            <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+              <tr>
+                <th class="p-2.5 w-28 border-r border-slate-200 bg-slate-200/70 text-slate-800">දිනය</th>
+                <th class="p-2.5 min-w-[95px] border-r border-slate-200">1 වන වාරය</th>
+                <th class="p-2.5 min-w-[95px] border-r border-slate-200">2 වන වාරය</th>
+                <th class="p-2.5 min-w-[95px] border-r border-slate-200">3 වන වාරය</th>
+                <th class="p-2.5 min-w-[95px] border-r border-slate-200">4 වන වාරය</th>
+                <!-- විවේකය (Interval Column) -->
+                <th class="p-2.5 w-10 border-r border-slate-200 bg-amber-50 text-amber-800 font-extrabold select-none">විවේකය</th>
+                <th class="p-2.5 min-w-[95px] border-r border-slate-200">5 වන වාරය</th>
+                <th class="p-2.5 min-w-[95px] border-r border-slate-200">6 වන වාරය</th>
+                <th class="p-2.5 min-w-[95px] border-r border-slate-200">7 වන වාරය</th>
+                <th class="p-2.5 min-w-[95px]">8 වන වාරය</th>
+              </tr>
+            </thead>
+            <tbody id="classTimetableGridBody" class="divide-y divide-slate-200 font-medium">
+              <!-- සඳුදා සිට සිකුරාදා දක්වා දින 5 ම මෙතැනට Render වේ -->
+            </tbody>
+          </table>
+        </div>
+
       </div>
     </div>
-
+    
     <!-- TAB 3: GRADE MASTER -->
     <div id="gradeMasterTab" class="hidden space-y-6">
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
@@ -2524,6 +2555,138 @@ function resetSystemData() {
       });
     }
 
+// =========================================================================
+    // 5-DAY UNIFIED CLASS TIMETABLE GRID CONTROLLER
+    // =========================================================================
+
+    // පන්ති Dropdown එක පිරවීම
+    function populateClassTimetableDropdown() {
+      const select = document.getElementById("classTimetableSelectClass");
+      if (!select) return;
+
+      const currentVal = select.value;
+      select.innerHTML = "";
+
+      if (!schoolClasses || schoolClasses.length === 0) {
+        select.innerHTML = '<option value="">පන්ති හමු නොවීය</option>';
+        return;
+      }
+
+      // ශ්‍රේණිය සහ නම අනුව පිළිවෙළට සකස් කිරීම
+      const sortedClasses = [...schoolClasses].sort((a, b) => Number(a.grade) - Number(b.grade) || a.name.localeCompare(b.name));
+
+      sortedClasses.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = `${c.name} (Grade ${c.grade})`;
+        if (c.id === currentVal) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    // දින 5ම එකවර පෙන්වන කාලසටහන් Grid එක Render කිරීම
+    function renderClassTimetableGrid() {
+      populateClassTimetableDropdown();
+
+      const select = document.getElementById("classTimetableSelectClass");
+      const tbody = document.getElementById("classTimetableGridBody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      if (!select || !select.value) {
+        tbody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-slate-400 font-bold">කරුණාකර පන්තියක් තෝරන්න.</td></tr>';
+        return;
+      }
+
+      const selectedClassId = select.value;
+      const days = [
+        { id: 0, name: "සඳුදා (Mon)", short: "සඳුදා" },
+        { id: 1, name: "අඟහරුවාදා (Tue)", short: "අඟහරුවාදා" },
+        { id: 2, name: "බදාදා (Wed)", short: "බදාදා" },
+        { id: 3, name: "බ්‍රහස්පතින්දා (Thu)", short: "බ්‍රහස්පතින්දා" },
+        { id: 4, name: "සිකුරාදා (Fri)", short: "සිකුරාදා" }
+      ];
+
+      // දින 5 සඳහා පේළි 5ක් සෑදීම
+      days.forEach((d, dayIndex) => {
+        let rowHtml = `<tr class="hover:bg-slate-50/50 transition border-b border-slate-200">`;
+        
+        // පළමු තීරුව: දිනය
+        rowHtml += `
+          <td class="p-3 font-bold text-slate-800 bg-slate-100/70 border-r border-slate-200 whitespace-nowrap">
+            <span class="text-xs block text-indigo-900">${d.short}</span>
+          </td>
+        `;
+
+        // කාලච්ඡේද 1 සිට 8 දක්වා කොටු සැකසීම
+        for (let p = 1; p <= 8; p++) {
+
+          // 4 වන කාලච්ඡේදයෙන් පසු විවේකය (Interval) තීරුව
+          if (p === 5) {
+            if (dayIndex === 0) {
+              // පළමු පේළියේදී පමණක් පේළි 5ම එකතු කරමින් (rowspan=5) විවේකය පෙන්වීම
+              rowHtml += `
+                <td rowspan="5" class="bg-amber-50/80 border-r border-slate-200 text-amber-800 font-extrabold text-[11px] p-1 tracking-widest uppercase select-none shadow-inner" style="writing-mode: vertical-rl; text-orientation: mixed;">
+                  වි වේ ක ය
+                </td>
+              `;
+            }
+          }
+
+          // masterSchedule තුළ මෙම (day, period) සඳහා slot එකක් තිබේදැයි බැලීම
+          const slot = (masterSchedule || []).find(s => 
+            String(s.classId) === String(selectedClassId) && 
+            Number(s.day) === Number(d.id) && 
+            Number(s.period) === Number(p)
+          );
+
+          if (slot && slot.subject) {
+            // ගුරුවරයාගේ විස්තර ලබාගැනීම
+            let teacherText = '<span class="text-rose-500 font-bold text-[10px]">ගුරුවරයෙකු නැත</span>';
+            if (slot.teacherId) {
+              const tch = (teachers || []).find(t => String(t.id).trim().toLowerCase() === String(slot.teacherId).trim().toLowerCase());
+              if (tch) {
+                const no = tch.schoolNo ? `[${tch.schoolNo}]` : "";
+                teacherText = `<span class="text-indigo-900 font-semibold text-[10px] block truncate" title="${tch.name}">${tch.name} ${no}</span>`;
+              }
+            }
+
+            // පිරවූ කාලච්ඡේද කොටුව (Clickable)
+            rowHtml += `
+              <td onclick="openTimetableSlotModal('${selectedClassId}', ${d.id}, ${p})" class="p-2 border-r border-slate-200 cursor-pointer bg-indigo-50/40 hover:bg-indigo-100/80 transition relative group">
+                <div class="font-bold text-xs text-indigo-950 truncate" title="${slot.subject}">
+                  ${slot.subject}
+                </div>
+                <div class="mt-0.5">
+                  ${teacherText}
+                </div>
+                <span class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-[9px] text-indigo-600 transition">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </span>
+              </td>
+            `;
+          } else {
+            // හිස් කාලච්ඡේද කොටුව (Clickable to Add)
+            rowHtml += `
+              <td onclick="openTimetableSlotModal('${selectedClassId}', ${d.id}, ${p})" class="p-2 border-r border-slate-200 cursor-pointer hover:bg-slate-100/80 transition text-slate-300 hover:text-indigo-600 group">
+                <span class="text-xs group-hover:hidden">-</span>
+                <span class="hidden group-hover:inline-flex items-center gap-0.5 text-[10px] font-bold text-indigo-600">
+                  <i class="fa-solid fa-plus text-[9px]"></i> එක් කරන්න
+                </span>
+              </td>
+            `;
+          }
+        }
+
+        rowHtml += `</tr>`;
+        tbody.innerHTML += rowHtml;
+      });
+    }
+
+    window.renderClassTimetableGrid = renderClassTimetableGrid;
+    window.populateClassTimetableDropdown = populateClassTimetableDropdown;
+    
+ /*   
     function renderClassTimetableGrid() {
       populateClassSelects();
       const sel = document.getElementById("activeClassSelect");
@@ -2562,7 +2725,8 @@ function resetSystemData() {
         container.appendChild(card);
       }
     }
-
+*/
+    
     function renderClassSubjectQuota(clsId, grade) {
       const container = document.getElementById("classSubjectQuotaStatus");
       if (!container) return;
