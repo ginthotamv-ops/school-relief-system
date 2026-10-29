@@ -471,7 +471,7 @@
                 <th class="p-2.5 w-24">අංශය</th>
                 <th class="p-2.5">විෂය නම</th>
                 <th class="p-2.5 w-28">සතියට වාර</th>
-                <th class="p-2.5">ආදේශ කළ ගුරුවරුන් (Assigned Teachers)</th>
+                <th class="p-2.5 text-left">ගුරුවරයෙකු නොමැති පන්ති</th>
                 <th class="p-2.5 text-center w-48">ක්‍රියාකාරකම්</th>
               </tr>
             </thead>
@@ -2933,6 +2933,12 @@ function resetSystemData() {
         return;
       }
 
+      // saveCurrentSlot සහ handleSlotDrop තුළ මුලින්ම පරීක්ෂා කෙරේ:
+    if (!validateCurriculumSubjectForClass(classId, subjectName)) {
+      alert(`දෝෂයකි! '${subjectName}' විෂය මෙම ශ්‍රේණියේ විෂය නිර්දේශයට (විෂයන් & සීමා) ඇතුළත් කර නොමැත. කාලසටහනට ඇතුළත් කළ නොහැක.`);
+      return;
+    }
+      
       let slot = (masterSchedule || []).find(s => 
         String(s.classId) === String(classId) && 
         (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, day) : Number(s.day) === Number(day)) && 
@@ -3113,6 +3119,23 @@ function resetSystemData() {
       e.currentTarget.classList.add("bg-indigo-200/70", "border-indigo-400", "scale-[0.98]");
     }
 
+function validateCurriculumSubjectForClass(classId, subjectName) {
+      const cls = (schoolClasses || []).find(c => String(c.id) === String(classId));
+      if (!cls || !subjectName) return false;
+
+      const subNorm = typeof normalizeSubjectString === "function" 
+        ? normalizeSubjectString(subjectName) 
+        : subjectName.trim().toLowerCase();
+
+      return (curriculumSubjects || []).some(cs => 
+        Number(cs.grade) === Number(cls.grade) && 
+        (typeof normalizeSubjectString === "function" ? normalizeSubjectString(cs.subject) === subNorm : cs.subject.trim().toLowerCase() === subNorm)
+      );
+    }
+
+    window.validateCurriculumSubjectForClass = validateCurriculumSubjectForClass;
+    
+    
     function handleSlotDragLeave(e) {
       e.currentTarget.classList.remove("bg-indigo-200/70", "border-indigo-400", "scale-[0.98]");
     }
@@ -3123,6 +3146,12 @@ function resetSystemData() {
 
       if (!window.draggedSubjectData) return;
       const subjectName = window.draggedSubjectData.subject;
+
+      // saveCurrentSlot සහ handleSlotDrop තුළ මුලින්ම පරීක්ෂා කෙරේ:
+    if (!validateCurriculumSubjectForClass(classId, subjectName)) {
+      alert(`දෝෂයකි! '${subjectName}' විෂය මෙම ශ්‍රේණියේ විෂය නිර්දේශයට (විෂයන් & සීමා) ඇතුළත් කර නොමැත. කාලසටහනට ඇතුළත් කළ නොහැක.`);
+      return;
+    }
 
       // A. Quota Limit පරීක්ෂාව
       const quotas = calculateClassSubjectQuotas(classId);
@@ -5429,8 +5458,182 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       alert(msg);
     }
 
-    // 4. Curriculum Table එකේ බොත්තම නිවැරදි Parameter සහිතව Render කිරීම
+// =========================================================================
+    // UNASSIGNED CLASSES DETECTOR & CURRICULUM TABLE CONTROLLER
+    // =========================================================================
+
+    // යම් ශ්‍රේණියක විෂයකට අදාළව ගුරුවරයෙකු පවරා නොමැති පන්ති සොයාගැනීම
+    function getUnassignedClassesForSubject(grade, subjectName) {
+      const g = Number(grade);
+      const subNorm = typeof normalizeSubjectString === "function" 
+        ? normalizeSubjectString(subjectName) 
+        : subjectName.trim().toLowerCase();
+
+      // අදාළ ශ්‍රේණියේ සියලු පන්ති
+      const classesOfGrade = (schoolClasses || []).filter(c => Number(c.grade) === g);
+      const unassignedList = [];
+
+      classesOfGrade.forEach(cls => {
+        const allocKey = `${cls.id}__${subjectName.trim()}`;
+        let assignedTeacherId = null;
+
+        // 1. classSubjectAllocations තුළ පරීක්ෂාව
+        if (window.classSubjectAllocations && window.classSubjectAllocations[allocKey]) {
+          assignedTeacherId = window.classSubjectAllocations[allocKey];
+        }
+
+        // 2. masterSchedule තුළ පරීක්ෂාව (Fallback)
+        if (!assignedTeacherId && Array.isArray(masterSchedule)) {
+          const slot = masterSchedule.find(s => 
+            String(s.classId) === String(cls.id) &&
+            !s.isBasket && 
+            s.subject && 
+            (typeof normalizeSubjectString === "function" ? normalizeSubjectString(s.subject) === subNorm : s.subject.trim().toLowerCase() === subNorm) &&
+            s.teacherId
+          );
+          if (slot) assignedTeacherId = slot.teacherId;
+        }
+
+        // 3. පවරා ඇති ගුරුවරයා සැබවින්ම පද්ධතියේ සිටීදැයි පරීක්ෂාව
+        const teacherExists = assignedTeacherId 
+          ? (teachers || []).some(t => String(t.id).trim().toLowerCase() === String(assignedTeacherId).trim().toLowerCase()) 
+          : false;
+
+        // ගුරුවරයෙකු නැතිනම් හෝ අදාළ ගුරුවරයා පද්ධතියෙන් මකා දමා ඇත්නම් නොපවරා ඇති ලැයිස්තුවට එක් වේ
+        if (!teacherExists) {
+          unassignedList.push(cls);
+        }
+      });
+
+      return unassignedList;
+    }
+
+// 1. කාලච්ඡේද Modal එකේ Dropdown එකට එම ශ්‍රේණියේ විෂයන් පමණක් පිරවීම
+    function populateSlotSubjectOptions(classId, currentSubject) {
+      const selectSub = document.getElementById("slotSubjectSelect");
+      if (!selectSub) return;
+      selectSub.innerHTML = '<option value="">-- විෂය තෝරන්න --</option>';
+
+      const cls = (schoolClasses || []).find(c => String(c.id) === String(classId));
+      if (!cls) return;
+
+      // විෂයන් සහ සීමා (Curriculum) තුළ මෙම ශ්‍රේණියට ඇති විෂයන් පමණක් ලබාගැනීම
+      const validCurriculumSubjects = (curriculumSubjects || []).filter(c => Number(c.grade) === Number(cls.grade));
+
+      if (validCurriculumSubjects.length === 0) {
+        selectSub.innerHTML = '<option value="">⚠️ මෙම ශ්‍රේණියට විෂයන් සහ සීමා ඇතුළත් කර නැත</option>';
+        return;
+      }
+
+      validCurriculumSubjects.forEach(cs => {
+        const opt = document.createElement("option");
+        opt.value = cs.subject;
+        opt.textContent = `${cs.subject} (${cs.maxWeekly} Periods)`;
+        if (currentSubject && cs.subject.trim().toLowerCase() === currentSubject.trim().toLowerCase()) {
+          opt.selected = true;
+        }
+        selectSub.appendChild(opt);
+      });
+    }
+
+    // 2. සුරැකීමේදී විෂය නිර්දේශයේ නැති බාහිර විෂයන් අවහිර කිරීම (Double Validation)
+    function validateCurriculumSubjectForClass(classId, subjectName) {
+      const cls = (schoolClasses || []).find(c => String(c.id) === String(classId));
+      if (!cls || !subjectName) return false;
+
+      const subNorm = typeof normalizeSubjectString === "function" 
+        ? normalizeSubjectString(subjectName) 
+        : subjectName.trim().toLowerCase();
+
+      return (curriculumSubjects || []).some(cs => 
+        Number(cs.grade) === Number(cls.grade) && 
+        (typeof normalizeSubjectString === "function" ? normalizeSubjectString(cs.subject) === subNorm : cs.subject.trim().toLowerCase() === subNorm)
+      );
+    }
+
+    
+
+    // විෂය නිර්දේශ වගුව Render කිරීම
     function renderCurriculumTable() {
+      if (typeof populateCurriculumGradesDropdown === "function") {
+        populateCurriculumGradesDropdown();
+      }
+
+      const filterGradeEl = document.getElementById("curriculumFilterGradeSelect");
+      const filterGrade = filterGradeEl ? filterGradeEl.value : "All";
+      const tbody = document.getElementById("curriculumTableBody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      let list = filterGrade !== "All"
+        ? (curriculumSubjects || []).filter(c => Number(c.grade) === Number(filterGrade))
+        : (curriculumSubjects || []);
+
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-5 text-center text-slate-400 font-bold">විෂයන් කිසිවක් හමු නොවීය.</td></tr>';
+        return;
+      }
+
+      list.forEach((cs, idx) => {
+        if (!cs.id) cs.id = `cs_${cs.grade}_${idx}`;
+
+        const grade = Number(cs.grade);
+        const secName = typeof getSectionOfGrade === "function" ? getSectionOfGrade(grade) : "-";
+        const safeSubName = encodeURIComponent(cs.subject);
+
+        const classesOfGrade = (schoolClasses || []).filter(c => Number(c.grade) === grade);
+        const unassignedClasses = getUnassignedClassesForSubject(grade, cs.subject);
+
+        let statusColumnHtml = "";
+
+        if (classesOfGrade.length === 0) {
+          statusColumnHtml = `<span class="text-slate-400 text-[11px] font-semibold italic">පන්ති ලියාපදිංචි කර නැත</span>`;
+        } else if (unassignedClasses.length === 0) {
+          statusColumnHtml = `
+            <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg text-[11px] font-bold">
+              <i class="fa-solid fa-circle-check text-emerald-600"></i> සියලු පන්ති සම්පූර්ණයි (${classesOfGrade.length}/${classesOfGrade.length})
+            </span>
+          `;
+        } else {
+          // ගුරුවරුන් නොමැති පන්ති පමණක් පෙන්වීම
+          statusColumnHtml = `
+            <div class="flex flex-wrap items-center gap-1.5">
+              ${unassignedClasses.map(cls => `
+                <span class="inline-flex items-center gap-1 bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-md text-[11px] font-bold shadow-sm" title="මෙම පන්තියට ගුරුවරයෙකු පවරා නැත">
+                  <i class="fa-solid fa-triangle-exclamation text-rose-500 text-[9px]"></i> ${cls.name}
+                </span>
+              `).join("")}
+              <span class="text-[10px] text-rose-600 font-bold ml-1">(${unassignedClasses.length} කට නැත)</span>
+            </div>
+          `;
+        }
+
+        tbody.innerHTML += `
+          <tr class="border-b hover:bg-slate-50/80 transition">
+            <td class="p-2.5 font-bold text-indigo-700 text-xs whitespace-nowrap">Grade ${cs.grade}</td>
+            <td class="p-2.5 font-bold text-slate-500 text-xs whitespace-nowrap">${secName}</td>
+            <td class="p-2.5 font-bold text-slate-800 text-xs">${cs.subject}</td>
+            <td class="p-2.5 font-bold text-slate-600 text-xs whitespace-nowrap">${cs.maxWeekly} Periods</td>
+            <td class="p-2.5">
+              ${statusColumnHtml}
+            </td>
+            <td class="p-2.5 text-center flex flex-wrap justify-center items-center gap-1.5 whitespace-nowrap">
+              <button type="button" onclick="openSubjectTeachersModal(${cs.grade}, '${safeSubName}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shadow-sm" title="පන්ති අනුව ගුරුවරුන් පවරන්න">
+                <i class="fa-solid fa-user-pen"></i> ගුරුවරුන්
+              </button>
+              <button type="button" onclick="editCurriculumSubject('${cs.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-[11px] px-1.5 py-1">Edit</button>
+              <button type="button" onclick="handleDeleteCurriculum('${cs.id}')" class="text-red-600 hover:text-red-800 font-bold text-[11px] px-1.5 py-1">Delete</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    window.getUnassignedClassesForSubject = getUnassignedClassesForSubject;
+    window.renderCurriculumTable = renderCurriculumTable;
+    
+    // 4. Curriculum Table එකේ බොත්තම නිවැරදි Parameter සහිතව Render කිරීම
+/*    function renderCurriculumTable() {
       if (typeof populateCurriculumGradesDropdown === "function") {
         populateCurriculumGradesDropdown();
       }
@@ -5494,7 +5697,7 @@ function toggleSelectAllCurriculumGrades(masterChk) {
         `;
       });
     }
-
+*/
   
 // =========================================================================
     // CLASS-BY-CLASS SUBJECT TEACHER REASSIGNMENT & SCHEDULE HOT-SWAP CONTROLLER
