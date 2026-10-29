@@ -1360,11 +1360,12 @@ function resetSystemData() {
       if (gradeNum <= 5) return "1-5"; if (gradeNum <= 7) return "6-7"; if (gradeNum <= 11) return "8-11"; return "12-13";
     }
 
-    function isTeacherInTargetSection(teacher, section) {
+   /* function isTeacherInTargetSection(teacher, section) {
       if (!teacher || !teacher.sections) return true;
       if (teacher.sections.includes("All")) return true;
       return teacher.sections.includes(section);
-    }
+    } 
+    */
 
     function calculateTeacherWeeklyWorkload(teacherId) {
       let unique = new Set();
@@ -3217,152 +3218,7 @@ function resetSystemData() {
     window.renderClassTimetableGrid = renderClassTimetableGrid;
     
 
-/*
-    
-    // දින 5ම එකවර පෙන්වන කාලසටහන් Grid එක Render කිරීම
-    function renderClassTimetableGrid() {
-      populateClassTimetableDropdown();
 
-      const select = document.getElementById("classTimetableSelectClass");
-      const tbody = document.getElementById("classTimetableGridBody");
-      if (!tbody) return;
-      tbody.innerHTML = "";
-
-      if (!select || !select.value) {
-        tbody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-slate-400 font-bold">කරුණාකර පන්තියක් තෝරන්න.</td></tr>';
-        return;
-      }
-
-      const selectedClassId = select.value;
-      const days = [
-        { id: 0, name: "සඳුදා (Mon)", short: "සඳුදා" },
-        { id: 1, name: "අඟහරුවාදා (Tue)", short: "අඟහරුවාදා" },
-        { id: 2, name: "බදාදා (Wed)", short: "බදාදා" },
-        { id: 3, name: "බ්‍රහස්පතින්දා (Thu)", short: "බ්‍රහස්පතින්දා" },
-        { id: 4, name: "සිකුරාදා (Fri)", short: "සිකුරාදා" }
-      ];
-
-      // දින 5 සඳහා පේළි 5ක් සෑදීම
-      days.forEach((d, dayIndex) => {
-        let rowHtml = `<tr class="hover:bg-slate-50/50 transition border-b border-slate-200">`;
-        
-        // පළමු තීරුව: දිනය
-        rowHtml += `
-          <td class="p-3 font-bold text-slate-800 bg-slate-100/70 border-r border-slate-200 whitespace-nowrap">
-            <span class="text-xs block text-indigo-900">${d.short}</span>
-          </td>
-        `;
-
-        // කාලච්ඡේද 1 සිට 8 දක්වා කොටු සැකසීම
-        for (let p = 1; p <= 8; p++) {
-
-          // 4 වන කාලච්ඡේදයෙන් පසු විවේකය (Interval) තීරුව
-          if (p === 5) {
-            if (dayIndex === 0) {
-              // පළමු පේළියේදී පමණක් පේළි 5ම එකතු කරමින් (rowspan=5) විවේකය පෙන්වීම
-              rowHtml += `
-                <td rowspan="5" class="bg-amber-50/80 border-r border-slate-200 text-amber-800 font-extrabold text-[11px] p-1 tracking-widest uppercase select-none shadow-inner" style="writing-mode: vertical-rl; text-orientation: mixed;">
-                  වි වේ ක ය
-                </td>
-              `;
-            }
-          }
-
-          // masterSchedule තුළ මෙම (day, period) සඳහා slot එකක් තිබේදැයි බැලීම
-          const slot = (masterSchedule || []).find(s => 
-            String(s.classId) === String(selectedClassId) && 
-            Number(s.day) === Number(d.id) && 
-            Number(s.period) === Number(p)
-          );
-
-          if (slot && slot.subject) {
-            // ගුරුවරයාගේ විස්තර ලබාගැනීම
-            let teacherText = '<span class="text-rose-500 font-bold text-[10px]">ගුරුවරයෙකු නැත</span>';
-            if (slot.teacherId) {
-              const tch = (teachers || []).find(t => String(t.id).trim().toLowerCase() === String(slot.teacherId).trim().toLowerCase());
-              if (tch) {
-                const no = tch.schoolNo ? `[${tch.schoolNo}]` : "";
-                teacherText = `<span class="text-indigo-900 font-semibold text-[10px] block truncate" title="${tch.name}">${tch.name} ${no}</span>`;
-              }
-            }
-
-            // පිරවූ කාලච්ඡේද කොටුව (Clickable)
-            rowHtml += `
-              <td onclick="openTimetableSlotModal('${selectedClassId}', ${d.id}, ${p})" class="p-2 border-r border-slate-200 cursor-pointer bg-indigo-50/40 hover:bg-indigo-100/80 transition relative group">
-                <div class="font-bold text-xs text-indigo-950 truncate" title="${slot.subject}">
-                  ${slot.subject}
-                </div>
-                <div class="mt-0.5">
-                  ${teacherText}
-                </div>
-                <span class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-[9px] text-indigo-600 transition">
-                  <i class="fa-solid fa-pen-to-square"></i>
-                </span>
-              </td>
-            `;
-          } else {
-            // හිස් කාලච්ඡේද කොටුව (Clickable to Add)
-            rowHtml += `
-              <td onclick="openTimetableSlotModal('${selectedClassId}', ${d.id}, ${p})" class="p-2 border-r border-slate-200 cursor-pointer hover:bg-slate-100/80 transition text-slate-300 hover:text-indigo-600 group">
-                <span class="text-xs group-hover:hidden">-</span>
-                <span class="hidden group-hover:inline-flex items-center gap-0.5 text-[10px] font-bold text-indigo-600">
-                  <i class="fa-solid fa-plus text-[9px]"></i> එක් කරන්න
-                </span>
-              </td>
-            `;
-          }
-        }
-
-        rowHtml += `</tr>`;
-        tbody.innerHTML += rowHtml;
-      });
-    }
-
-    window.renderClassTimetableGrid = renderClassTimetableGrid;
-    window.populateClassTimetableDropdown = populateClassTimetableDropdown;
-
-*/
-    
- /*   
-    function renderClassTimetableGrid() {
-      populateClassSelects();
-      const sel = document.getElementById("activeClassSelect");
-      if (!sel || !sel.value) return;
-      activeClass = sel.value;
-      const viewDay = document.getElementById("classViewDaySelect").value;
-      const container = document.getElementById("classPeriodSlotsContainer");
-      if (!container) return;
-      container.innerHTML = "";
-
-      const clsObj = schoolClasses.find(c => c.id === activeClass);
-      const teacher = teachers.find(t => t.id === (clsObj ? clsObj.classTeacherId : null));
-      if (document.getElementById("classMasterTeacherName")) {
-        document.getElementById("classMasterTeacherName").innerText = teacher ? `${teacher.name} (${teacher.subject})` : "පත් කර නොමැත";
-      }
-
-      renderClassSubjectQuota(activeClass, clsObj ? clsObj.grade : null);
-
-      for (let p = 1; p <= 8; p++) {
-        const slot = masterSchedule.find(s => s.classId === activeClass && s.day === viewDay && s.period === p);
-        const card = document.createElement("div");
-        card.className = "bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between hover:border-indigo-400 transition";
-
-        if (slot) {
-          const combinedBadge = slot.isCombined && slot.combinedWithClasses && slot.combinedWithClasses.length > 0 ? `<span class="inline-block mt-1 text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded font-bold">Combined (${[slot.classId, ...slot.combinedWithClasses].join(', ')})</span>` : '';
-          if (slot.isBasket) {
-            let basketHtml = (slot.basketItems || []).map(item => { const t = teachers.find(x => x.id === item.teacherId); return `<div class="text-[11px] font-medium text-slate-700">• <b>${item.subject}</b> - ${t ? t.name : '<span class="text-amber-600 italic">ගුරුවරයෙකු නැත</span>'}</div>`; }).join('');
-            card.innerHTML = `<div><div class="flex justify-between items-center mb-1.5"><span class="font-black text-indigo-700 text-xs">Period ${p}</span><span class="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold">Basket</span></div><div class="space-y-1 mt-1 bg-white p-2 rounded border border-slate-200">${basketHtml || '<div class="text-slate-400 italic">විෂයන් නැත</div>'}</div>${combinedBadge}</div><div class="mt-3 pt-2 border-t border-slate-200 flex gap-1"><button type="button" onclick="openClassSlotModal('${activeClass}', '${viewDay}', ${p})" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold py-1 rounded transition">Edit</button><button type="button" onclick="deleteSingleSlotDirect('${activeClass}', '${viewDay}', ${p})" class="px-2 bg-slate-200 hover:bg-red-100 hover:text-red-600 text-slate-600 text-[11px] rounded transition"><i class="fa-solid fa-trash"></i></button></div>`;
-          } else {
-            const t = teachers.find(x => x.id === slot.teacherId);
-            card.innerHTML = `<div><div class="flex justify-between items-center mb-1.5"><span class="font-black text-indigo-700 text-xs">Period ${p}</span><span class="text-[10px] ${t ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-800'} px-1.5 py-0.5 rounded font-bold">${t ? 'Assigned' : 'No Teacher'}</span></div><div class="font-bold text-sm text-slate-800">${slot.subject}</div><div class="text-xs text-slate-600 mt-0.5">${t ? t.name : '<span class="text-amber-600 italic">ගුරුවරයෙකු යොදන්න</span>'}</div>${combinedBadge}</div><div class="mt-3 pt-2 border-t border-slate-200 flex gap-1"><button type="button" onclick="openClassSlotModal('${activeClass}', '${viewDay}', ${p})" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold py-1 rounded transition">Edit</button><button type="button" onclick="deleteSingleSlotDirect('${activeClass}', '${viewDay}', ${p})" class="px-2 bg-slate-200 hover:bg-red-100 hover:text-red-600 text-slate-600 text-[11px] rounded transition"><i class="fa-solid fa-trash"></i></button></div>`;
-          }
-        } else {
-          card.innerHTML = `<div><div class="flex justify-between items-center mb-1.5"><span class="font-black text-slate-400 text-xs">Period ${p}</span><span class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">Free</span></div><div class="text-xs text-slate-400 italic py-2">විෂයක් පවරා නොමැත</div></div><div class="mt-3 pt-2 border-t border-slate-200"><button type="button" onclick="openClassSlotModal('${activeClass}', '${viewDay}', ${p})" class="w-full bg-slate-200 hover:bg-indigo-600 hover:text-white text-slate-700 text-[11px] font-bold py-1.5 rounded transition">+ Edit</button></div>`;
-        }
-        container.appendChild(card);
-      }
-    }
-*/
     
     function renderClassSubjectQuota(clsId, grade) {
       const container = document.getElementById("classSubjectQuotaStatus");
@@ -4969,6 +4825,8 @@ function toggleSelectAllCurriculumGrades(masterChk) {
     window.currentSubjectName = null;
     window.currentSubjectCurriculumId = null;
 
+   
+    /*
     // 1. Modal එක විවෘත කිරීම (ඕනෑම ආකාරයකින් එන Parameters නිවැරදිව හඳුනාගනී)
     function openSubjectTeachersModal(arg1, arg2) {
       let cs = null;
@@ -5115,6 +4973,171 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       const modal = document.getElementById("subjectTeachersModal");
       if (modal) modal.classList.remove("hidden");
     }
+
+*/
+
+    // =========================================================================
+    // BULLETPROOF SECTION CHECKER & TEACHER ASSIGNMENT CONTROLLER
+    // =========================================================================
+
+    // 1. ගුරුවරයෙකු අදාළ අංශයට අයත් දැයි නිවැරදිව පරීක්ෂා කරන ශ්‍රිතය
+    function isTeacherInTargetSection(teacher, targetSection) {
+      if (!teacher) return false;
+      if (!targetSection || targetSection === "All") return true;
+
+      // ගුරුවරයාට sections සකසා නැතිනම් පෙරනිමියෙන් ඕනෑම අංශයකට වලංගු වේ
+      if (!teacher.sections || !Array.isArray(teacher.sections) || teacher.sections.length === 0) {
+        return true;
+      }
+
+      if (teacher.sections.includes("All")) return true;
+      return teacher.sections.some(s => String(s).trim().toLowerCase() === String(targetSection).trim().toLowerCase());
+    }
+
+    // 2. විෂය සඳහා ගුරුවරුන් තෝරන Modal එක (කිසිදු ගුරුවරයෙකු මඟ නොහැරේ)
+    function openSubjectTeachersModal(arg1, arg2) {
+      let cs = null;
+
+      // Grade සහ Subject මඟින් විෂය සොයාගැනීම
+      if (arg2 !== undefined && arg2 !== null && String(arg2) !== "undefined") {
+        const grade = Number(arg1);
+        const subName = decodeURIComponent(String(arg2)).trim().toLowerCase();
+        cs = (curriculumSubjects || []).find(c => 
+          Number(c.grade) === grade && 
+          (typeof normalizeSubjectString === "function" ? normalizeSubjectString(c.subject) === normalizeSubjectString(subName) : c.subject.trim().toLowerCase() === subName)
+        );
+      }
+
+      // ID මඟින් සෙවීම (Fallback)
+      if (!cs && arg1 !== undefined && arg1 !== null) {
+        const targetId = String(arg1).trim();
+        cs = (curriculumSubjects || []).find(c => c.id && String(c.id).trim() === targetId);
+      }
+
+      if (!cs) {
+        alert("විෂය දත්ත හඳුනාගත නොහැකි විය. කරුණාකර පිටුව Refresh කරන්න.");
+        return;
+      }
+
+      window.currentEditingSubject = cs;
+      window.currentSubjectGrade = Number(cs.grade);
+      window.currentSubjectName = String(cs.subject).trim();
+      window.currentSubjectCurriculumId = cs.id || `cs_${cs.grade}_${encodeURIComponent(cs.subject)}`;
+
+      const grade = Number(cs.grade);
+      const section = typeof getSectionOfGrade === "function" ? getSectionOfGrade(grade) : "All";
+
+      document.getElementById("subModalSubjectName").innerText = cs.subject;
+      document.getElementById("subModalGradeSection").innerText = `(Grade ${grade} | අංශය: ${section})`;
+      document.getElementById("subModalPeriodsBadge").innerText = `${cs.maxWeekly} Periods / සතියට`;
+
+      // අදාළ ශ්‍රේණියේ පන්ති නිවැරදිව ලබාගැනීම (Data Type Safe)
+      const classesOfGrade = (schoolClasses || []).filter(c => Number(c.grade) === grade);
+      const container = document.getElementById("subModalClassList");
+      if (!container) return;
+      container.innerHTML = "";
+
+      if (classesOfGrade.length === 0) {
+        container.innerHTML = `
+          <div class="p-4 text-center text-xs text-amber-700 bg-amber-50 rounded-lg">
+            ⚠️ Grade ${grade} සඳහා පන්ති කිසිවක් පද්ධතියේ ලියාපදිංචි කර නොමැත. කරුණාකර පළමුව 'පන්ති' ටැබ් එකෙන් Grade ${grade} සඳහා පන්ති (උදා: ${grade}-A) එක් කරන්න.
+          </div>
+        `;
+      } else {
+        classesOfGrade.forEach(cls => {
+          const allocKey = `${cls.id}__${cs.subject.trim()}`;
+
+          // දැනට පවරා ඇති ගුරුවරයා හඳුනාගැනීම
+          let currentTeacherId = (window.classSubjectAllocations && window.classSubjectAllocations[allocKey]) || "";
+          if (!currentTeacherId && typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) {
+            const assignedSlot = masterSchedule.find(s =>
+              String(s.classId) === String(cls.id) &&
+              !s.isBasket && s.subject &&
+              (typeof normalizeSubjectString === "function" ? normalizeSubjectString(s.subject) === normalizeSubjectString(cs.subject) : s.subject.trim().toLowerCase() === cs.subject.trim().toLowerCase())
+            );
+            if (assignedSlot) currentTeacherId = assignedSlot.teacherId || "";
+          }
+
+          // ගුරු කාණ්ඩ වෙන් කිරීම
+          const targetSubNorm = typeof normalizeSubjectString === "function" ? normalizeSubjectString(cs.subject) : cs.subject.trim().toLowerCase();
+
+          // 1. ප්‍රධාන විෂය ගැලපෙන ගුරුවරුන්
+          const primaryTeachers = (teachers || []).filter(t => {
+            const sub = t.subject ? (typeof normalizeSubjectString === "function" ? normalizeSubjectString(t.subject) : t.subject.trim().toLowerCase()) : "";
+            return sub === targetSubNorm;
+          });
+
+          // 2. අදාළ අංශයේ අනෙකුත් ගුරුවරුන්
+          const sectionTeachers = (teachers || []).filter(t => {
+            const sub = t.subject ? (typeof normalizeSubjectString === "function" ? normalizeSubjectString(t.subject) : t.subject.trim().toLowerCase()) : "";
+            return sub !== targetSubNorm && isTeacherInTargetSection(t, section);
+          });
+
+          // 3. පාසලේ ඉතිරි සියලුම ගුරුවරුන් (කිසිදු ගුරුවරයෙකු සැඟවීම වැළැක්වීමට)
+          const remainingTeachers = (teachers || []).filter(t => {
+            return !primaryTeachers.some(pt => pt.id === t.id) && !sectionTeachers.some(st => st.id === t.id);
+          });
+
+          // Dropdown එක සැකසීම
+          let optionsHtml = `<option value="">-- ගුරුවරයෙකු තෝරා නැත (Unassigned) --</option>`;
+
+          if (primaryTeachers.length > 0) {
+            optionsHtml += `<optgroup label="⭐ ${cs.subject} ප්‍රධාන විෂය වන ගුරුවරුන්">`;
+            primaryTeachers.forEach(t => {
+              const selected = String(t.id) === String(currentTeacherId) ? "selected" : "";
+              const no = t.schoolNo ? `[${t.schoolNo}]` : `[${t.id}]`;
+              const load = typeof getTeacherWorkloadCount === "function" ? getTeacherWorkloadCount(t.id) : 0;
+              optionsHtml += `<option value="${t.id}" ${selected}>${t.name} ${no} (${load}/35)</option>`;
+            });
+            optionsHtml += `</optgroup>`;
+          }
+
+          if (sectionTeachers.length > 0) {
+            optionsHtml += `<optgroup label="👥 ${section} අංශයේ අනෙකුත් ගුරුවරුන්">`;
+            sectionTeachers.forEach(t => {
+              const selected = String(t.id) === String(currentTeacherId) ? "selected" : "";
+              const no = t.schoolNo ? `[${t.schoolNo}]` : `[${t.id}]`;
+              const load = typeof getTeacherWorkloadCount === "function" ? getTeacherWorkloadCount(t.id) : 0;
+              optionsHtml += `<option value="${t.id}" ${selected}>${t.name} ${no} - ${t.subject || 'General'} (${load}/35)</option>`;
+            });
+            optionsHtml += `</optgroup>`;
+          }
+
+          if (remainingTeachers.length > 0) {
+            optionsHtml += `<optgroup label="🏫 පාසලේ අනෙකුත් ගුරුවරුන්">`;
+            remainingTeachers.forEach(t => {
+              const selected = String(t.id) === String(currentTeacherId) ? "selected" : "";
+              const no = t.schoolNo ? `[${t.schoolNo}]` : `[${t.id}]`;
+              const load = typeof getTeacherWorkloadCount === "function" ? getTeacherWorkloadCount(t.id) : 0;
+              optionsHtml += `<option value="${t.id}" ${selected}>${t.name} ${no} - ${t.subject || 'General'} (${load}/35)</option>`;
+            });
+            optionsHtml += `</optgroup>`;
+          }
+
+          const row = document.createElement("div");
+          row.className = "p-2.5 flex items-center justify-between gap-3 hover:bg-white rounded-lg transition border-b border-slate-100 last:border-b-0";
+          row.innerHTML = `
+            <div class="w-1/3">
+              <span class="font-bold text-xs text-slate-800 block">${cls.name}</span>
+              <span class="text-[10px] text-slate-400 font-semibold">${section} අංශය</span>
+            </div>
+            <div class="flex-1">
+              <select data-class-id="${cls.id}" class="sub-teacher-assign-select w-full p-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600">
+                ${optionsHtml}
+              </select>
+            </div>
+          `;
+          container.appendChild(row);
+        });
+      }
+
+      const modal = document.getElementById("subjectTeachersModal");
+      if (modal) modal.classList.remove("hidden");
+    }
+
+    window.isTeacherInTargetSection = isTeacherInTargetSection;
+    window.openSubjectTeachersModal = openSubjectTeachersModal;
+
 
     // 2. Modal එක වැසීම
     function closeSubjectTeachersModal() {
@@ -5278,80 +5301,6 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       });
     }
 
-
-    
-    
-
-/*
-    
-    // විෂය නිර්දේශ වගුව නැවත ඇඳීම
-    function renderCurriculumTable() {
-      if (!curriculumSubjects) return;
-      if (!Array.isArray(curriculumSubjects)) curriculumSubjects = Object.values(curriculumSubjects);
-
-      if (typeof populateCurriculumGradesDropdown === "function") {
-        populateCurriculumGradesDropdown();
-      }
-
-      const filterGradeEl = document.getElementById("curriculumFilterGradeSelect");
-      const filterGrade = filterGradeEl ? filterGradeEl.value : "All";
-      const tbody = document.getElementById("curriculumTableBody");
-      if (!tbody) return;
-      tbody.innerHTML = "";
-
-      let list = filterGrade !== "All" 
-        ? curriculumSubjects.filter(c => Number(c.grade) === Number(filterGrade)) 
-        : curriculumSubjects;
-
-      if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">විෂයන් කිසිවක් හමු නොවීය.</td></tr>';
-        return;
-      }
-
-      list.forEach((cs, idx) => {
-        cs.id = getSubjectUniqueId(cs, idx);
-        const resolvedTeachers = resolveTeachersForSubject(cs);
-
-        let badgesHtml = "";
-        if (resolvedTeachers.length > 0) {
-          badgesHtml = resolvedTeachers.map(t => {
-            const no = t.schoolNo ? `[${t.schoolNo}]` : `[${t.id}]`;
-            return `<span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-900 border border-indigo-200 px-2 py-0.5 rounded text-[11px] font-bold shadow-sm mb-1 mr-1">
-                      <i class="fa-solid fa-user-check text-indigo-600 text-[10px]"></i> ${t.name} ${no}
-                    </span>`;
-          }).join("");
-        } else {
-          badgesHtml = `<span class="text-rose-500 font-bold text-[11px] flex items-center gap-1">
-                          <i class="fa-solid fa-triangle-exclamation"></i> ගුරුවරුන් පවරා නැත
-                        </span>`;
-        }
-
-        const secName = typeof getSectionOfGrade === "function" ? getSectionOfGrade(cs.grade) : "-";
-
-        tbody.innerHTML += `
-          <tr class="border-b hover:bg-slate-50/80 transition">
-            <td class="p-2.5 font-bold text-indigo-700 text-xs">Grade ${cs.grade}</td>
-            <td class="p-2.5 font-bold text-slate-500 text-xs">${secName}</td>
-            <td class="p-2.5 font-bold text-slate-800 text-xs">${cs.subject}</td>
-            <td class="p-2.5 font-bold text-slate-600 text-xs">${cs.maxWeekly} Periods</td>
-            <td class="p-2.5">
-              <div class="flex flex-wrap items-center">
-                ${badgesHtml}
-              </div>
-            </td>
-            <td class="p-2.5 text-center flex flex-wrap justify-center items-center gap-1.5">
-              <button type="button" onclick="openSubjectTeachersModal('${cs.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shadow-sm" title="ගුරුවරුන් කළමනාකරණය">
-                <i class="fa-solid fa-user-pen"></i> ගුරුවරුන් (${resolvedTeachers.length})
-              </button>
-              <button type="button" onclick="editCurriculumSubject('${cs.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-[11px] px-1.5 py-1">Edit</button>
-              <button type="button" onclick="handleDeleteCurriculum('${cs.id}')" class="text-red-600 hover:text-red-800 font-bold text-[11px] px-1.5 py-1">Delete</button>
-            </td>
-          </tr>
-        `;
-      });
-    }
-
-*/
   
 // =========================================================================
     // CLASS-BY-CLASS SUBJECT TEACHER REASSIGNMENT & SCHEDULE HOT-SWAP CONTROLLER
