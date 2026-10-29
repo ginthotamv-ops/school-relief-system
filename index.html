@@ -5371,7 +5371,106 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       window.currentSubjectName = null;
       window.currentSubjectCurriculumId = null;
     }
+// =========================================================================
+    // FULLY INDEPENDENT CLASS-SUBJECT TEACHER ASSIGNMENT CONTROLLER
+    // =========================================================================
 
+    function saveSubjectTeachersAssignment() {
+      let cs = window.currentEditingSubject;
+
+      if (!cs && window.currentSubjectGrade !== null && window.currentSubjectName) {
+        cs = (curriculumSubjects || []).find(c =>
+          Number(c.grade) === Number(window.currentSubjectGrade) &&
+          (typeof normalizeSubjectString === "function" 
+            ? normalizeSubjectString(c.subject) === normalizeSubjectString(window.currentSubjectName) 
+            : c.subject.trim().toLowerCase() === window.currentSubjectName.trim().toLowerCase())
+        );
+      }
+
+      if (!cs) {
+        alert("විෂය දත්ත සොයාගත නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.");
+        return;
+      }
+
+      const selects = document.querySelectorAll(".sub-teacher-assign-select");
+      let assignedCount = 0;
+      let unassignedCount = 0;
+      const assignedTeacherIdsSet = new Set();
+      const targetSubNorm = typeof normalizeSubjectString === "function" 
+        ? normalizeSubjectString(cs.subject) 
+        : cs.subject.trim().toLowerCase();
+
+      window.classSubjectAllocations = window.classSubjectAllocations || {};
+
+      // 1. පන්ති-විෂය-ගුරු සබඳතාව ස්වාධීනව තැන්පත් කිරීම (කාලසටහන අවශ්‍ය නැත)
+      selects.forEach(sel => {
+        const classId = sel.getAttribute("data-class-id");
+        if (!classId) return;
+
+        const newTeacherId = sel.value ? String(sel.value).trim() : null;
+        const allocKey = typeof makeAllocKey === "function" 
+          ? makeAllocKey(classId, cs.subject) 
+          : `${classId}___${targetSubNorm}`;
+
+        if (newTeacherId) {
+          window.classSubjectAllocations[allocKey] = newTeacherId;
+          assignedTeacherIdsSet.add(newTeacherId);
+          assignedCount++;
+        } else {
+          delete window.classSubjectAllocations[allocKey];
+          unassignedCount++;
+        }
+
+        // 2. දැනටමත් කාලසටහනේ Slots පවතී නම් පමණක් ඒවායේ ගුරුවරයාද Update කිරීම (Passive Sync)
+        if (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) {
+          masterSchedule.forEach(slot => {
+            if (String(slot.classId) === String(classId)) {
+              const slotSubNorm = typeof normalizeSubjectString === "function" 
+                ? normalizeSubjectString(slot.subject) 
+                : (slot.subject || "").trim().toLowerCase();
+
+              if (!slot.isBasket && slotSubNorm === targetSubNorm) {
+                slot.teacherId = newTeacherId;
+              }
+              if (slot.isBasket && Array.isArray(slot.basketItems)) {
+                slot.basketItems.forEach(b => {
+                  const bSubNorm = typeof normalizeSubjectString === "function" 
+                    ? normalizeSubjectString(b.subject) 
+                    : (b.subject || "").trim().toLowerCase();
+                  if (bSubNorm === targetSubNorm) {
+                    b.teacherId = newTeacherId;
+                  }
+                });
+              }
+            }
+          });
+        }
+      });
+
+      // 3. Curriculum වගුව සඳහා teacherIds යාවත්කාලීන කිරීම
+      cs.teacherIds = Array.from(assignedTeacherIdsSet);
+
+      // 4. Firebase සහ LocalStorage වෙත ක්ෂණිකව ස්ථිර කිරීම
+      saveAllToStorage();
+
+      // Firebase වෙත සෘජුවම Allocations Node එක ලිවීම (Double Persistence Safety)
+      if (typeof firebaseDb !== "undefined" && isFirebaseActive && firebaseDb) {
+        firebaseDb.ref("timetable_system/classSubjectAllocations").set(window.classSubjectAllocations)
+          .catch(e => console.warn("Allocations direct sync:", e));
+      }
+
+      // 5. තිරයේ ඇති සියලු වගු ක්ෂණිකව අලුත් කිරීම
+      if (typeof renderCurriculumTable === "function") renderCurriculumTable();
+      if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+      if (typeof renderGradeMasterGrid === "function") renderGradeMasterGrid();
+      if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+
+      closeSubjectTeachersModal();
+
+      alert(`සාර්ථකයි! '${cs.subject}' විෂය සඳහා පන්ති ${assignedCount} කට ගුරුවරුන් ස්ථිරව පවරන ලදි.\n\n(කාලසටහන සකස් කිරීමට පෙර මෙම ගුරු පැවරුම් ස්වාධීනව සුරැකී පවතී).`);
+    }
+
+    /*
     // 3. සුරැකීම (Triple-Fallback මඟින් විෂය නිවැරදිව සොයාගැනීම)
     function saveSubjectTeachersAssignment() {
       // ක්‍රමය 1: සෘජු Memory Reference එකෙන් ලබාගැනීම
@@ -5457,11 +5556,44 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       }
       alert(msg);
     }
-
+*/
+  
 // =========================================================================
     // UNASSIGNED CLASSES DETECTOR & CURRICULUM TABLE CONTROLLER
     // =========================================================================
 
+    
+    // ගුරුවරයෙකු පවරා නොමැති පන්ති පරීක්ෂා කිරීම (කාලසටහනෙන් 100% ක් ස්වාධීනයි)
+    function getUnassignedClassesForSubject(grade, subjectName) {
+      const g = Number(grade);
+      const classesOfGrade = (schoolClasses || []).filter(c => Number(c.grade) === g);
+      const unassignedList = [];
+
+      classesOfGrade.forEach(cls => {
+        const allocKey = typeof makeAllocKey === "function" 
+          ? makeAllocKey(cls.id, subjectName) 
+          : `${cls.id}___${String(subjectName).trim().toLowerCase()}`;
+
+        // 1. ස්වාධීන ගුරු පැවරුම් ලැයිස්තුව පරීක්ෂා කිරීම
+        let assignedTeacherId = (window.classSubjectAllocations && window.classSubjectAllocations[allocKey]) ? window.classSubjectAllocations[allocKey] : null;
+
+        // 2. අදාළ ගුරුවරයා සැබවින්ම ගුරු ලැයිස්තුවේ සිටීදැයි බැලීම
+        const teacherExists = assignedTeacherId 
+          ? (teachers || []).some(t => String(t.id).trim().toLowerCase() === String(assignedTeacherId).trim().toLowerCase()) 
+          : false;
+
+        // ගුරුවරයෙකු පවරා නැතිනම් පමණක් Unassigned ලැයිස්තුවට එක් වේ
+        if (!teacherExists) {
+          unassignedList.push(cls);
+        }
+      });
+
+      return unassignedList;
+    }
+
+    window.getUnassignedClassesForSubject = getUnassignedClassesForSubject;
+    
+    /*
     // යම් ශ්‍රේණියක විෂයකට අදාළව ගුරුවරයෙකු පවරා නොමැති පන්ති සොයාගැනීම
     function getUnassignedClassesForSubject(grade, subjectName) {
       const g = Number(grade);
@@ -5507,7 +5639,8 @@ function toggleSelectAllCurriculumGrades(masterChk) {
 
       return unassignedList;
     }
-
+*/
+    
 // 1. කාලච්ඡේද Modal එකේ Dropdown එකට එම ශ්‍රේණියේ විෂයන් පමණක් පිරවීම
     function populateSlotSubjectOptions(classId, currentSubject) {
       const selectSub = document.getElementById("slotSubjectSelect");
