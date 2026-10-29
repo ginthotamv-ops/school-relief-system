@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> පාසල් කාලසටහන් & සහන කළමනාකරණය
+          <i class="fa-solid fa-school text-amber-400"></i> පාසල් කාලසටහන් & සහන කළමනාකරණය v2
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -5773,6 +5773,141 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       if (modal) modal.classList.remove("hidden");
     }
 
+    // =========================================================================
+    // ERROR-PROOF SAVE & UPDATE HANDLER (WITH INSTANT DIAGNOSTICS)
+    // =========================================================================
+
+    function saveSubjectTeachersAssignment() {
+      console.log("👉 Save & Update button clicked!");
+
+      try {
+        // 1. විෂය හඳුනාගැනීම
+        let cs = window.currentEditingSubject;
+
+        if (!cs && window.currentSubjectGrade !== null && window.currentSubjectName) {
+          const targetGrade = cleanGradeNum(window.currentSubjectGrade);
+          const targetSub = cleanSubjectKey(window.currentSubjectName);
+          cs = (curriculumSubjects || []).find(c => cleanGradeNum(c.grade) === targetGrade && cleanSubjectKey(c.subject) === targetSub);
+        }
+
+        if (!cs) {
+          alert("දෝෂයකි: සංස්කරණය කරන විෂය දත්ත මතකයෙන් ගිලිහී ඇත. කරුණාකර Modal එක වසා නැවත 'ගුරුවරුන්' බොත්තම ඔබන්න.");
+          return;
+        }
+
+        const subKey = cleanSubjectKey(cs.subject);
+        const selects = document.querySelectorAll(".sub-teacher-assign-select");
+        
+        if (selects.length === 0) {
+          alert("දෝෂයකි: පන්ති තේරීමේ Dropdowns හමු නොවීය.");
+          return;
+        }
+
+        let assignedCount = 0;
+        const assignedTeacherIdsSet = new Set();
+
+        // LocalStorage Backup
+        let localBackup = {};
+        try {
+          localBackup = JSON.parse(localStorage.getItem("sch_permanent_allocations_v1") || "{}");
+        } catch (e) { localBackup = {}; }
+
+        window.classSubjectAllocations = window.classSubjectAllocations || {};
+
+        // 2. එක් එක් පන්තියට ගුරුවරයා යෙදීම
+        selects.forEach(sel => {
+          const classIdentifier = sel.getAttribute("data-class-identifier");
+          if (!classIdentifier) return;
+
+          const teacherId = sel.value ? String(sel.value).trim() : null;
+
+          const cls = (schoolClasses || []).find(c => 
+            String(c.id).trim() === String(classIdentifier).trim() || 
+            String(c.name).trim() === String(classIdentifier).trim()
+          );
+
+          if (cls) {
+            cls.subjectTeachers = cls.subjectTeachers || {};
+            const key1 = `${String(cls.id || cls.name).trim()}___${subKey}`;
+            const key2 = `${String(cls.name).trim()}___${subKey}`;
+
+            if (teacherId) {
+              cls.subjectTeachers[subKey] = teacherId;
+              localBackup[key1] = teacherId;
+              localBackup[key2] = teacherId;
+              window.classSubjectAllocations[key1] = teacherId;
+              window.classSubjectAllocations[key2] = teacherId;
+              assignedTeacherIdsSet.add(teacherId);
+              assignedCount++;
+            } else {
+              delete cls.subjectTeachers[subKey];
+              delete localBackup[key1];
+              delete localBackup[key2];
+              delete window.classSubjectAllocations[key1];
+              delete window.classSubjectAllocations[key2];
+            }
+
+            // masterSchedule හි දැනට ඇති කාලච්ඡේද update කිරීම
+            if (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) {
+              masterSchedule.forEach(slot => {
+                if (String(slot.classId) === String(cls.id) || String(slot.classId) === String(cls.name)) {
+                  if (!slot.isBasket && cleanSubjectKey(slot.subject) === subKey) {
+                    slot.teacherId = teacherId;
+                  }
+                }
+              });
+            }
+          }
+        });
+
+        // 3. විෂය නිර්දේශයේ teacherIds
+        cs.teacherIds = Array.from(assignedTeacherIdsSet);
+
+        // 4. LocalStorage Dedicated Backup එක ලිවීම
+        try {
+          localStorage.setItem("sch_permanent_allocations_v1", JSON.stringify(localBackup));
+        } catch (e) {
+          console.warn("Backup error:", e);
+        }
+
+        // 5. ප්‍රධාන Storage එකට සුරැකීම (Error safe)
+        if (typeof saveAllToStorage === "function") {
+          try {
+            saveAllToStorage();
+          } catch (storageErr) {
+            console.error("saveAllToStorage failed:", storageErr);
+          }
+        }
+
+        // 6. UI නැවත ඇඳීම
+        if (typeof renderCurriculumTable === "function") renderCurriculumTable();
+        if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+        if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+
+        // 7. Modal එක වැසීම
+        if (typeof closeSubjectTeachersModal === "function") {
+          closeSubjectTeachersModal();
+        } else {
+          const m = document.getElementById("subjectTeachersModal");
+          if (m) m.classList.add("hidden");
+        }
+
+        alert(`සාර්ථකයි! '${cs.subject}' විෂය සඳහා පන්ති ${assignedCount} කට ගුරුවරුන් ස්ථිරව පවරන ලදි.`);
+
+      } catch (fatalErr) {
+        // කිසියම් බිඳවැටීමක් වුවහොත් නිශ්ශබ්දව නොසිට දෝෂය කෙළින්ම Alert එකකින් පෙන්වයි
+        console.error("Save fatal error:", fatalErr);
+        alert("සුරැකීමේදී දෝෂයක් හටගත්තේය:\n\n" + fatalErr.message);
+      }
+    }
+
+    // පැරණි හෝ විකල්ප නම් සඳහා Alias එකතු කිරීම (HTML එකේ කුමන නම තිබුණද වැඩ කරයි)
+    window.saveSubjectTeachersAssignment = saveSubjectTeachersAssignment;
+    window.saveSubjectTeachers = saveSubjectTeachersAssignment;
+    window.saveSubjectTeacherAssignment = saveSubjectTeachersAssignment;
+
+    
+    /*
     // 7. ගුරුවරුන් ස්ථිරව සුරැකීම (Save Function)
     function saveSubjectTeachersAssignment() {
       const cs = window.currentEditingSubject;
@@ -5856,6 +5991,8 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       closeSubjectTeachersModal();
       alert(`සාර්ථකයි! '${cs.subject}' විෂය සඳහා පන්ති ${assignedCount} කට ගුරුවරුන් ස්ථිරව පවරන ලදි.`);
     }
+
+    */
 
     // 8. විෂය නිර්දේශ වගුව Render කිරීම (ගුරුවරුන් නැති පන්ති නිවැරදිව පෙන්වයි)
     function renderCurriculumTable() {
