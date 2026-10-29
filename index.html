@@ -4158,6 +4158,331 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       return Array.from(assignedTeacherMap.values());
     }
 
+
+    // =========================================================================
+    // 100% FAIL-SAFE SUBJECT TEACHERS CONTROLLER & TABLE RENDERER
+    // =========================================================================
+
+    window.currentEditingSubject = null;
+    window.currentSubjectGrade = null;
+    window.currentSubjectName = null;
+    window.currentSubjectCurriculumId = null;
+
+    // 1. Modal එක විවෘත කිරීම (ඕනෑම ආකාරයකින් එන Parameters නිවැරදිව හඳුනාගනී)
+    function openSubjectTeachersModal(arg1, arg2) {
+      let cs = null;
+
+      // ආකාරය 1: grade සහ subject ලෙස ලැබුණු විට -> openSubjectTeachersModal(10, 'Science')
+      if (arg2 !== undefined && arg2 !== null && String(arg2) !== "undefined") {
+        const grade = Number(arg1);
+        const subName = decodeURIComponent(String(arg2)).trim().toLowerCase();
+        cs = (curriculumSubjects || []).find(c => Number(c.grade) === grade && String(c.subject || "").trim().toLowerCase() === subName);
+      }
+
+      // ආකාරය 2: ID එකක් හෝ Array Index එකක් ලෙස ලැබුණු විට
+      if (!cs && arg1 !== undefined && arg1 !== null) {
+        const targetId = String(arg1).trim();
+        
+        // ID මඟින් සෙවීම
+        cs = (curriculumSubjects || []).find(c => c.id && String(c.id).trim() === targetId);
+
+        // ID එක 'cs_10_sub_0' ආකෘතියේ එකක් නම් parse කර සෙවීම
+        if (!cs && targetId.startsWith("cs_")) {
+          const parts = targetId.split("_");
+          if (parts.length >= 3) {
+            const g = Number(parts[1]);
+            const sub = decodeURIComponent(parts[2]).trim().toLowerCase();
+            cs = (curriculumSubjects || []).find(c => Number(c.grade) === g && String(c.subject || "").trim().toLowerCase() === sub);
+          }
+        }
+
+        // Array Index අංකයක් නම්
+        if (!cs && !isNaN(targetId) && curriculumSubjects[Number(targetId)]) {
+          cs = curriculumSubjects[Number(targetId)];
+        }
+      }
+
+      if (!cs) {
+        alert("විෂය දත්ත හඳුනාගත නොහැකි විය. කරුණාකර පිටුව Refresh කරන්න.");
+        return;
+      }
+
+      // සෘජු Object Reference එක මතකයේ රඳවා ගැනීම (කිසිදා අහිමි නොවේ)
+      window.currentEditingSubject = cs;
+      window.currentSubjectGrade = Number(cs.grade);
+      window.currentSubjectName = String(cs.subject).trim();
+      window.currentSubjectCurriculumId = cs.id || `cs_${cs.grade}_${encodeURIComponent(cs.subject)}`;
+
+      const grade = cs.grade;
+      const section = typeof getSectionOfGrade === "function" ? getSectionOfGrade(grade) : "All";
+
+      const elSubName = document.getElementById("subModalSubjectName");
+      const elGradeSec = document.getElementById("subModalGradeSection");
+      const elPeriods = document.getElementById("subModalPeriodsBadge");
+
+      if (elSubName) elSubName.innerText = cs.subject;
+      if (elGradeSec) elGradeSec.innerText = `(Grade ${grade} | අංශය: ${section})`;
+      if (elPeriods) elPeriods.innerText = `${cs.maxWeekly} Periods / සතියට`;
+
+      // අදාළ ශ්‍රේණියේ පන්ති ලැයිස්තුව සැකසීම
+      const classesOfGrade = (schoolClasses || []).filter(c => Number(c.grade) === Number(grade));
+      const container = document.getElementById("subModalClassList");
+      if (!container) return;
+      container.innerHTML = "";
+
+      if (classesOfGrade.length === 0) {
+        container.innerHTML = `
+          <div class="p-4 text-center text-xs text-amber-700 bg-amber-50 rounded-lg">
+            ⚠️ Grade ${grade} සඳහා පන්ති කිසිවක් පද්ධතියේ ලියාපදිංචි කර නොමැත. පළමුව 'පන්ති' ටැබ් එකෙන් පන්ති එක් කරන්න.
+          </div>
+        `;
+      } else {
+        classesOfGrade.forEach(cls => {
+          const allocKey = `${cls.id}__${cs.subject.trim()}`;
+
+          // දැනට කාලසටහනෙන් හෝ පෙර පැවරුම්වලින් ගුරුවරයා හඳුනාගැනීම
+          let currentTeacherId = (window.classSubjectAllocations && window.classSubjectAllocations[allocKey]) || "";
+          if (!currentTeacherId && typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) {
+            const assignedSlot = masterSchedule.find(s =>
+              s.classId === cls.id &&
+              ((!s.isBasket && s.subject && s.subject.toLowerCase() === cs.subject.toLowerCase()) ||
+               (s.isBasket && Array.isArray(s.basketItems) && s.basketItems.some(b => b.subject && b.subject.toLowerCase() === cs.subject.toLowerCase())))
+            );
+            if (assignedSlot) {
+              if (assignedSlot.isBasket) {
+                const item = assignedSlot.basketItems.find(b => b.subject && b.subject.toLowerCase() === cs.subject.toLowerCase());
+                currentTeacherId = item ? item.teacherId : "";
+              } else {
+                currentTeacherId = assignedSlot.teacherId || "";
+              }
+            }
+          }
+
+          // විෂය හා අංශය අනුව ගුරුවරුන් පෙරහන් කිරීම
+          const targetSub = cs.subject.trim().toLowerCase();
+          const primaryTeachers = teachers.filter(t => {
+            const inSec = typeof isTeacherInTargetSection === "function" ? isTeacherInTargetSection(t, section) : true;
+            return inSec && t.subject && t.subject.trim().toLowerCase() === targetSub;
+          });
+
+          const otherTeachers = teachers.filter(t => {
+            const inSec = typeof isTeacherInTargetSection === "function" ? isTeacherInTargetSection(t, section) : true;
+            return inSec && (!t.subject || t.subject.trim().toLowerCase() !== targetSub);
+          });
+
+          let optionsHtml = `<option value="">-- ගුරුවරයෙකු තෝරා නැත (Unassigned) --</option>`;
+
+          if (primaryTeachers.length > 0) {
+            optionsHtml += `<optgroup label="⭐ ${cs.subject} ප්‍රධාන විෂය වන ගුරුවරුන්">`;
+            primaryTeachers.forEach(t => {
+              const selected = String(t.id) === String(currentTeacherId) ? "selected" : "";
+              const no = t.schoolNo ? `[${t.schoolNo}]` : `[${t.id}]`;
+              const load = typeof getTeacherWorkloadCount === "function" ? getTeacherWorkloadCount(t.id) : 0;
+              optionsHtml += `<option value="${t.id}" ${selected}>${t.name} ${no} (${load}/35)</option>`;
+            });
+            optionsHtml += `</optgroup>`;
+          }
+
+          if (otherTeachers.length > 0) {
+            optionsHtml += `<optgroup label="👥 ${section} අංශයේ අනෙකුත් ගුරුවරුන්">`;
+            otherTeachers.forEach(t => {
+              const selected = String(t.id) === String(currentTeacherId) ? "selected" : "";
+              const no = t.schoolNo ? `[${t.schoolNo}]` : `[${t.id}]`;
+              const load = typeof getTeacherWorkloadCount === "function" ? getTeacherWorkloadCount(t.id) : 0;
+              optionsHtml += `<option value="${t.id}" ${selected}>${t.name} ${no} - ${t.subject || 'General'} (${load}/35)</option>`;
+            });
+            optionsHtml += `</optgroup>`;
+          }
+
+          const row = document.createElement("div");
+          row.className = "p-2.5 flex items-center justify-between gap-3 hover:bg-white rounded-lg transition border-b border-slate-100 last:border-b-0";
+          row.innerHTML = `
+            <div class="w-1/3">
+              <span class="font-bold text-xs text-slate-800 block">${cls.name}</span>
+              <span class="text-[10px] text-slate-400 font-semibold">${section} අංශය</span>
+            </div>
+            <div class="flex-1">
+              <select data-class-id="${cls.id}" class="sub-teacher-assign-select w-full p-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600">
+                ${optionsHtml}
+              </select>
+            </div>
+          `;
+          container.appendChild(row);
+        });
+      }
+
+      const modal = document.getElementById("subjectTeachersModal");
+      if (modal) modal.classList.remove("hidden");
+    }
+
+    // 2. Modal එක වැසීම
+    function closeSubjectTeachersModal() {
+      const modal = document.getElementById("subjectTeachersModal");
+      if (modal) modal.classList.add("hidden");
+      window.currentEditingSubject = null;
+      window.currentSubjectGrade = null;
+      window.currentSubjectName = null;
+      window.currentSubjectCurriculumId = null;
+    }
+
+    // 3. සුරැකීම (Triple-Fallback මඟින් විෂය නිවැරදිව සොයාගැනීම)
+    function saveSubjectTeachersAssignment() {
+      // ක්‍රමය 1: සෘජු Memory Reference එකෙන් ලබාගැනීම
+      let cs = window.currentEditingSubject;
+
+      // ක්‍රමය 2: Grade + Subject Composite Key එකෙන් සෙවීම
+      if (!cs && window.currentSubjectGrade !== null && window.currentSubjectName) {
+        cs = (curriculumSubjects || []).find(c =>
+          Number(c.grade) === Number(window.currentSubjectGrade) &&
+          String(c.subject || "").trim().toLowerCase() === String(window.currentSubjectName).trim().toLowerCase()
+        );
+      }
+
+      // ක්‍රමය 3: Curriculum ID මඟින් සෙවීම
+      if (!cs && window.currentSubjectCurriculumId) {
+        cs = (curriculumSubjects || []).find(c => c.id && String(c.id).trim() === String(window.currentSubjectCurriculumId).trim());
+      }
+
+      if (!cs) {
+        alert("විෂය දත්ත සොයාගත නොහැකි විය. කරුණාකර නැවත 'ගුරුවරුන්' බොත්තම ඔබා උත්සාහ කරන්න.");
+        return;
+      }
+
+      const selects = document.querySelectorAll(".sub-teacher-assign-select");
+      let updatedSlotsCount = 0;
+      const assignedTeacherIdsSet = new Set();
+      const targetSub = cs.subject.trim().toLowerCase();
+
+      window.classSubjectAllocations = window.classSubjectAllocations || {};
+
+      selects.forEach(sel => {
+        const classId = sel.getAttribute("data-class-id");
+        const newTeacherId = sel.value ? String(sel.value).trim() : null;
+        const allocKey = `${classId}__${cs.subject.trim()}`;
+
+        if (newTeacherId) {
+          window.classSubjectAllocations[allocKey] = newTeacherId;
+          assignedTeacherIdsSet.add(newTeacherId);
+        } else {
+          delete window.classSubjectAllocations[allocKey];
+        }
+
+        // masterSchedule හි කාලච්ඡේද වලට නව ගුරුවරයා ආදේශ කිරීම (වේලාවන් නොවෙනස්ව තබා ගනිමින්)
+        if (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) {
+          masterSchedule.forEach(slot => {
+            if (slot.classId === classId) {
+              if (!slot.isBasket && slot.subject && slot.subject.trim().toLowerCase() === targetSub) {
+                if (slot.teacherId !== newTeacherId) {
+                  slot.teacherId = newTeacherId;
+                  updatedSlotsCount++;
+                }
+              }
+              if (slot.isBasket && Array.isArray(slot.basketItems)) {
+                slot.basketItems.forEach(b => {
+                  if (b.subject && b.subject.trim().toLowerCase() === targetSub) {
+                    if (b.teacherId !== newTeacherId) {
+                      b.teacherId = newTeacherId;
+                      updatedSlotsCount++;
+                    }
+                  }
+                });
+              }
+            }
+          });
+        }
+      });
+
+      // Curriculum වගුවේ Badges යාවත්කාලීන වීම සඳහා
+      cs.teacherIds = Array.from(assignedTeacherIdsSet);
+
+      saveAllToStorage();
+
+      if (typeof renderCurriculumTable === "function") renderCurriculumTable();
+      if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+      if (typeof renderGradeMasterGrid === "function") renderGradeMasterGrid();
+      if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+
+      closeSubjectTeachersModal();
+
+      let msg = `සාර්ථකයි! '${cs.subject}' විෂය සඳහා පන්ති ගුරු පැවරුම් සුරකින ලදි.`;
+      if (updatedSlotsCount > 0) {
+        msg += `\n\n🔄 කාලසටහන තුළ අදාළ පන්ති කාලච්ඡේද ${updatedSlotsCount} ක ගුරුවරයා සාර්ථකව මාරු කරන ලදි.`;
+      }
+      alert(msg);
+    }
+
+    // 4. Curriculum Table එකේ බොත්තම නිවැරදි Parameter සහිතව Render කිරීම
+    function renderCurriculumTable() {
+      if (typeof populateCurriculumGradesDropdown === "function") {
+        populateCurriculumGradesDropdown();
+      }
+
+      const filterGradeEl = document.getElementById("curriculumFilterGradeSelect");
+      const filterGrade = filterGradeEl ? filterGradeEl.value : "All";
+      const tbody = document.getElementById("curriculumTableBody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      let list = filterGrade !== "All"
+        ? (curriculumSubjects || []).filter(c => Number(c.grade) === Number(filterGrade))
+        : (curriculumSubjects || []);
+
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">විෂයන් කිසිවක් හමු නොවීය.</td></tr>';
+        return;
+      }
+
+      list.forEach((cs, idx) => {
+        if (!cs.id) cs.id = `cs_${cs.grade}_${idx}`;
+
+        const resolvedTeachers = typeof resolveTeachersForSubject === "function" ? resolveTeachersForSubject(cs) : [];
+
+        let badgesHtml = "";
+        if (resolvedTeachers.length > 0) {
+          badgesHtml = resolvedTeachers.map(t => {
+            const no = t.schoolNo ? `[${t.schoolNo}]` : `[${t.id}]`;
+            return `<span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-900 border border-indigo-200 px-2 py-0.5 rounded text-[11px] font-bold shadow-sm mb-1 mr-1">
+                      <i class="fa-solid fa-user-check text-indigo-600 text-[10px]"></i> ${t.name} ${no}
+                    </span>`;
+          }).join("");
+        } else {
+          badgesHtml = `<span class="text-rose-500 font-bold text-[11px] flex items-center gap-1">
+                          <i class="fa-solid fa-triangle-exclamation"></i> ගුරුවරුන් පවරා නැත
+                        </span>`;
+        }
+
+        const secName = typeof getSectionOfGrade === "function" ? getSectionOfGrade(cs.grade) : "-";
+        const safeSubName = encodeURIComponent(cs.subject);
+
+        tbody.innerHTML += `
+          <tr class="border-b hover:bg-slate-50/80 transition">
+            <td class="p-2.5 font-bold text-indigo-700 text-xs">Grade ${cs.grade}</td>
+            <td class="p-2.5 font-bold text-slate-500 text-xs">${secName}</td>
+            <td class="p-2.5 font-bold text-slate-800 text-xs">${cs.subject}</td>
+            <td class="p-2.5 font-bold text-slate-600 text-xs">${cs.maxWeekly} Periods</td>
+            <td class="p-2.5">
+              <div class="flex flex-wrap items-center">
+                ${badgesHtml}
+              </div>
+            </td>
+            <td class="p-2.5 text-center flex flex-wrap justify-center items-center gap-1.5">
+              <button type="button" onclick="openSubjectTeachersModal(${cs.grade}, '${safeSubName}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shadow-sm" title="පන්ති අනුව ගුරුවරුන් පවරන්න">
+                <i class="fa-solid fa-user-pen"></i> ගුරුවරුන් (${resolvedTeachers.length})
+              </button>
+              <button type="button" onclick="editCurriculumSubject('${cs.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-[11px] px-1.5 py-1">Edit</button>
+              <button type="button" onclick="handleDeleteCurriculum('${cs.id}')" class="text-red-600 hover:text-red-800 font-bold text-[11px] px-1.5 py-1">Delete</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+
+    
+    
+
+/*
+    
     // විෂය නිර්දේශ වගුව නැවත ඇඳීම
     function renderCurriculumTable() {
       if (!curriculumSubjects) return;
@@ -4225,7 +4550,8 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       });
     }
 
-
+*/
+  
 // =========================================================================
     // CLASS-BY-CLASS SUBJECT TEACHER REASSIGNMENT & SCHEDULE HOT-SWAP CONTROLLER
     // =========================================================================
@@ -4250,6 +4576,8 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       return count;
     }
 
+/*
+    
     // Modal එක විවෘත කිරීම
     function openSubjectTeachersModal(grade, encodedSubject) {
       const subjectName = decodeURIComponent(encodedSubject);
@@ -4358,13 +4686,19 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       document.getElementById("subjectTeachersModal").classList.remove("hidden");
     }
 
+
+
+    
+
     function closeSubjectTeachersModal() {
       const modal = document.getElementById("subjectTeachersModal");
       if (modal) modal.classList.add("hidden");
       window.currentSubjectGrade = null;
       window.currentSubjectName = null;
     }
+*/
 
+    /*
     // ගුරුවරුන් මාරු කර සුරැකීම (කාලසටහන ස්වයංක්‍රීයව Hot-Swap වීම)
     function saveSubjectTeachersAssignment() {
       if (window.currentSubjectGrade === null || !window.currentSubjectName) return;
@@ -4444,7 +4778,8 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       alert(msg);
     }
 
-
+*/
+  
     
 /*
     // Modal එක විවෘත වන විට කලින් පවරා ඇති සියලුම ගුරුවරුන් ක්ෂණිකව පූරණය කිරීම
