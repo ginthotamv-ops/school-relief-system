@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> පාසල් කාලසටහන් & සහන කළමනාකරණය v12
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -5739,6 +5739,132 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       return unassignedList;
     }
 
+// 2. Modal එක තුළ ගුරුවරුන්ගේ කාලච්ඡේද ප්‍රමාණය සහ සීමා (35/40) සහිතව Dropdown එක සෑදීම
+    function openSubjectTeachersModal(arg1, arg2) {
+      let cs = null;
+
+      if (arg2 !== undefined && arg2 !== null && String(arg2) !== "undefined") {
+        const grade = cleanGradeNum(arg1);
+        const subName = cleanSubjectKey(decodeURIComponent(String(arg2)));
+        cs = (curriculumSubjects || []).find(c => cleanGradeNum(c.grade) === grade && cleanSubjectKey(c.subject) === subName);
+      }
+
+      if (!cs && arg1 !== undefined && arg1 !== null) {
+        const targetId = String(arg1).trim();
+        cs = (curriculumSubjects || []).find(c => c.id && String(c.id).trim() === targetId);
+      }
+
+      if (!cs) {
+        alert("විෂය දත්ත හඳුනාගත නොහැකි විය. කරුණාකර පිටුව Refresh කරන්න.");
+        return;
+      }
+
+      window.currentEditingSubject = cs;
+      window.currentSubjectGrade = cleanGradeNum(cs.grade);
+      window.currentSubjectName = String(cs.subject).trim();
+
+      const grade = window.currentSubjectGrade;
+      const section = typeof getSectionOfGrade === "function" ? getSectionOfGrade(grade) : "All";
+      const subjectPeriods = Number(cs.maxWeekly) || 0;
+
+      document.getElementById("subModalSubjectName").innerText = cs.subject;
+      document.getElementById("subModalGradeSection").innerText = `(Grade ${grade} | අංශය: ${section})`;
+      document.getElementById("subModalPeriodsBadge").innerText = `${subjectPeriods} Periods / සතියට`;
+
+      const classesOfGrade = (schoolClasses || []).filter(c => cleanGradeNum(c.grade) === grade);
+      const container = document.getElementById("subModalClassList");
+      if (!container) return;
+      container.innerHTML = "";
+
+      if (classesOfGrade.length === 0) {
+        container.innerHTML = `
+          <div class="p-4 text-center text-xs text-amber-700 bg-amber-50 rounded-lg">
+            ⚠️ Grade ${grade} සඳහා පන්ති කිසිවක් පද්ධතියේ ලියාපදිංචි කර නොමැත.
+          </div>
+        `;
+      } else {
+        classesOfGrade.forEach(cls => {
+          const currentTeacherId = getAssignedTeacherIdForClass(cls, cs.subject) || "";
+          const targetSubNorm = cleanSubjectKey(cs.subject);
+          const classIdentifier = cls.id || cls.name;
+
+          // ගුරු කාණ්ඩ වෙන් කිරීම
+          const primaryTeachers = (teachers || []).filter(t => cleanSubjectKey(t.subject) === targetSubNorm);
+          const sectionTeachers = (teachers || []).filter(t => cleanSubjectKey(t.subject) !== targetSubNorm && (typeof isTeacherInTargetSection === "function" ? isTeacherInTargetSection(t, section) : true));
+          const otherTeachers = (teachers || []).filter(t => !primaryTeachers.some(pt => pt.id === t.id) && !sectionTeachers.some(st => st.id === t.id));
+
+          // Dropdown Option එකක් සාදන Helper ශ්‍රිතය (35-40 Quota නීති සහිතව)
+          const buildOption = (t) => {
+            const isSelected = String(t.id).trim().toLowerCase() === String(currentTeacherId).trim().toLowerCase();
+            const currentLoad = getTeacherWorkloadCount(t.id, classIdentifier, cs.subject);
+            const projectedLoad = currentLoad + subjectPeriods;
+            const no = t.schoolNo ? `[${t.schoolNo}]` : `[${t.id}]`;
+
+            let labelText = `${t.name} ${no} (${currentLoad}/35)`;
+            let isDisabled = false;
+
+            if (currentLoad >= 40) {
+              // දැනටමත් 40 ක් හෝ ඊට වැඩි නම් සම්පූර්ණයෙන්ම තහනම්
+              labelText = `⛔ ${t.name} ${no} (${currentLoad}/40 - පිරී ඇත)`;
+              if (!isSelected) isDisabled = true;
+            } else if (currentLoad >= 35 || projectedLoad > 35) {
+              if (projectedLoad > 40 && !isSelected) {
+                // මෙම විෂය එක් කළ විට 40 ඉක්මවයි නම් තෝරාගත නොහැක
+                labelText = `⛔ ${t.name} ${no} (${currentLoad}/35 ➔ +${subjectPeriods}=${projectedLoad} > 40 සීමාව ඉක්මවයි)`;
+                isDisabled = true;
+              } else {
+                // 35 සිට 40 දක්වා විශේෂ අවසර සහිතව
+                labelText = `⚠️ ${t.name} ${no} (${currentLoad}/35 - විශේෂ අවසර 40 දක්වා)`;
+              }
+            }
+
+            return `<option value="${t.id}" ${isSelected ? "selected" : ""} ${isDisabled ? "disabled class='text-slate-400 bg-slate-100'" : ""}>${labelText}</option>`;
+          };
+
+          let optionsHtml = `<option value="">-- ගුරුවරයෙකු තෝරා නැත (Unassigned) --</option>`;
+
+          if (primaryTeachers.length > 0) {
+            optionsHtml += `<optgroup label="⭐ ${cs.subject} ප්‍රධාන විෂය වන ගුරුවරුන්">`;
+            primaryTeachers.forEach(t => optionsHtml += buildOption(t));
+            optionsHtml += `</optgroup>`;
+          }
+
+          if (sectionTeachers.length > 0) {
+            optionsHtml += `<optgroup label="👥 ${section} අංශයේ අනෙකුත් ගුරුවරුන්">`;
+            sectionTeachers.forEach(t => optionsHtml += buildOption(t));
+            optionsHtml += `</optgroup>`;
+          }
+
+          if (otherTeachers.length > 0) {
+            optionsHtml += `<optgroup label="🏫 පාසලේ අනෙකුත් ගුරුවරුන්">`;
+            otherTeachers.forEach(t => optionsHtml += buildOption(t));
+            optionsHtml += `</optgroup>`;
+          }
+
+          const row = document.createElement("div");
+          row.className = "p-2.5 flex items-center justify-between gap-3 hover:bg-white rounded-lg transition border-b border-slate-100 last:border-b-0";
+          row.innerHTML = `
+            <div class="w-1/3">
+              <span class="font-bold text-xs text-slate-800 block">${cls.name}</span>
+              <span class="text-[10px] text-slate-400 font-semibold">${section} අංශය</span>
+            </div>
+            <div class="flex-1">
+              <select data-class-identifier="${classIdentifier}" class="sub-teacher-assign-select w-full p-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600">
+                ${optionsHtml}
+              </select>
+            </div>
+          `;
+          container.appendChild(row);
+        });
+      }
+
+      const modal = document.getElementById("subjectTeachersModal");
+      if (modal) modal.classList.remove("hidden");
+    }
+
+    
+    
+    /*
     // 6. Modal එක විවෘත කිරීම
     function openSubjectTeachersModal(arg1, arg2) {
       let cs = null;
@@ -5852,11 +5978,128 @@ const modal = document.getElementById("subjectTeachersModal");
       
     
     }
+    */
 
     // =========================================================================
     // ERROR-PROOF SAVE & UPDATE HANDLER (WITH INSTANT DIAGNOSTICS)
     // =========================================================================
 
+    
+    // 3. සුරැකීමේදී 35-40 සීමා පරීක්ෂා කර තහවුරු කිරීම
+    function saveSubjectTeachersAssignment() {
+      const cs = window.currentEditingSubject;
+      if (!cs) {
+        alert("විෂය දත්ත හඳුනාගත නොහැක. කරුණාකර නැවත විවෘත කරන්න.");
+        return;
+      }
+
+      const subKey = cleanSubjectKey(cs.subject);
+      const subjectPeriods = Number(cs.maxWeekly) || 0;
+      const selects = document.querySelectorAll(".sub-teacher-assign-select");
+
+      // A. Quota පරීක්ෂාව (Validation Pass)
+      const specialApprovalNeeded = [];
+
+      for (let sel of selects) {
+        const teacherId = sel.value ? String(sel.value).trim() : null;
+        const classIdentifier = sel.getAttribute("data-class-identifier");
+
+        if (teacherId) {
+          const currentLoad = getTeacherWorkloadCount(teacherId, classIdentifier, cs.subject);
+          const projectedLoad = currentLoad + subjectPeriods;
+          const teacherObj = (teachers || []).find(t => String(t.id).trim().toLowerCase() === teacherId.toLowerCase());
+          const teacherName = teacherObj ? teacherObj.name : teacherId;
+
+          // නීතිය 1: වාර 40 ඉක්මවා යාම සම්පූර්ණයෙන්ම අවහිර කිරීම
+          if (projectedLoad > 40) {
+            alert(`තහනම් කර ඇත!\n\n'${teacherName}' ගුරුතුමාට මෙම විෂය (${subjectPeriods} periods) පැවරුවහොත් මුළු සතිපතා කාලච්ඡේද ගණන ${projectedLoad} දක්වා ඉහළ යයි.\n\nඋපරිම සීමාව වන වාර 40 ඉක්මවා කිසිදු ගුරුවරයෙකුට විෂයන් පැවරිය නොහැක.`);
+            return;
+          }
+
+          // නීතිය 2: වාර 35 ත් 40 ත් අතර නම් විශේෂ අවසරය සඳහා ලැයිස්තුගත කිරීම
+          if (projectedLoad > 35) {
+            specialApprovalNeeded.push({
+              name: teacherName,
+              current: currentLoad,
+              projected: projectedLoad
+            });
+          }
+        }
+      }
+
+      // විශේෂ අවස්ථාවකදී (35 ට වැඩි නම්) තහවුරු කිරීම ලබාගැනීම
+      if (specialApprovalNeeded.length > 0) {
+        let confirmMsg = "විශේෂ අනතුරු ඇඟවීමයි (Special Quota Approval):\n";
+        specialApprovalNeeded.forEach(item => {
+          confirmMsg += `\n• ${item.name}: සතිපතා වාර 35 සීමාව ඉක්මවා ${item.projected}/40 දක්වා වැඩිවේ.`;
+        });
+        confirmMsg += "\n\nමෙම ගුරුවරුන්ට වාර 35 ඉක්මවා (වාර 40 දක්වා) විශේෂ අවස්ථාවක් ලෙස පැවරීම තහවුරු කරන්නේද?";
+
+        const userAgreed = confirm(confirmMsg);
+        if (!userAgreed) {
+          return; // පරිශීලකයා එකඟ නොවූයේ නම් සුරැකීම අවලංගු වේ
+        }
+      }
+
+      // B. දත්ත සුරැකීමේ ක්‍රියාවලිය
+      let assignedCount = 0;
+      const assignedTeacherIdsSet = new Set();
+      window.classSubjectAllocations = window.classSubjectAllocations || {};
+
+      selects.forEach(sel => {
+        const classIdentifier = sel.getAttribute("data-class-identifier");
+        const teacherId = sel.value ? String(sel.value).trim() : null;
+
+        const cls = (schoolClasses || []).find(c => 
+          String(c.id).trim() === String(classIdentifier).trim() || 
+          String(c.name).trim() === String(classIdentifier).trim()
+        );
+
+        if (cls) {
+          cls.subjectTeachers = cls.subjectTeachers || {};
+          const key = `${String(cls.id || cls.name).trim()}___${subKey}`;
+
+          if (teacherId) {
+            cls.subjectTeachers[subKey] = teacherId;
+            window.classSubjectAllocations[key] = teacherId;
+            assignedTeacherIdsSet.add(teacherId);
+            assignedCount++;
+          } else {
+            delete cls.subjectTeachers[subKey];
+            delete window.classSubjectAllocations[key];
+          }
+        }
+      });
+
+      cs.teacherIds = Array.from(assignedTeacherIdsSet);
+
+      // LocalStorage Backup
+      try {
+        localStorage.setItem("sch_permanent_allocations_v1", JSON.stringify(window.classSubjectAllocations));
+      } catch (e) {}
+
+      // Main Storage Save
+      if (typeof saveAllToStorage === "function") {
+        saveAllToStorage();
+      }
+
+      // Refresh UI
+      if (typeof renderCurriculumTable === "function") renderCurriculumTable();
+      if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+      if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+
+      const modal = document.getElementById("subjectTeachersModal");
+      if (modal) modal.classList.add("hidden");
+
+      alert(`සාර්ථකයි! '${cs.subject}' විෂය සඳහා පන්ති ${assignedCount} කට ගුරුවරුන් සුරකින ලදි.`);
+    }
+
+    window.getTeacherWorkloadCount = getTeacherWorkloadCount;
+    window.openSubjectTeachersModal = openSubjectTeachersModal;
+    window.saveSubjectTeachersAssignment = saveSubjectTeachersAssignment;
+    
+    
+    /*
     function saveSubjectTeachersAssignment() {
       console.log("👉 Save & Update button clicked!");
 
@@ -5986,6 +6229,7 @@ const modal = document.getElementById("subjectTeachersModal");
     window.saveSubjectTeachers = saveSubjectTeachersAssignment;
     window.saveSubjectTeacherAssignment = saveSubjectTeachersAssignment;
 
+*/
     
     /*
     // 7. ගුරුවරුන් ස්ථිරව සුරැකීම (Save Function)
@@ -6438,20 +6682,50 @@ const modal = document.getElementById("subjectTeachersModal");
     window.currentSubjectName = null;
 
     // ගුරුවරයෙකුගේ සතිපතා වාර ගණන ගණනය කිරීමේ Helper ශ්‍රිතය
-    function getTeacherWorkloadCount(teacherId) {
-      if (!teacherId || typeof masterSchedule === "undefined" || !Array.isArray(masterSchedule)) return 0;
-      let count = 0;
-      masterSchedule.forEach(slot => {
-        if (!slot.isBasket && String(slot.teacherId) === String(teacherId)) count++;
-        if (slot.isBasket && Array.isArray(slot.basketItems)) {
-          slot.basketItems.forEach(b => {
-            if (String(b.teacherId) === String(teacherId)) count++;
+// =========================================================================
+    // TEACHER WORKLOAD CALCULATOR & 35-40 PERIOD QUOTA ENFORCER
+    // =========================================================================
+
+    // 1. ගුරුවරයාට දැනට පවරා ඇති මුළු සතිපතා කාලච්ඡේද ගණන නිවැරදිව ගණනය කිරීම
+    function getTeacherWorkloadCount(teacherId, excludeClassIdentifier = null, excludeSubject = null) {
+      if (!teacherId) return 0;
+      const tIdStr = String(teacherId).trim().toLowerCase();
+      let totalPeriods = 0;
+
+      const cleanExClass = excludeClassIdentifier ? String(excludeClassIdentifier).trim().toLowerCase() : null;
+      const cleanExSub = excludeSubject ? cleanSubjectKey(excludeSubject) : null;
+
+      // පාසලේ සියලුම පන්තිවල ස්ථිර පැවරුම් (cls.subjectTeachers) පරීක්ෂාව
+      (schoolClasses || []).forEach(cls => {
+        const clsIdStr = String(cls.id || "").trim().toLowerCase();
+        const clsNameStr = String(cls.name || "").trim().toLowerCase();
+
+        if (cls.subjectTeachers && typeof cls.subjectTeachers === "object") {
+          Object.keys(cls.subjectTeachers).forEach(subKey => {
+            const assignedTId = String(cls.subjectTeachers[subKey] || "").trim().toLowerCase();
+
+            // දැනට සංස්කරණය කරන පන්තියේ මෙම විෂයම නම් එය නැවත ගණනය කිරීමෙන් বাদ හැරීම
+            if (cleanExClass && (clsIdStr === cleanExClass || clsNameStr === cleanExClass) && cleanExSub === subKey) {
+              return;
+            }
+
+            if (assignedTId === tIdStr) {
+              // අදාළ ශ්‍රේණියට මෙම විෂය සඳහා ඇති සතිපතා වාර ගණන සෙවීම
+              const cs = (curriculumSubjects || []).find(c => 
+                cleanGradeNum(c.grade) === cleanGradeNum(cls.grade) && 
+                cleanSubjectKey(c.subject) === subKey
+              );
+              if (cs) {
+                totalPeriods += (Number(cs.maxWeekly) || 0);
+              }
+            }
           });
         }
       });
-      return count;
-    }
 
+      return totalPeriods;
+    }
+    
 /*
     
     // Modal එක විවෘත කිරීම
