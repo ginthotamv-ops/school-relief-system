@@ -665,61 +665,49 @@
   
   <!-- Modal: Subject Teachers Selection Modal -->
 
-<!-- Modal: Class-by-Class Subject Teacher Assignment Modal -->
-  <div id="subjectTeachersModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-200 max-h-[90vh] flex flex-col">
+<!-- Modal: Subject Teachers Assignment Modal (Z-Index Fixed & Clickable) -->
+  <div id="subjectTeachersModal" class="fixed inset-0 z-[9999] flex items-center justify-center hidden p-4">
+    <!-- 1. පසුබිම (Backdrop - pointer-events නොමැත) -->
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeSubjectTeachersModal()"></div>
+
+    <!-- 2. Modal පෙට්ටිය (Relative & z-10 නිසා පසුබිමට ඉහළින් මතුපිටින්ම පවතී) -->
+    <div class="relative z-10 bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
       
-      <!-- Modal Header -->
-      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
-        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-          <i class="fa-solid fa-chalkboard-user text-indigo-600"></i>
-          <span>පන්ති අනුව විෂය ගුරුවරුන් පැවරීම</span>
-        </h3>
-        <button type="button" onclick="closeSubjectTeachersModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1 leading-none">&times;</button>
-      </div>
-
-      <!-- Subject Info Banner -->
-      <div class="my-3 p-3 bg-indigo-50/80 rounded-xl border border-indigo-200 flex flex-wrap items-center justify-between text-xs gap-2">
+      <!-- Header -->
+      <div class="flex justify-between items-start pb-3 border-b border-slate-100">
         <div>
-          <span class="text-indigo-950 font-black text-sm" id="subModalSubjectName">-</span>
-          <span class="text-slate-500 ml-2 font-bold" id="subModalGradeSection">-</span>
+          <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-user-pen text-indigo-600"></i>
+            <span id="subModalSubjectName">විෂය නම</span>
+          </h3>
+          <div class="flex items-center gap-2 mt-1">
+            <span id="subModalGradeSection" class="text-xs text-slate-500 font-semibold">-</span>
+            <span id="subModalPeriodsBadge" class="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-bold border border-indigo-200">0 Periods</span>
+          </div>
         </div>
-        <div class="font-bold text-indigo-800 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-sm" id="subModalPeriodsBadge">
-          - Periods / සතියට
-        </div>
+        <button type="button" onclick="closeSubjectTeachersModal()" class="text-slate-400 hover:text-slate-700 text-2xl font-bold p-1 leading-none">&times;</button>
       </div>
 
-      <div class="bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-2 text-[11px] text-amber-900 flex items-start gap-2">
-        <i class="fa-solid fa-circle-info text-amber-600 mt-0.5"></i>
-        <span>මෙහිදී ගුරුවරයෙකු වෙනස් කළ විට, <b>කාලසටහනේ වේලාවන් නොවෙනස්ව පවතින අතර</b> එම පන්තියේ සියලු කාලච්ඡේද වලට නව ගුරුවරයා ස්වයංක්‍රීයව ආදේශ වේ.</span>
+      <!-- Class List Scrollable Area -->
+      <div class="my-4 overflow-y-auto pr-1 flex-1 space-y-2 border border-slate-100 rounded-xl p-2 bg-slate-50/50" id="subModalClassList" style="max-height: 50vh;">
+        <!-- පන්ති සහ Dropdowns මෙතැනට JavaScript මඟින් පිරවේ -->
       </div>
 
-      <!-- Classes & Teachers Selection List -->
-      <div class="overflow-y-auto flex-grow my-1 border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-72 p-1 bg-slate-50/50" id="subModalClassList">
-        <!-- JavaScript මඟින් පන්ති සහ ගුරු Dropdown මෙතැනට එකතු වේ -->
-      </div>
-
-      <!-- Footer Buttons -->
-      <div class="pt-3 border-t border-slate-100 mt-3 flex justify-end gap-2">
-
-<!-- Modal එක තුළ ඇති Save බොත්තම මෙසේ විය යුතුය -->
-
-        <!-- Modal එක තුළ ඇති Save බොත්තම මෙසේ විය යුතුය -->
-<button type="button" 
-        onclick="alert('Button Works!'); saveSubjectTeachersAssignment();" 
-        class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs shadow">
-  සුරකින්න (Save & Update)
-</button>
-        
+      <!-- Action Buttons (Footer) -->
+      <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
         <button type="button" onclick="closeSubjectTeachersModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs transition">
-          අවලංගු
+          අවලංගු කරන්න
+        </button>
+        <button type="button" 
+                id="btnSaveSubjectTeachers" 
+                onclick="saveSubjectTeachersAssignment()" 
+                class="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold py-2.5 px-6 rounded-xl text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-floppy-disk"></i> සුරකින්න (Save & Update)
         </button>
       </div>
 
     </div>
   </div>
-
-
 
   
 <!-- ==================== PRINT CONTAINERS ==================== -->
@@ -1043,6 +1031,84 @@
       { id: "T09", name: "ජගත් විජේසිංහ", phone: "0712345679", subject: "History", sections: ["6-7", "8-11"], leaveStatus: "present", isExempt: false, allowOver35: false }
     ];
 
+
+// සෘජුවම ක්‍රියාත්මක වන Save ශ්‍රිතය
+    window.saveSubjectTeachersAssignment = function() {
+      // 1. පරීක්ෂාව සඳහා Alert එක
+      alert("සුරැකීමේ ක්‍රියාවලිය ආරම්භ විය!");
+
+      const cs = window.currentEditingSubject;
+      if (!cs) {
+        alert("දෝෂයකි: විෂය දත්ත හඳුනාගත නොහැක. කරුණාකර නැවත 'ගුරුවරුන්' බොත්තම ඔබන්න.");
+        return;
+      }
+
+      const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(cs.subject) : cs.subject.trim().toLowerCase();
+      const selects = document.querySelectorAll(".sub-teacher-assign-select");
+      
+      let assignedCount = 0;
+      const assignedTeacherIdsSet = new Set();
+      window.classSubjectAllocations = window.classSubjectAllocations || {};
+
+      selects.forEach(sel => {
+        const classIdentifier = sel.getAttribute("data-class-identifier");
+        const teacherId = sel.value ? String(sel.value).trim() : null;
+
+        const cls = (schoolClasses || []).find(c => 
+          String(c.id).trim() === String(classIdentifier).trim() || 
+          String(c.name).trim() === String(classIdentifier).trim()
+        );
+
+        if (cls) {
+          cls.subjectTeachers = cls.subjectTeachers || {};
+          const key = `${String(cls.id || cls.name).trim()}___${subKey}`;
+
+          if (teacherId) {
+            cls.subjectTeachers[subKey] = teacherId;
+            window.classSubjectAllocations[key] = teacherId;
+            assignedTeacherIdsSet.add(teacherId);
+            assignedCount++;
+          } else {
+            delete cls.subjectTeachers[subKey];
+            delete window.classSubjectAllocations[key];
+          }
+        }
+      });
+
+      cs.teacherIds = Array.from(assignedTeacherIdsSet);
+
+      // LocalStorage Backup
+      try {
+        localStorage.setItem("sch_permanent_allocations_v1", JSON.stringify(window.classSubjectAllocations));
+      } catch (e) {}
+
+      // Main Storage Save
+      if (typeof saveAllToStorage === "function") {
+        saveAllToStorage();
+      }
+
+      // Refresh UI Tables
+      if (typeof renderCurriculumTable === "function") renderCurriculumTable();
+      if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+
+      // Close Modal
+      const modal = document.getElementById("subjectTeachersModal");
+      if (modal) modal.classList.add("hidden");
+
+      alert(`සාර්ථකයි! '${cs.subject}' විෂය සඳහා පන්ති ${assignedCount} කට ගුරුවරුන් සුරකින ලදි.`);
+    };
+
+    window.closeSubjectTeachersModal = function() {
+      const modal = document.getElementById("subjectTeachersModal");
+      if (modal) modal.classList.add("hidden");
+    };
+
+    
+
+
+
+
+    
     function buildDefaultGradeMaster() {
       var gm = [];
       var subs = ["Mathematics", "Science", "Sinhala", "English", "ICT", "History", "Science", "Mathematics"];
