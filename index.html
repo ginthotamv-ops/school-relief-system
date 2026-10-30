@@ -671,6 +671,8 @@
 
 <!-- Modal: Subject Teachers Assignment Modal (Z-Index Fixed & Clickable) -->
   <div id="subjectTeachersModal" class="fixed inset-0 z-[9999] flex items-center justify-center hidden p-4">
+
+    
     <!-- 1. පසුබිම (Backdrop - pointer-events නොමැත) -->
     <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeSubjectTeachersModal()"></div>
 
@@ -713,6 +715,78 @@
     </div>
   </div>
 
+  <!-- Modal: Bulk Clear Allocations Modal -->
+  <div id="clearAllocationsModal" class="fixed inset-0 z-[9999] flex items-center justify-center hidden p-4">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeClearAllocationsModal()"></div>
+
+    <!-- Modal Box -->
+    <div class="relative z-10 bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200">
+      
+      <!-- Header -->
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-eraser text-rose-600"></i>
+          <span>ගුරු පැවරුම් එකවර ඉවත් කිරීම (Bulk Clear)</span>
+        </h3>
+        <button type="button" onclick="closeClearAllocationsModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold p-1 leading-none">&times;</button>
+      </div>
+
+      <!-- Action Options -->
+      <div class="space-y-4 my-5 text-xs">
+        
+        <!-- 1. ශ්‍රේණියක් අනුව ඉවත් කිරීම -->
+        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+          <label class="font-bold text-slate-700 block">
+            <i class="fa-solid fa-layer-group text-indigo-600 mr-1"></i> ශ්‍රේණියකට අදාළ සියලු පැවරීම් ඉවත් කරන්න:
+          </label>
+          <div class="flex gap-2">
+            <select id="clearByGradeSelect" class="flex-1 p-2 border border-slate-300 rounded-lg font-bold bg-white outline-none focus:border-indigo-600">
+              <!-- Grades Populate වේ -->
+            </select>
+            <button type="button" onclick="executeClearByGrade()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-2 rounded-lg transition shadow-sm whitespace-nowrap">
+              ශ්‍රේණිය Clear
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. විෂයක් අනුව ඉවත් කිරීම -->
+        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+          <label class="font-bold text-slate-700 block">
+            <i class="fa-solid fa-book-open text-indigo-600 mr-1"></i> විෂයකට අදාළ සියලු පැවරීම් ඉවත් කරන්න:
+          </label>
+          <div class="flex gap-2">
+            <select id="clearBySubjectSelect" class="flex-1 p-2 border border-slate-300 rounded-lg font-bold bg-white outline-none focus:border-indigo-600">
+              <!-- Subjects Populate වේ -->
+            </select>
+            <button type="button" onclick="executeClearBySubject()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-2 rounded-lg transition shadow-sm whitespace-nowrap">
+              විෂය Clear
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. සියලු පැවරීම් එකවර Reset කිරීම -->
+        <div class="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between gap-3">
+          <div>
+            <b class="font-bold text-rose-800 block text-xs">සියලුම ගුරු පැවරුම් Reset කරන්න:</b>
+            <span class="text-[11px] text-rose-600 block mt-0.5">පාසලේ සියලුම පන්තිවල විෂය ගුරු පැවරුම් සම්පූර්ණයෙන්ම ඉවත් කෙරේ.</span>
+          </div>
+          <button type="button" onclick="executeClearAllAllocations()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-3.5 py-2.5 rounded-lg transition shadow-sm whitespace-nowrap">
+            All Clear
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="pt-3 border-t border-slate-100 flex justify-end">
+        <button type="button" onclick="closeClearAllocationsModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-5 rounded-xl text-xs transition">
+          වසන්න
+        </button>
+      </div>
+
+    </div>
+  </div>
   
 <!-- ==================== PRINT CONTAINERS ==================== -->
   <div id="printableClassArea" class="hidden p-4 bg-white">
@@ -6322,6 +6396,241 @@ const modal = document.getElementById("subjectTeachersModal");
 
     */
 
+
+
+    // =========================================================================
+    // BULK ALLOCATION REMOVAL CONTROLLER (GRADE / SUBJECT / ALL)
+    // =========================================================================
+
+    // 1. Modal එක විවෘත කිරීම සහ Dropdowns පිරවීම
+    function openClearAllocationsModal() {
+      const gradeSelect = document.getElementById("clearByGradeSelect");
+      const subSelect = document.getElementById("clearBySubjectSelect");
+
+      // Grades Dropdown එක පිරවීම
+      if (gradeSelect) {
+        gradeSelect.innerHTML = '<option value="">-- ශ්‍රේණිය තෝරන්න --</option>';
+        const availableGrades = [...new Set((schoolClasses || []).map(c => cleanGradeNum(c.grade)))].filter(g => g > 0).sort((a, b) => a - b);
+        availableGrades.forEach(g => {
+          gradeSelect.innerHTML += `<option value="${g}">Grade ${g}</option>`;
+        });
+      }
+
+      // Subjects Dropdown එක පිරවීම (Unique Subject Names)
+      if (subSelect) {
+        subSelect.innerHTML = '<option value="">-- විෂය තෝරන්න --</option>';
+        const subjectNames = [...new Set((curriculumSubjects || []).map(c => c.subject.trim()))].sort();
+        subjectNames.forEach(sub => {
+          subSelect.innerHTML += `<option value="${sub}">${sub}</option>`;
+        });
+      }
+
+      const modal = document.getElementById("clearAllocationsModal");
+      if (modal) modal.classList.remove("hidden");
+    }
+
+    function closeClearAllocationsModal() {
+      const modal = document.getElementById("clearAllocationsModal");
+      if (modal) modal.classList.add("hidden");
+    }
+
+    // 2. තෝරාගත් ශ්‍රේණියේ සියලු පැවරීම් ඉවත් කිරීම
+    function executeClearByGrade() {
+      const gradeSelect = document.getElementById("clearByGradeSelect");
+      const grade = gradeSelect ? cleanGradeNum(gradeSelect.value) : 0;
+
+      if (!grade) {
+        alert("කරුණාකර ශ්‍රේණියක් තෝරන්න.");
+        return;
+      }
+
+      const confirmed = confirm(`Grade ${grade} ට අදාළ සියලුම පන්තිවල විෂය ගුරු පැවරුම් ඉවත් කිරීමට අවශ්‍ය බව තහවුරු කරන්නද?`);
+      if (!confirmed) return;
+
+      const targetClasses = (schoolClasses || []).filter(c => cleanGradeNum(c.grade) === grade);
+      const targetClassIds = new Set(targetClasses.map(c => String(c.id || c.name).trim()));
+
+      // A. schoolClasses තුළින් subjectTeachers ඉවත් කිරීම
+      targetClasses.forEach(cls => {
+        cls.subjectTeachers = {};
+      });
+
+      // B. classSubjectAllocations සහ LocalStorage backup පිරිසිදු කිරීම
+      let localBackup = {};
+      try {
+        localBackup = JSON.parse(localStorage.getItem("sch_permanent_allocations_v1") || "{}");
+      } catch (e) { localBackup = {}; }
+
+      Object.keys(window.classSubjectAllocations || {}).forEach(key => {
+        const classPart = key.split("___")[0];
+        if (targetClassIds.has(classPart)) {
+          delete window.classSubjectAllocations[key];
+        }
+      });
+
+      Object.keys(localBackup).forEach(key => {
+        const classPart = key.split("___")[0];
+        if (targetClassIds.has(classPart)) {
+          delete localBackup[key];
+        }
+      });
+
+      try {
+        localStorage.setItem("sch_permanent_allocations_v1", JSON.stringify(localBackup));
+      } catch (e) {}
+
+      // C. Curriculum හි teacherIds හිස් කිරීම
+      (curriculumSubjects || []).forEach(cs => {
+        if (cleanGradeNum(cs.grade) === grade) {
+          cs.teacherIds = [];
+        }
+      });
+
+      // D. masterSchedule හි අදාළ පන්තිවල කාලච්ඡේදවල ගුරුවරයා ඉවත් කිරීම
+      if (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) {
+        masterSchedule.forEach(slot => {
+          if (targetClassIds.has(String(slot.classId))) {
+            slot.teacherId = null;
+          }
+        });
+      }
+
+      saveAllToStorage();
+      if (typeof renderCurriculumTable === "function") renderCurriculumTable();
+      if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+      if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+
+      closeClearAllocationsModal();
+      alert(`සාර්ථකයි! Grade ${grade} හි සියලුම පන්තිවල ගුරු පැවරුම් ඉවත් කරන ලදි.`);
+    }
+
+    // 3. තෝරාගත් විෂයේ සියලු පැවරීම් ඉවත් කිරීම
+    function executeClearBySubject() {
+      const subSelect = document.getElementById("clearBySubjectSelect");
+      const subjectName = subSelect ? subSelect.value.trim() : "";
+
+      if (!subjectName) {
+        alert("කරුණාකර විෂයක් තෝරන්න.");
+        return;
+      }
+
+      const confirmed = confirm(`'${subjectName}' විෂය සඳහා පාසලේ සියලුම පන්තිවලට පවරා ඇති ගුරුවරුන් ඉවත් කිරීමට අවශ්‍ය බව තහවුරු කරන්නද?`);
+      if (!confirmed) return;
+
+      const subKey = cleanSubjectKey(subjectName);
+
+      // A. schoolClasses තුළින් අදාළ විෂය ඉවත් කිරීම
+      (schoolClasses || []).forEach(cls => {
+        if (cls.subjectTeachers && cls.subjectTeachers[subKey]) {
+          delete cls.subjectTeachers[subKey];
+        }
+      });
+
+      // B. classSubjectAllocations සහ LocalStorage backup පිරිසිදු කිරීම
+      let localBackup = {};
+      try {
+        localBackup = JSON.parse(localStorage.getItem("sch_permanent_allocations_v1") || "{}");
+      } catch (e) { localBackup = {}; }
+
+      Object.keys(window.classSubjectAllocations || {}).forEach(key => {
+        if (key.endsWith(`___${subKey}`)) {
+          delete window.classSubjectAllocations[key];
+        }
+      });
+
+      Object.keys(localBackup).forEach(key => {
+        if (key.endsWith(`___${subKey}`)) {
+          delete localBackup[key];
+        }
+      });
+
+      try {
+        localStorage.setItem("sch_permanent_allocations_v1", JSON.stringify(localBackup));
+      } catch (e) {}
+
+      // C. Curriculum හි teacherIds හිස් කිරීම
+      (curriculumSubjects || []).forEach(cs => {
+        if (cleanSubjectKey(cs.subject) === subKey) {
+          cs.teacherIds = [];
+        }
+      });
+
+      // D. masterSchedule හි අදාළ විෂයේ කාලච්ඡේදවල ගුරුවරයා ඉවත් කිරීම
+      if (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) {
+        masterSchedule.forEach(slot => {
+          if (!slot.isBasket && cleanSubjectKey(slot.subject) === subKey) {
+            slot.teacherId = null;
+          }
+        });
+      }
+
+      saveAllToStorage();
+      if (typeof renderCurriculumTable === "function") renderCurriculumTable();
+      if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+      if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+
+      closeClearAllocationsModal();
+      alert(`සාර්ථකයි! '${subjectName}' විෂය සඳහා වූ සියලුම ගුරු පැවරුම් ඉවත් කරන ලදි.`);
+    }
+
+    // 4. පාසලේ සියලුම ගුරු පැවරුම් එකවර Reset කිරීම
+    function executeClearAllAllocations() {
+      const confirmed = confirm("අවවාදයයි!\n\nපාසලේ සියලුම ශ්‍රේණිවල සියලුම පන්ති සඳහා සිදු කර ඇති මුළු ගුරු පැවරුම් සම්පූර්ණයෙන්ම ඉවත් කෙරේ.\n\nමෙය තහවුරු කරන්නද?");
+      if (!confirmed) return;
+
+      const doubleConfirm = prompt("මෙය ආපසු හැරවිය නොහැක! තහවුරු කිරීමට 'CLEAR' ලෙස English අකුරින් Type කරන්න:");
+      if (doubleConfirm !== "CLEAR") {
+        alert("තහවුරු කිරීම අසාර්ථකයි. අවලංගු කරන ලදි.");
+        return;
+      }
+
+      // A. සියලු පන්තිවල subjectTeachers හිස් කිරීම
+      (schoolClasses || []).forEach(cls => {
+        cls.subjectTeachers = {};
+      });
+
+      // B. මතකයන් සහ Backups හිස් කිරීම
+      window.classSubjectAllocations = {};
+      try {
+        localStorage.removeItem("sch_permanent_allocations_v1");
+      } catch (e) {}
+
+      // C. සියලු Curriculum විෂයන්ගේ teacherIds හිස් කිරීම
+      (curriculumSubjects || []).forEach(cs => {
+        cs.teacherIds = [];
+      });
+
+      // D. masterSchedule හි සියලු කාලච්ඡේදවලින් ගුරුවරුන් ඉවත් කිරීම
+      if (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) {
+        masterSchedule.forEach(slot => {
+          slot.teacherId = null;
+          if (slot.isBasket && Array.isArray(slot.basketItems)) {
+            slot.basketItems.forEach(b => b.teacherId = null);
+          }
+        });
+      }
+
+      saveAllToStorage();
+      if (typeof renderCurriculumTable === "function") renderCurriculumTable();
+      if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+      if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+
+      closeClearAllocationsModal();
+      alert("සාර්ථකයි! පාසලේ සියලුම ගුරු පැවරුම් සම්පූර්ණයෙන්ම ඉවත් කර Reset කරන ලදි.");
+    }
+
+    // Global Window Exports
+    window.openClearAllocationsModal = openClearAllocationsModal;
+    window.closeClearAllocationsModal = closeClearAllocationsModal;
+    window.executeClearByGrade = executeClearByGrade;
+    window.executeClearBySubject = executeClearBySubject;
+    window.executeClearAllAllocations = executeClearAllAllocations;
+
+
+
+
+
+    
     // 8. විෂය නිර්දේශ වගුව Render කිරීම (ගුරුවරුන් නැති පන්ති නිවැරදිව පෙන්වයි)
     function renderCurriculumTable() {
       if (typeof populateCurriculumGradesDropdown === "function") populateCurriculumGradesDropdown();
