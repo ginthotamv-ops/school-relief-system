@@ -3337,12 +3337,14 @@ function resetSystemData() {
     // =========================================================================
 
     // 1. Drop එකට ඉඩ ලබාදීම (Drag Over) - මෙය අනිවාර්ය වේ!
+// 1. කොටුව මතට Drag කරගෙන එන විට Drop කිරීමට ඉඩ ලබාදීම (අනිවාර්ය වේ)
     function handleSlotDragOver(e) {
       e.preventDefault();
-      e.dataTransfer.dropEffect = "copy";
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = "copy";
+      }
       e.currentTarget.classList.add("bg-indigo-100", "border-indigo-400");
     }
-    
 function validateCurriculumSubjectForClass(classId, subjectName) {
       const cls = (schoolClasses || []).find(c => String(c.id) === String(classId));
       if (!cls || !subjectName) return false;
@@ -3361,9 +3363,104 @@ function validateCurriculumSubjectForClass(classId, subjectName) {
     
     
  // 2. Drag ඉවත් වූ විට Style එක සාමාන්‍ය කිරීම (Drag Leave)
-    function handleSlotDragLeave(e) {
+function handleSlotDragLeave(e) {
       e.currentTarget.classList.remove("bg-indigo-100", "border-indigo-400");
     }
+
+function handleSlotDrop(e, classId, day, period) {
+      e.preventDefault();
+      e.currentTarget.classList.remove("bg-indigo-100", "border-indigo-400");
+
+      // ඇදගෙන ආ විෂය නම ලබාගැනීම
+      let subjectName = "";
+      if (window.draggedSubjectData && window.draggedSubjectData.subject) {
+        subjectName = window.draggedSubjectData.subject;
+      } else if (e.dataTransfer) {
+        subjectName = e.dataTransfer.getData("text/plain");
+      }
+
+      if (!subjectName) {
+        console.warn("Drop Failed: No subject data found.");
+        return;
+      }
+
+      const cleanClassId = String(classId).trim();
+      const numDay = Number(day);
+      const numPeriod = Number(period);
+
+      // A. Quota Limit පරීක්ෂාව
+      if (typeof calculateClassSubjectQuotas === "function") {
+        const quotas = calculateClassSubjectQuotas(cleanClassId);
+        const targetKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(subjectName) : subjectName.trim().toLowerCase();
+        const subQuota = quotas.find(q => 
+          (typeof cleanSubjectKey === "function" ? cleanSubjectKey(q.subject) : q.subject.trim().toLowerCase()) === targetKey
+        );
+
+        if (subQuota && subQuota.allocated >= subQuota.maxWeekly) {
+          alert(`අවවාදයයි! '${subjectName}' විෂය සඳහා සතියට නියමිත උපරිම කාලච්ඡේද ${subQuota.maxWeekly} සීමාව දැනටමත් සම්පූර්ණ වී ඇත.`);
+          window.draggedSubjectData = null;
+          return;
+        }
+      }
+
+      // B. පන්තියට නියම කර ඇති ගුරුවරයා සොයාගැනීම (නැතිනම් null වේ)
+      let teacherIdToSet = null;
+      if (typeof getAssignedTeacherForClassSubject === "function") {
+        const assignedTeacher = getAssignedTeacherForClassSubject(cleanClassId, subjectName);
+        if (assignedTeacher) {
+          // කාලසටහන් ගැටුම් (Clash) පරීක්ෂාව
+          if (typeof checkTeacherTimeClash === "function") {
+            const clash = checkTeacherTimeClash(assignedTeacher.id, numDay, numPeriod, cleanClassId);
+            if (clash) {
+              alert(`කාලසටහන් ගැටුමකි (Clash)!\n\n'${assignedTeacher.name}' ගුරුතුමා මෙම වේලාවේදී දැනටමත් ${clash.className} පන්තියේ (${clash.subject}) උගන්වයි.`);
+              window.draggedSubjectData = null;
+              return;
+            }
+          }
+          teacherIdToSet = assignedTeacher.id;
+        }
+      }
+
+      // C. masterSchedule තුළ දත්ත තැන්පත් කිරීම
+      if (!Array.isArray(masterSchedule)) {
+        masterSchedule = [];
+      }
+
+      let slotIndex = masterSchedule.findIndex(s => 
+        String(s.classId).trim() === cleanClassId && 
+        (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, numDay) : Number(s.day) === numDay) && 
+        Number(s.period) === numPeriod
+      );
+
+      if (slotIndex > -1) {
+        masterSchedule[slotIndex].subject = subjectName;
+        masterSchedule[slotIndex].teacherId = teacherIdToSet;
+        masterSchedule[slotIndex].isBasket = false;
+      } else {
+        masterSchedule.push({
+          classId: cleanClassId,
+          day: numDay,
+          period: numPeriod,
+          subject: subjectName,
+          teacherId: teacherIdToSet,
+          isBasket: false
+        });
+      }
+
+      window.draggedSubjectData = null;
+
+      // D. දත්ත සුරැකීම සහ තිරය Refresh කිරීම
+      if (typeof saveAllToStorage === "function") saveAllToStorage();
+      if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+      if (typeof renderSubjectQuotaTray === "function") renderSubjectQuotaTray(cleanClassId);
+      else if (typeof renderClassSubjectQuota === "function") renderClassSubjectQuota(cleanClassId);
+      if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+    }
+
+    // HTML ondrop සහ ondragover මඟින් සෘජුව හඳුනාගැනීමට Global Scope එකට සම්බන්ධ කිරීම
+    window.handleSlotDragOver = handleSlotDragOver;
+    window.handleSlotDragLeave = handleSlotDragLeave;
+    window.handleSlotDrop = handleSlotDrop;
     
     
    /* 
