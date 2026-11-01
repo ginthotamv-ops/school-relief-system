@@ -127,7 +127,7 @@
       <button type="button" onclick="switchTab('gradeMasterTab')" id="tab-gradeMasterTab" class="py-3 px-3 font-bold text-xs sm:text-sm text-slate-500 hover:text-indigo-600 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
         <i class="fa-solid fa-sitemap"></i> ශ්‍රේණියේ කාලසටහන
       </button>
-      <button type="button" onclick="switchTab('teacherScheduleTab')" id="tab-teacherScheduleTab" class="py-3 px-3 font-bold text-xs sm:text-sm text-slate-500 hover:text-indigo-600 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
+      <button type="button" onclick="('teacherScheduleTab')" id="tab-teacherScheduleTab" class="py-3 px-3 font-bold text-xs sm:text-sm text-slate-500 hover:text-indigo-600 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
         <i class="fa-solid fa-id-badge"></i> ගුරු කාලසටහන් & WhatsApp
       </button>
       <button type="button" onclick="switchTab('subjectCurriculumTab')" id="tab-subjectCurriculumTab" class="py-3 px-3 font-bold text-xs sm:text-sm text-slate-500 hover:text-indigo-600 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
@@ -2837,10 +2837,8 @@ function resetSystemData() {
     window.draggedSubjectData = null;
 
 
-    // =========================================================================
-    // BULLETPROOF SUBJECT QUOTAS & DRAG TRAY CONTROLLER
-    // =========================================================================
-/ =========================================================================
+
+// =========================================================================
     // BULLETPROOF SUBJECT TRAY (SHOWS ALL SUBJECTS WITH OR WITHOUT TEACHERS)
     // =========================================================================
 
@@ -5808,11 +5806,18 @@ function toggleSelectAllCurriculumGrades(masterChk) {
     }
 
     // 2. ශ්‍රේණි අංකය නිවැරදිව ලබාගැනීම (උදා: "Grade 10", 10, "10" -> 10)
-    function cleanGradeNum(g) {
-      if (g === undefined || g === null) return 0;
-      const digits = String(g).replace(/\D/g, "");
-      return digits ? parseInt(digits, 10) : 0;
-    }
+// ආරක්ෂිත cleanGradeNum ශ්‍රිතය
+function cleanGradeNum(g) {
+  if (g === undefined || g === null) return 0;
+  const digits = String(g).replace(/[^0-9]/g, "");
+  return digits ? parseInt(digits, 10) : 0;
+}
+
+    // ආරක්ෂිත cleanSubjectKey ශ්‍රිතය
+function cleanSubjectKey(str) {
+  if (!str) return "";
+  return String(str).trim().toLowerCase();
+}
 
     // 3. පන්තියකට අදාළ විෂය ගුරුවරයාගේ ID එක ස්ථිරව සොයාගැනීම (Multi-layer Fallback)
     function getAssignedTeacherIdForClass(cls, subjectName) {
@@ -6466,7 +6471,12 @@ const modal = document.getElementById("subjectTeachersModal");
 
     */
 
-
+// ආරක්ෂිත makeAllocKey ශ්‍රිතය
+function makeAllocKey(classId, subject) {
+  const c = String(classId || "").trim();
+  const s = String(subject || "").trim().toLowerCase();
+  return (c + "___" + s).replace(/[^a-zA-Z0-9_\u0D80-\u0DFF]/g, "_");
+}
 
     // =========================================================================
     // BULK ALLOCATION REMOVAL CONTROLLER (GRADE / SUBJECT / ALL)
