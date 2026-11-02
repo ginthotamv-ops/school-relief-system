@@ -1217,7 +1217,106 @@
       { id: "T09", name: "ජගත් විජේසිංහ", phone: "0712345679", subject: "History", sections: ["6-7", "8-11"], leaveStatus: "present", isExempt: false, allowOver35: false }
     ];
 
+window.saveSubjectTeachersAssignment = function() {
+      const cs = window.currentEditingSubject;
+      if (!cs) {
+        alert("දෝෂයකි: විෂය දත්ත හඳුනාගත නොහැක. කරුණාකර නැවත 'ගුරුවරුන්' බොත්තම ඔබන්න.");
+        return;
+      }
 
+      const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(cs.subject) : cs.subject.trim().toLowerCase();
+      const selects = document.querySelectorAll(".sub-teacher-assign-select");
+      
+      let assignedCount = 0;
+      const assignedTeacherIdsSet = new Set();
+      window.classSubjectAllocations = window.classSubjectAllocations || {};
+
+      // 1. LocalStorage Backup කියවා ගැනීම
+      let clusterStorage = {};
+      try {
+        clusterStorage = JSON.parse(localStorage.getItem("sch_cluster_groups_v1") || "{}");
+      } catch (e) { clusterStorage = {}; }
+
+      let savedGroupsList = [];
+
+      selects.forEach(sel => {
+        const classIdentifier = sel.getAttribute("data-class-identifier");
+        const teacherId = sel.value ? String(sel.value).trim() : null;
+
+        // 🔴 අලුතින් එක් කළ කොටස: එම පන්තියේ Group Dropdown එක සෘජුවම සොයා ගැනීම
+        const parentRow = sel.closest("#subModalClassList > div") || sel.parentElement;
+        const groupSel = parentRow ? parentRow.querySelector(".sub-cluster-group-select") : null;
+        const groupVal = (groupSel && groupSel.value) ? groupSel.value.trim() : "none";
+
+        const cls = (schoolClasses || []).find(c => 
+          String(c.id).trim() === String(classIdentifier).trim() || 
+          String(c.name).trim() === String(classIdentifier).trim()
+        );
+
+        if (cls) {
+          cls.subjectTeachers = cls.subjectTeachers || {};
+          cls.combinedSubjectGroups = cls.combinedSubjectGroups || {}; // 🔴 Group Object එක සෑදීම
+          
+          const key = `${String(cls.id || cls.name).trim()}___${subKey}`;
+
+          // ගුරුවරයා සුරැකීම
+          if (teacherId) {
+            cls.subjectTeachers[subKey] = teacherId;
+            window.classSubjectAllocations[key] = teacherId;
+            assignedTeacherIdsSet.add(teacherId);
+            assignedCount++;
+          } else {
+            delete cls.subjectTeachers[subKey];
+            delete window.classSubjectAllocations[key];
+          }
+
+          // 🔴 අලුතින් එක් කළ කොටස: Group එක පන්තියට සහ LocalStorage එකට ස්ථිරව සුරැකීම
+          if (groupVal && groupVal !== "none") {
+            cls.combinedSubjectGroups[subKey] = groupVal;
+            clusterStorage[key] = groupVal;
+            savedGroupsList.push(`${cls.name} ➔ ${groupVal.replace("group_", "Grp ")}`);
+          } else {
+            delete cls.combinedSubjectGroups[subKey];
+            delete clusterStorage[key];
+          }
+        }
+      });
+
+      cs.teacherIds = Array.from(assignedTeacherIdsSet);
+
+      // LocalStorage Backup සුරැකීම
+      try {
+        localStorage.setItem("sch_permanent_allocations_v1", JSON.stringify(window.classSubjectAllocations));
+        localStorage.setItem("sch_cluster_groups_v1", JSON.stringify(clusterStorage)); // 🔴 Groups Backup
+      } catch (e) {}
+
+      // Main Storage Save
+      if (typeof saveAllToStorage === "function") {
+        saveAllToStorage();
+      }
+
+      // Refresh UI Tables
+      if (typeof renderCurriculumTable === "function") renderCurriculumTable();
+      if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+
+      // Close Modal
+      const modal = document.getElementById("subjectTeachersModal");
+      if (modal) modal.classList.add("hidden");
+
+      // සවිස්තරාත්මක තහවුරු කිරීමේ පණිවිඩය
+      if (savedGroupsList.length > 0) {
+        alert(`සාර්ථකයි! '${cs.subject}' විෂය සඳහා:\n• ගුරුවරුන් පන්ති ${assignedCount} කට සුරකින ලදි.\n• කණ්ඩායම්: ${savedGroupsList.join(", ")}`);
+      } else {
+        alert(`සාර්ථකයි! '${cs.subject}' විෂය සඳහා පන්ති ${assignedCount} කට ගුරුවරුන් (තනි පන්ති ලෙස) සුරකින ලදි.`);
+      }
+    };
+
+    window.closeSubjectTeachersModal = function() {
+      const modal = document.getElementById("subjectTeachersModal");
+      if (modal) modal.classList.add("hidden");
+    };
+    
+/*
 // සෘජුවම ක්‍රියාත්මක වන Save ශ්‍රිතය
     window.saveSubjectTeachersAssignment = function() {
       // 1. පරීක්ෂාව සඳහා Alert එක
@@ -1240,6 +1339,11 @@
         const classIdentifier = sel.getAttribute("data-class-identifier");
         const teacherId = sel.value ? String(sel.value).trim() : null;
 
+// 🔴 අලුතින් එක් කළ කොටස: එම පන්තියේ Group Dropdown එක සෘජුවම සොයා ගැනීම
+        const parentRow = sel.closest("#subModalClassList > div") || sel.parentElement;
+        const groupSel = parentRow ? parentRow.querySelector(".sub-cluster-group-select") : null;
+        const groupVal = (groupSel && groupSel.value) ? groupSel.value.trim() : "none";
+        
         const cls = (schoolClasses || []).find(c => 
           String(c.id).trim() === String(classIdentifier).trim() || 
           String(c.name).trim() === String(classIdentifier).trim()
@@ -1247,6 +1351,7 @@
 
         if (cls) {
           cls.subjectTeachers = cls.subjectTeachers || {};
+          cls.combinedSubjectGroups = cls.combinedSubjectGroups || {};
           const key = `${String(cls.id || cls.name).trim()}___${subKey}`;
 
           if (teacherId) {
@@ -1290,7 +1395,7 @@
     };
 
     
-
+*/
 
 
 
