@@ -3461,6 +3461,42 @@ function handleSlotDrop(e, classId, day, period) {
     window.handleSlotDragOver = handleSlotDragOver;
     window.handleSlotDragLeave = handleSlotDragLeave;
     window.handleSlotDrop = handleSlotDrop;
+
+
+// කාලසටහන් කොටුවෙන් විෂය ඉවත් කිරීමේ ශ්‍රිතය
+function removeTimetableSlot(classId, day, period) {
+  const cleanClassId = String(classId).trim();
+  const numDay = Number(day);
+  const numPeriod = Number(period);
+
+  // masterSchedule අරාවෙන් අදාළ කොටුව ඉවත් කිරීම
+  masterSchedule = (masterSchedule || []).filter(s => {
+    const isMatch = (String(s.classId).trim() === cleanClassId) && 
+                    (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, numDay) : Number(s.day) === numDay) && 
+                    (Number(s.period) === numPeriod);
+    return !isMatch;
+  });
+
+  // Storage එකට Save කිරීම
+  if (typeof saveAllToStorage === "function") {
+    saveAllToStorage();
+  }
+
+  // කාලසටහන සහ විෂය සංචිතය (Tray) Re-render කිරීම
+  if (typeof renderClassTimetableGrid === "function") {
+    renderClassTimetableGrid();
+  }
+  if (typeof renderSubjectQuotaTray === "function") {
+    renderSubjectQuotaTray(cleanClassId);
+  } else if (typeof renderClassSubjectQuota === "function") {
+    renderClassSubjectQuota(cleanClassId);
+  }
+  if (typeof renderIndividualTeacherSchedule === "function") {
+    renderIndividualTeacherSchedule();
+  }
+}
+
+window.removeTimetableSlot = removeTimetableSlot;
     
     
    /* 
@@ -3736,27 +3772,35 @@ function renderClassTimetableGrid() {
               }
             }
 
-            // =================================================================
-            // 🔴 වෙනස් කළ කොටස 1: පිරවූ කොටුව (Drag & Drop Events සහිතව)
+// =================================================================
+            // 🔴 මෙන්න මේ rowHtml කොටස පමණක් වෙනස් කරන්න:
             // =================================================================
             rowHtml += `
               <td ondragover="handleSlotDragOver(event)"
                   ondragleave="handleSlotDragLeave(event)"
                   ondrop="handleSlotDrop(event, '${selectedClassId}', ${d.id}, ${p})"
                   onclick="openTimetableSlotModal('${selectedClassId}', ${d.id}, ${p})" 
-                  class="p-2 border-r border-slate-200 cursor-pointer bg-indigo-50/40 hover:bg-indigo-100/80 transition relative group select-none min-w-[90px]">
-                <div class="font-bold text-xs text-indigo-950 truncate" title="${slot.subject}">
+                  class="p-2 border-r border-slate-200 cursor-pointer bg-indigo-50/50 hover:bg-indigo-100/70 transition relative group select-none min-w-[95px]">
+                
+                <!-- Quick Delete Button (Mouse එක ගෙන ගිය විට පමණක් පෙනේ) -->
+                <button type="button"
+                        onclick="event.stopPropagation(); removeTimetableSlot('${selectedClassId}', ${d.id}, ${p})"
+                        class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-white/90 hover:bg-rose-600 text-slate-400 hover:text-white rounded-md w-5 h-5 flex items-center justify-center transition shadow-xs z-10"
+                        title="මෙම විෂය ඉවත් කරන්න">
+                  <i class="fa-solid fa-xmark text-[11px]"></i>
+                </button>
+
+                <div class="font-bold text-xs text-indigo-950 truncate pr-4" title="${slot.subject}">
                   ${slot.subject}
                 </div>
                 <div class="mt-0.5">
                   ${teacherText}
                 </div>
-                <span class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-[9px] text-indigo-600 transition">
-                  <i class="fa-solid fa-pen-to-square"></i>
-                </span>
               </td>
             `;
-          } else {
+          }
+
+          else {
             // =================================================================
             // 🔴 වෙනස් කළ කොටස 2: හිස් කොටුව (Drag & Drop Events සහිතව)
             // =================================================================
