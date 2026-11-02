@@ -3924,6 +3924,11 @@ function handleSlotDragLeave(e) {
 
     // 1. Modal එක තුළ ඕනෑම සංයෝජනයක් තෝරාගත හැකි Generic Dropdown එකක් සෑදීම
 
+
+// =========================================================================
+    // 1. OPEN MODAL (CORRECT KEY & PRE-SELECTS SAVED GROUPS)
+    // =========================================================================
+
     function openSubjectTeachersModal(arg1, arg2) {
       let cs = null;
 
@@ -3966,127 +3971,116 @@ function handleSlotDragLeave(e) {
             ⚠️ Grade ${grade} සඳහා පන්ති කිසිවක් පද්ධතියේ ලියාපදිංචි කර නොමැත.
           </div>
         `;
-      } else {
-        const targetSubNorm = cleanSubjectKey(cs.subject);
-
-        classesOfGrade.forEach(cls => {
-          const currentTeacherId = (typeof getAssignedTeacherIdForClass === "function" 
-            ? getAssignedTeacherIdForClass(cls, cs.subject) 
-            : (cls.subjectTeachers && cls.subjectTeachers[targetSubNorm])) || "";
-          
-          const classIdentifier = cls.id || cls.name;
-
-// පන්තියට අදාළ Group එක Memory එකෙන් හෝ LocalStorage එකෙන් ලබාගැනීම
-          let currentGroup = "none";
-          if (cls.combinedSubjectGroups && cls.combinedSubjectGroups[targetSubNorm]) {
-            currentGroup = cls.combinedSubjectGroups[targetSubNorm];
-          } else {
-            try {
-              const clusterStorage = JSON.parse(localStorage.getItem("sch_saved_clusters_v1") || "{}");
-              const storageKey = `${String(cls.id || cls.name).trim()}___${targetSubNorm}`;
-              if (clusterStorage[storageKey]) {
-                currentGroup = clusterStorage[storageKey];
-                cls.combinedSubjectGroups = cls.combinedSubjectGroups || {};
-                cls.combinedSubjectGroups[targetSubNorm] = currentGroup;
-              }
-            } catch (e) {}
-          }
-          
-          // පන්තිය දැනට අයත් ඒකාබද්ධ කණ්ඩායම ලබාගැනීම
-        
-
-          // ගුරු කාණ්ඩ වෙන් කිරීම
-          const primaryTeachers = (teachers || []).filter(t => cleanSubjectKey(t.subject) === targetSubNorm);
-          const sectionTeachers = (teachers || []).filter(t => cleanSubjectKey(t.subject) !== targetSubNorm && (typeof isTeacherInTargetSection === "function" ? isTeacherInTargetSection(t, section) : true));
-          const otherTeachers = (teachers || []).filter(t => !primaryTeachers.some(pt => pt.id === t.id) && !sectionTeachers.some(st => st.id === t.id));
-
-          // Dropdown Option එකක් සාදන Helper ශ්‍රිතය (35-40 Quota නීති සහ සීමා සහිතව)
-          const buildOption = (t) => {
-            const isSelected = String(t.id).trim().toLowerCase() === String(currentTeacherId).trim().toLowerCase();
-            const currentLoad = getTeacherWorkloadCount(t.id, classIdentifier, cs.subject);
-            const projectedLoad = currentLoad + subjectPeriods;
-            const no = t.schoolNo ? `[${t.schoolNo}]` : `[${t.id}]`;
-
-            let labelText = `${t.name} ${no} (${currentLoad}/35)`;
-            let isDisabled = false;
-
-            if (currentLoad >= 40) {
-              // දැනටමත් 40 ක් හෝ ඊට වැඩි නම් සම්පූර්ණයෙන්ම තහනම්
-              labelText = `⛔ ${t.name} ${no} (${currentLoad}/40 - පිරී ඇත)`;
-              if (!isSelected) isDisabled = true;
-            } else if (currentLoad >= 35 || projectedLoad > 35) {
-              if (projectedLoad > 40 && !isSelected) {
-                // මෙම විෂය එක් කළ විට 40 ඉක්මවයි නම් තෝරාගත නොහැක
-                labelText = `⛔ ${t.name} ${no} (${currentLoad}/35 ➔ +${subjectPeriods}=${projectedLoad} > 40 සීමාව ඉක්මවයි)`;
-                isDisabled = true;
-              } else {
-                // 35 සිට 40 දක්වා විශේෂ අවසර සහිතව
-                labelText = `⚠️ ${t.name} ${no} (${currentLoad}/35 - විශේෂ අවසර 40 දක්වා)`;
-              }
-            }
-
-            return `<option value="${t.id}" ${isSelected ? "selected" : ""} ${isDisabled ? "disabled class='text-slate-400 bg-slate-100'" : ""}>${labelText}</option>`;
-          };
-
-          let optionsHtml = `<option value="">-- ගුරුවරයෙකු තෝරා නැත (Unassigned) --</option>`;
-
-          if (primaryTeachers.length > 0) {
-            optionsHtml += `<optgroup label="⭐ ${cs.subject} ප්‍රධාන විෂය වන ගුරුවරුන්" style="font-weight: 800; font-size :100%; font-style: normal;">`;
-            primaryTeachers.forEach(t => optionsHtml += buildOption(t));
-            optionsHtml += `</optgroup>`;
-          }
-
-          if (sectionTeachers.length > 0) {
-            optionsHtml += `<optgroup label="👥 ${section} අංශයේ අනෙකුත් ගුරුවරුන්"style="font-weight: 800; font-size :100%; color: #00008B; font-style: normal;">`;
-            sectionTeachers.forEach(t => optionsHtml += buildOption(t));
-            optionsHtml += `</optgroup>`;
-          }
-
-          if (otherTeachers.length > 0) {
-            optionsHtml += `<optgroup label="🏫 පාසලේ අනෙකුත් ගුරුවරුන්"style="font-weight: 800; font-size :100%; color: #800000; font-style: normal;">`;
-            otherTeachers.forEach(t => optionsHtml += buildOption(t));
-            optionsHtml += `</optgroup>`;
-          }
-
-          // පේළිය නිර්මාණය කිරීම (පන්තිය + ඒකාබද්ධ කණ්ඩායම් Dropdown + ගුරු Dropdown)
-          const row = document.createElement("div");
-          row.className = "p-2.5 flex items-center justify-between gap-3 hover:bg-white rounded-xl transition border-b border-slate-100 last:border-b-0";
-          row.innerHTML = `
-            <!-- 1. පන්ති නම සහ අංශය -->
-            <div class="w-28 shrink-0">
-              <span class="font-extrabold text-xs text-slate-800 block">${cls.name}</span>
-              <span class="text-[10px] text-slate-400 font-semibold">${section} අංශය</span>
-            </div>
-
-            <!-- 2. ඒකාබද්ධ කණ්ඩායම් තේරීම (Dynamic Cluster Selector) -->
-   <!-- දිග අඩු කළ කෙටි කණ්ඩායම් Dropdown එක -->
-            <div class="w-24 shrink-0">
-              <select data-class-id="${classIdentifier}" onchange="onClusterGroupChange('${grade}', '${targetSubNorm}', this)" class="sub-cluster-group-select w-full py-1.5 px-2 border border-slate-300 rounded-lg text-[11px] font-bold bg-slate-50 text-slate-700 outline-none focus:border-indigo-600">
-                <option value="none" ${currentGroup === 'none' ? 'selected' : ''}>— නැත —</option>
-                <option value="group_1" ${currentGroup === 'group_1' ? 'selected' : ''} class="text-indigo-700 font-bold">Grp 1</option>
-                <option value="group_2" ${currentGroup === 'group_2' ? 'selected' : ''} class="text-emerald-700 font-bold">Grp 2</option>
-                <option value="group_3" ${currentGroup === 'group_3' ? 'selected' : ''} class="text-violet-700 font-bold">Grp 3</option>
-                <option value="group_4" ${currentGroup === 'group_4' ? 'selected' : ''} class="text-amber-700 font-bold">Grp 4</option>
-                <option value="group_5" ${currentGroup === 'group_5' ? 'selected' : ''} class="text-rose-700 font-bold">Grp 5</option>
-              </select>
-            </div>
-
-            <!-- 3. ගුරු තේරීම (35/40 Quota සීමා සහ Auto-Sync සහිතව) -->
-            <div class="flex-1 min-w-[200px]">
-              <select data-class-identifier="${classIdentifier}" onchange="syncClusterTeachers('${targetSubNorm}', this)" class="sub-teacher-assign-select w-full p-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600">
-                ${optionsHtml}
-              </select>
-            </div>
-          `;
-          container.appendChild(row);
-        });
+        return;
       }
+
+      const targetSubNorm = cleanSubjectKey(cs.subject);
+
+      // තනි ස්ථාවර LocalStorage යතුරකින් Backup කියවා ගැනීම
+      let clusterStorage = {};
+      try {
+        clusterStorage = JSON.parse(localStorage.getItem("sch_cluster_groups_v1") || "{}");
+      } catch (e) { clusterStorage = {}; }
+
+      classesOfGrade.forEach(cls => {
+        const classIdentifier = String(cls.id || cls.name).trim();
+        const currentTeacherId = (typeof getAssignedTeacherIdForClass === "function" 
+          ? getAssignedTeacherIdForClass(cls, cs.subject) 
+          : (cls.subjectTeachers && cls.subjectTeachers[targetSubNorm])) || "";
+
+        // Group එක නිවැරදිව කියවීම (Memory -> LocalStorage)
+        let currentGroup = "none";
+        if (cls.combinedSubjectGroups && cls.combinedSubjectGroups[targetSubNorm]) {
+          currentGroup = cls.combinedSubjectGroups[targetSubNorm];
+        } else {
+          const storageKey = `${classIdentifier}___${targetSubNorm}`;
+          if (clusterStorage[storageKey]) {
+            currentGroup = clusterStorage[storageKey];
+            cls.combinedSubjectGroups = cls.combinedSubjectGroups || {};
+            cls.combinedSubjectGroups[targetSubNorm] = currentGroup;
+          }
+        }
+
+        // ගුරු කාණ්ඩ වෙන් කිරීම
+        const primaryTeachers = (teachers || []).filter(t => cleanSubjectKey(t.subject) === targetSubNorm);
+        const sectionTeachers = (teachers || []).filter(t => cleanSubjectKey(t.subject) !== targetSubNorm && (typeof isTeacherInTargetSection === "function" ? isTeacherInTargetSection(t, section) : true));
+        const otherTeachers = (teachers || []).filter(t => !primaryTeachers.some(pt => pt.id === t.id) && !sectionTeachers.some(st => st.id === t.id));
+
+        const buildOption = (t) => {
+          const isSelected = String(t.id).trim().toLowerCase() === String(currentTeacherId).trim().toLowerCase();
+          const currentLoad = getTeacherWorkloadCount(t.id, classIdentifier, cs.subject);
+          const projectedLoad = currentLoad + subjectPeriods;
+          const no = t.schoolNo ? `[${t.schoolNo}]` : `[${t.id}]`;
+
+          let labelText = `${t.name} ${no} (${currentLoad}/35)`;
+          let isDisabled = false;
+
+          if (currentLoad >= 40) {
+            labelText = `⛔ ${t.name} ${no} (${currentLoad}/40 - පිරී ඇත)`;
+            if (!isSelected) isDisabled = true;
+          } else if (currentLoad >= 35 || projectedLoad > 35) {
+            if (projectedLoad > 40 && !isSelected) {
+              labelText = `⛔ ${t.name} ${no} (${currentLoad}/35 ➔ +${subjectPeriods}=${projectedLoad} > 40 සීමාව ඉක්මවයි)`;
+              isDisabled = true;
+            } else {
+              labelText = `⚠️ ${t.name} ${no} (${currentLoad}/35 - විශේෂ අවසර 40 දක්වා)`;
+            }
+          }
+
+          return `<option value="${t.id}" style="font-weight: normal;" ${isSelected ? "selected" : ""} ${isDisabled ? "disabled class='text-slate-400 bg-slate-100'" : ""}>${labelText}</option>`;
+        };
+
+        let optionsHtml = `<option value="">-- ගුරුවරයෙකු තෝරා නැත (Unassigned) --</option>`;
+        if (primaryTeachers.length > 0) {
+          optionsHtml += `<optgroup label="⭐ ${cs.subject} ප්‍රධාන විෂය වන ගුරුවරුන්" style="font-weight: 800;">`;
+          primaryTeachers.forEach(t => optionsHtml += buildOption(t));
+          optionsHtml += `</optgroup>`;
+        }
+        if (sectionTeachers.length > 0) {
+          optionsHtml += `<optgroup label="👥 ${section} අංශයේ අනෙකුත් ගුරුවරුන්" style="font-weight: 800;">`;
+          sectionTeachers.forEach(t => optionsHtml += buildOption(t));
+          optionsHtml += `</optgroup>`;
+        }
+        if (otherTeachers.length > 0) {
+          optionsHtml += `<optgroup label="🏫 පාසලේ අනෙකුත් ගුරුවරුන්" style="font-weight: 800;">`;
+          otherTeachers.forEach(t => optionsHtml += buildOption(t));
+          optionsHtml += `</optgroup>`;
+        }
+
+        const row = document.createElement("div");
+        row.className = "p-2.5 flex items-center justify-between gap-3 hover:bg-white rounded-xl transition border-b border-slate-100 last:border-b-0";
+        row.innerHTML = `
+          <div class="w-28 shrink-0">
+            <span class="font-extrabold text-xs text-slate-800 block">${cls.name}</span>
+            <span class="text-[10px] text-slate-400 font-semibold">${section} අංශය</span>
+          </div>
+
+          <div class="w-24 shrink-0">
+            <select data-class-identifier="${classIdentifier}" onchange="onClusterGroupChange('${grade}', '${targetSubNorm}', this)" class="sub-cluster-group-select w-full py-1.5 px-2 border border-slate-300 rounded-lg text-[11px] font-bold bg-slate-50 text-slate-700 outline-none focus:border-indigo-600">
+              <option value="none" ${currentGroup === 'none' ? 'selected' : ''}>— නැත —</option>
+              <option value="group_1" ${currentGroup === 'group_1' ? 'selected' : ''} class="text-indigo-700 font-bold">Grp 1</option>
+              <option value="group_2" ${currentGroup === 'group_2' ? 'selected' : ''} class="text-emerald-700 font-bold">Grp 2</option>
+              <option value="group_3" ${currentGroup === 'group_3' ? 'selected' : ''} class="text-violet-700 font-bold">Grp 3</option>
+              <option value="group_4" ${currentGroup === 'group_4' ? 'selected' : ''} class="text-amber-700 font-bold">Grp 4</option>
+              <option value="group_5" ${currentGroup === 'group_5' ? 'selected' : ''} class="text-rose-700 font-bold">Grp 5</option>
+            </select>
+          </div>
+
+          <div class="flex-1 min-w-[200px]">
+            <select data-class-identifier="${classIdentifier}" onchange="syncClusterTeachers('${targetSubNorm}', this)" class="sub-teacher-assign-select w-full p-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white outline-none focus:border-indigo-600">
+              ${optionsHtml}
+            </select>
+          </div>
+        `;
+        container.appendChild(row);
+      });
 
       const modal = document.getElementById("subjectTeachersModal");
       if (modal) modal.classList.remove("hidden");
     }
 
     window.openSubjectTeachersModal = openSubjectTeachersModal;
+    
     
     /*
     function openSubjectTeachersModal(arg1, arg2) {
@@ -6710,139 +6704,15 @@ function cleanSubjectKey(str) {
     }
 
     
-    /*
-// 2. Modal එක තුළ ගුරුවරුන්ගේ කාලච්ඡේද ප්‍රමාණය සහ සීමා (35/40) සහිතව Dropdown එක සෑදීම
-    function openSubjectTeachersModal(arg1, arg2) {
-      let cs = null;
-
-      if (arg2 !== undefined && arg2 !== null && String(arg2) !== "undefined") {
-        const grade = cleanGradeNum(arg1);
-        const subName = cleanSubjectKey(decodeURIComponent(String(arg2)));
-        cs = (curriculumSubjects || []).find(c => cleanGradeNum(c.grade) === grade && cleanSubjectKey(c.subject) === subName);
-      }
-
-      if (!cs && arg1 !== undefined && arg1 !== null) {
-        const targetId = String(arg1).trim();
-        cs = (curriculumSubjects || []).find(c => c.id && String(c.id).trim() === targetId);
-      }
-
-      if (!cs) {
-        alert("විෂය දත්ත හඳුනාගත නොහැකි විය. කරුණාකර පිටුව Refresh කරන්න.");
-        return;
-      }
-
-      window.currentEditingSubject = cs;
-      window.currentSubjectGrade = cleanGradeNum(cs.grade);
-      window.currentSubjectName = String(cs.subject).trim();
-
-      const grade = window.currentSubjectGrade;
-      const section = typeof getSectionOfGrade === "function" ? getSectionOfGrade(grade) : "All";
-      const subjectPeriods = Number(cs.maxWeekly) || 0;
-
-      document.getElementById("subModalSubjectName").innerText = cs.subject;
-      document.getElementById("subModalGradeSection").innerText = `(Grade ${grade} | අංශය: ${section})`;
-      document.getElementById("subModalPeriodsBadge").innerText = `${subjectPeriods} Periods / සතියට`;
-
-      const classesOfGrade = (schoolClasses || []).filter(c => cleanGradeNum(c.grade) === grade);
-      const container = document.getElementById("subModalClassList");
-      if (!container) return;
-      container.innerHTML = "";
-
-      if (classesOfGrade.length === 0) {
-        container.innerHTML = `
-          <div class="p-4 text-center text-xs text-amber-700 bg-amber-50 rounded-lg">
-            ⚠️ Grade ${grade} සඳහා පන්ති කිසිවක් පද්ධතියේ ලියාපදිංචි කර නොමැත.
-          </div>
-        `;
-      } else {
-        classesOfGrade.forEach(cls => {
-          const currentTeacherId = getAssignedTeacherIdForClass(cls, cs.subject) || "";
-          const targetSubNorm = cleanSubjectKey(cs.subject);
-          const classIdentifier = cls.id || cls.name;
-
-          // ගුරු කාණ්ඩ වෙන් කිරීම
-          const primaryTeachers = (teachers || []).filter(t => cleanSubjectKey(t.subject) === targetSubNorm);
-          const sectionTeachers = (teachers || []).filter(t => cleanSubjectKey(t.subject) !== targetSubNorm && (typeof isTeacherInTargetSection === "function" ? isTeacherInTargetSection(t, section) : true));
-          const otherTeachers = (teachers || []).filter(t => !primaryTeachers.some(pt => pt.id === t.id) && !sectionTeachers.some(st => st.id === t.id));
-
-          // Dropdown Option එකක් සාදන Helper ශ්‍රිතය (35-40 Quota නීති සහිතව)
-          const buildOption = (t) => {
-            const isSelected = String(t.id).trim().toLowerCase() === String(currentTeacherId).trim().toLowerCase();
-            const currentLoad = getTeacherWorkloadCount(t.id, classIdentifier, cs.subject);
-            const projectedLoad = currentLoad + subjectPeriods;
-            const no = t.schoolNo ? `[${t.schoolNo}]` : `[${t.id}]`;
-
-            let labelText = `${t.name} ${no} (${currentLoad}/35)`;
-            let isDisabled = false;
-
-            if (currentLoad >= 40) {
-              // දැනටමත් 40 ක් හෝ ඊට වැඩි නම් සම්පූර්ණයෙන්ම තහනම්
-              labelText = `⛔ ${t.name} ${no} (${currentLoad}/40 - පිරී ඇත)`;
-              if (!isSelected) isDisabled = true;
-            } else if (currentLoad >= 35 || projectedLoad > 35) {
-              if (projectedLoad > 40 && !isSelected) {
-                // මෙම විෂය එක් කළ විට 40 ඉක්මවයි නම් තෝරාගත නොහැක
-                labelText = `⛔ ${t.name} ${no} (${currentLoad}/35 ➔ +${subjectPeriods}=${projectedLoad} > 40 සීමාව ඉක්මවයි)`;
-                isDisabled = true;
-              } else {
-                // 35 සිට 40 දක්වා විශේෂ අවසර සහිතව
-                labelText = `⚠️ ${t.name} ${no} (${currentLoad}/35 - විශේෂ අවසර 40 දක්වා)`;
-              }
-            }
-
-            return `<option value="${t.id}" ${isSelected ? "selected" : ""} ${isDisabled ? "disabled class='text-slate-400 bg-slate-100'" : ""}>${labelText}</option>`;
-          };
-
-          let optionsHtml = `<option value="">-- ගුරුවරයෙකු තෝරා නැත (Unassigned) --</option>`;
-
-          if (primaryTeachers.length > 0) {
-            optionsHtml += `<optgroup label="⭐ ${cs.subject} ප්‍රධාන විෂය වන ගුරුවරුන්">`;
-            primaryTeachers.forEach(t => optionsHtml += buildOption(t));
-            optionsHtml += `</optgroup>`;
-          }
-
-          if (sectionTeachers.length > 0) {
-            optionsHtml += `<optgroup label="👥 ${section} අංශයේ අනෙකුත් ගුරුවරුන්">`;
-            sectionTeachers.forEach(t => optionsHtml += buildOption(t));
-            optionsHtml += `</optgroup>`;
-          }
-
-          if (otherTeachers.length > 0) {
-            optionsHtml += `<optgroup label="🏫 පාසලේ අනෙකුත් ගුරුවරුන්">`;
-            otherTeachers.forEach(t => optionsHtml += buildOption(t));
-            optionsHtml += `</optgroup>`;
-          }
-
-          const row = document.createElement("div");
-          row.className = "p-2.5 flex items-center justify-between gap-3 hover:bg-white rounded-lg transition border-b border-slate-100 last:border-b-0";
-          row.innerHTML = `
-            <div class="w-1/3">
-              <span class="font-bold text-xs text-slate-800 block">${cls.name}</span>
-              <span class="text-[10px] text-slate-400 font-semibold">${section} අංශය</span>
-            </div>
-            <div class="flex-1">
-              <select data-class-identifier="${classIdentifier}" class="sub-teacher-assign-select w-full p-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600">
-                ${optionsHtml}
-              </select>
-            </div>
-          `;
-          container.appendChild(row);
-        });
-      }
-
-      const modal = document.getElementById("subjectTeachersModal");
-      if (modal) modal.classList.remove("hidden");
-    }
-
-  */
-    
-   
+  
 
 // =========================================================================
     // 1. SAVE ASSIGNMENTS WITH PERSISTENT CLUSTER GROUPS
     // =========================================================================
-// =========================================================================
-    // STEP 1: PURE GROUP SAVING CONTROLLER
+
+
+    // =========================================================================
+    // 2. SAVE ASSIGNMENTS (ACCURATELY EXTRACTS GROUP & PERSISTS TO STORAGE)
     // =========================================================================
 
     function saveSubjectTeachersAssignment() {
@@ -6855,15 +6725,18 @@ function cleanSubjectKey(str) {
       const subKey = cleanSubjectKey(cs.subject);
       const grade = cleanGradeNum(cs.grade);
 
-      // 1. LocalStorage තුළ දැනට ඇති සියලුම Groups කියවා ගැනීම
+      // තනි ස්ථාවර LocalStorage යතුරට ලිවීම
       let clusterStorage = {};
       try {
-        clusterStorage = JSON.parse(localStorage.getItem("sch_saved_clusters_v1") || "{}");
+        clusterStorage = JSON.parse(localStorage.getItem("sch_cluster_groups_v1") || "{}");
       } catch (e) { clusterStorage = {}; }
 
-      // 2. Modal එකේ ඇති සෑම පන්ති පේළියක්ම කියවීම
+      window.classSubjectAllocations = window.classSubjectAllocations || {};
+      const assignedTeacherIdsSet = new Set();
+      let debugSavedList = [];
+
+      // Modal එකේ ඇති සියලුම පේළි හරහා යාම
       const rows = document.querySelectorAll("#subModalClassList > div");
-      let savedLog = [];
 
       rows.forEach(row => {
         const teacherSel = row.querySelector(".sub-teacher-assign-select");
@@ -6873,9 +6746,10 @@ function cleanSubjectKey(str) {
 
         const classIdentifier = teacherSel.getAttribute("data-class-identifier");
         const teacherId = teacherSel.value ? String(teacherSel.value).trim() : null;
-        const groupVal = groupSel ? groupSel.value : "none"; // none, group_1, group_2...
+        
+        // Group එක කියවා ගැනීම (groupSel නැතිනම් පමණක් 'none')
+        const groupVal = (groupSel && groupSel.value) ? groupSel.value.trim() : "none";
 
-        // අදාළ Class Object එක සෙවීම
         const cls = (schoolClasses || []).find(c => 
           String(c.id).trim() === String(classIdentifier).trim() || 
           String(c.name).trim() === String(classIdentifier).trim()
@@ -6887,110 +6761,37 @@ function cleanSubjectKey(str) {
 
           const storageKey = `${String(cls.id || cls.name).trim()}___${subKey}`;
 
+          // ගුරුවරයා යෙදීම හෝ ඉවත් කිරීම
           if (teacherId) {
             cls.subjectTeachers[subKey] = teacherId;
-            cls.combinedSubjectGroups[subKey] = groupVal;
-            clusterStorage[storageKey] = groupVal; // LocalStorage එකට ලිවීම
-            savedLog.push(`${cls.name} ➔ ${groupVal}`);
+            window.classSubjectAllocations[storageKey] = teacherId;
+            assignedTeacherIdsSet.add(teacherId);
           } else {
             delete cls.subjectTeachers[subKey];
+            delete window.classSubjectAllocations[storageKey];
+          }
+
+          // Group එක සුරැකීම (ගුරුවරයෙකු තෝරා නොතිබුණද Group එක නොමැකෙන ලෙස සුරැකේ)
+          if (groupVal !== "none") {
+            cls.combinedSubjectGroups[subKey] = groupVal;
+            clusterStorage[storageKey] = groupVal;
+            debugSavedList.push(`${cls.name} ➔ ${groupVal}`);
+          } else {
             delete cls.combinedSubjectGroups[subKey];
             delete clusterStorage[storageKey];
           }
         }
       });
 
-      // 3. LocalStorage වෙත ස්ථිරවම Write කිරීම
+      // LocalStorage එකට ස්ථිරව සුරැකීම
       try {
-        localStorage.setItem("sch_saved_clusters_v1", JSON.stringify(clusterStorage));
+        localStorage.setItem("sch_cluster_groups_v1", JSON.stringify(clusterStorage));
       } catch (e) {
-        console.error("Storage Error:", e);
+        console.error("LocalStorage write error:", e);
       }
-
-      // පද්ධතියේ ප්‍රධාන Storage එකට සුරැකීම
-      if (typeof saveAllToStorage === "function") saveAllToStorage();
-      if (typeof renderCurriculumTable === "function") renderCurriculumTable();
-
-      // Modal එක වැසීම
-      const modal = document.getElementById("subjectTeachersModal");
-      if (modal) modal.classList.add("hidden");
-
-      console.log("✅ සුරකින ලද Groups:", savedLog);
-      alert(`සාර්ථකයි! '${cs.subject}' විෂය සඳහා පන්ති කණ්ඩායම් (Groups) සුරකින ලදි.`);
-    }
-
-    window.saveSubjectTeachersAssignment = saveSubjectTeachersAssignment;
-
-    
-
-    
-    /*
-    function saveSubjectTeachersAssignment() {
-      const cs = window.currentEditingSubject;
-      if (!cs) {
-        alert("විෂය දත්ත හඳුනාගත නොහැකි විය.");
-        return;
-      }
-
-      const subKey = cleanSubjectKey(cs.subject);
-      const grade = cleanGradeNum(cs.grade);
-      const rows = document.querySelectorAll("#subModalClassList > div");
-
-      // LocalStorage Backup සඳහා Object එකක් සකස් කිරීම
-      let groupBackup = {};
-      try {
-        groupBackup = JSON.parse(localStorage.getItem("sch_cluster_groups_v1") || "{}");
-      } catch (e) { groupBackup = {}; }
-
-      window.classSubjectAllocations = window.classSubjectAllocations || {};
-      const assignedTeacherIdsSet = new Set();
-
-      rows.forEach(row => {
-        const teacherSel = row.querySelector(".sub-teacher-assign-select");
-        const groupSel = row.querySelector(".sub-cluster-group-select");
-
-        if (!teacherSel) return;
-
-        const classIdentifier = teacherSel.getAttribute("data-class-identifier");
-        const teacherId = teacherSel.value ? String(teacherSel.value).trim() : null;
-        const groupVal = groupSel ? groupSel.value : "none"; // none, group_1, group_2...
-
-        const cls = (schoolClasses || []).find(c => 
-          String(c.id).trim() === String(classIdentifier).trim() || 
-          String(c.name).trim() === String(classIdentifier).trim()
-        );
-
-        if (cls) {
-          cls.subjectTeachers = cls.subjectTeachers || {};
-          cls.combinedSubjectGroups = cls.combinedSubjectGroups || {};
-
-          const allocKey = `${String(cls.id || cls.name).trim()}___${subKey}`;
-
-          if (teacherId) {
-            // ගුරුවරයා සහ කණ්ඩායම පන්තියට ස්ථිරව ඇතුළත් කිරීම
-            cls.subjectTeachers[subKey] = teacherId;
-            cls.combinedSubjectGroups[subKey] = groupVal;
-
-            window.classSubjectAllocations[allocKey] = teacherId;
-            groupBackup[allocKey] = groupVal; // LocalStorage Backup එකට ලිවීම
-            assignedTeacherIdsSet.add(teacherId);
-          } else {
-            delete cls.subjectTeachers[subKey];
-            delete cls.combinedSubjectGroups[subKey];
-            delete window.classSubjectAllocations[allocKey];
-            delete groupBackup[allocKey];
-          }
-        }
-      });
-
-      // Browser Refresh වුවද දත්ත නොමැකෙන සේ LocalStorage හි තැන්පත් කිරීම
-      try {
-        localStorage.setItem("sch_cluster_groups_v1", JSON.stringify(groupBackup));
-      } catch (e) {}
 
       cs.teacherIds = Array.from(assignedTeacherIdsSet);
 
-      // දත්ත ස්ථිරව සුරැකීම සහ UI Refresh කිරීම
       if (typeof saveAllToStorage === "function") saveAllToStorage();
       if (typeof renderCurriculumTable === "function") renderCurriculumTable();
       if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
@@ -6999,130 +6800,15 @@ function cleanSubjectKey(str) {
       const modal = document.getElementById("subjectTeachersModal");
       if (modal) modal.classList.add("hidden");
 
-      alert(`සාර්ථකයි! '${cs.subject}' විෂය සඳහා පන්ති කණ්ඩායම් සහ ගුරු පැවරුම් නිවැරදිව සුරකින ලදි.`);
+      console.log("🎯 සැබැවින්ම සුරකින ලද Groups:", debugSavedList);
+      alert(`සාර්ථකයි! '${cs.subject}' විෂය සඳහා පන්ති කණ්ඩායම් (${debugSavedList.length > 0 ? debugSavedList.join(", ") : 'තනි පන්ති'}) සුරකින ලදි.`);
     }
 
     window.saveSubjectTeachersAssignment = saveSubjectTeachersAssignment;
     
-*/
 
     
-    /*
-    // 3. සුරැකීමේදී 35-40 සීමා පරීක්ෂා කර තහවුරු කිරීම
-    function saveSubjectTeachersAssignment() {
-      const cs = window.currentEditingSubject;
-      if (!cs) {
-        alert("විෂය දත්ත හඳුනාගත නොහැක. කරුණාකර නැවත විවෘත කරන්න.");
-        return;
-      }
 
-      const subKey = cleanSubjectKey(cs.subject);
-      const subjectPeriods = Number(cs.maxWeekly) || 0;
-      const selects = document.querySelectorAll(".sub-teacher-assign-select");
-
-      // A. Quota පරීක්ෂාව (Validation Pass)
-      const specialApprovalNeeded = [];
-
-      for (let sel of selects) {
-        const teacherId = sel.value ? String(sel.value).trim() : null;
-        const classIdentifier = sel.getAttribute("data-class-identifier");
-
-        if (teacherId) {
-          const currentLoad = getTeacherWorkloadCount(teacherId, classIdentifier, cs.subject);
-          const projectedLoad = currentLoad + subjectPeriods;
-          const teacherObj = (teachers || []).find(t => String(t.id).trim().toLowerCase() === teacherId.toLowerCase());
-          const teacherName = teacherObj ? teacherObj.name : teacherId;
-
-          // නීතිය 1: වාර 40 ඉක්මවා යාම සම්පූර්ණයෙන්ම අවහිර කිරීම
-          if (projectedLoad > 40) {
-            alert(`තහනම් කර ඇත!\n\n'${teacherName}' ගුරුතුමාට මෙම විෂය (${subjectPeriods} periods) පැවරුවහොත් මුළු සතිපතා කාලච්ඡේද ගණන ${projectedLoad} දක්වා ඉහළ යයි.\n\nඋපරිම සීමාව වන වාර 40 ඉක්මවා කිසිදු ගුරුවරයෙකුට විෂයන් පැවරිය නොහැක.`);
-            return;
-          }
-
-          // නීතිය 2: වාර 35 ත් 40 ත් අතර නම් විශේෂ අවසරය සඳහා ලැයිස්තුගත කිරීම
-          if (projectedLoad > 35) {
-            specialApprovalNeeded.push({
-              name: teacherName,
-              current: currentLoad,
-              projected: projectedLoad
-            });
-          }
-        }
-      }
-
-      // විශේෂ අවස්ථාවකදී (35 ට වැඩි නම්) තහවුරු කිරීම ලබාගැනීම
-      if (specialApprovalNeeded.length > 0) {
-        let confirmMsg = "විශේෂ අනතුරු ඇඟවීමයි (Special Quota Approval):\n";
-        specialApprovalNeeded.forEach(item => {
-          confirmMsg += `\n• ${item.name}: සතිපතා වාර 35 සීමාව ඉක්මවා ${item.projected}/40 දක්වා වැඩිවේ.`;
-        });
-        confirmMsg += "\n\nමෙම ගුරුවරුන්ට වාර 35 ඉක්මවා (වාර 40 දක්වා) විශේෂ අවස්ථාවක් ලෙස පැවරීම තහවුරු කරන්නේද?";
-
-        const userAgreed = confirm(confirmMsg);
-        if (!userAgreed) {
-          return; // පරිශීලකයා එකඟ නොවූයේ නම් සුරැකීම අවලංගු වේ
-        }
-      }
-
-      // B. දත්ත සුරැකීමේ ක්‍රියාවලිය
-      let assignedCount = 0;
-      const assignedTeacherIdsSet = new Set();
-      window.classSubjectAllocations = window.classSubjectAllocations || {};
-
-      selects.forEach(sel => {
-        const classIdentifier = sel.getAttribute("data-class-identifier");
-        const teacherId = sel.value ? String(sel.value).trim() : null;
-
-        const cls = (schoolClasses || []).find(c => 
-          String(c.id).trim() === String(classIdentifier).trim() || 
-          String(c.name).trim() === String(classIdentifier).trim()
-        );
-
-        if (cls) {
-          cls.subjectTeachers = cls.subjectTeachers || {};
-          const key = `${String(cls.id || cls.name).trim()}___${subKey}`;
-
-          if (teacherId) {
-            cls.subjectTeachers[subKey] = teacherId;
-            window.classSubjectAllocations[key] = teacherId;
-            assignedTeacherIdsSet.add(teacherId);
-            assignedCount++;
-          } else {
-            delete cls.subjectTeachers[subKey];
-            delete window.classSubjectAllocations[key];
-          }
-        }
-      });
-
-      cs.teacherIds = Array.from(assignedTeacherIdsSet);
-
-      // LocalStorage Backup
-      try {
-        localStorage.setItem("sch_permanent_allocations_v1", JSON.stringify(window.classSubjectAllocations));
-      } catch (e) {}
-
-      // Main Storage Save
-      if (typeof saveAllToStorage === "function") {
-        saveAllToStorage();
-      }
-
-      // Refresh UI
-      if (typeof renderCurriculumTable === "function") renderCurriculumTable();
-      if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
-      if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
-
-      const modal = document.getElementById("subjectTeachersModal");
-      if (modal) modal.classList.add("hidden");
-
-      alert(`සාර්ථකයි! '${cs.subject}' විෂය සඳහා පන්ති ${assignedCount} කට ගුරුවරුන් සුරකින ලදි.`);
-    }
-
-    window.getTeacherWorkloadCount = getTeacherWorkloadCount;
-    window.openSubjectTeachersModal = openSubjectTeachersModal;
-    window.saveSubjectTeachersAssignment = saveSubjectTeachersAssignment;
-    
-    
-  */
 
 // ආරක්ෂිත makeAllocKey ශ්‍රිතය
 function makeAllocKey(classId, subject) {
