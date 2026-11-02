@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V61
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V95
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -6347,7 +6347,7 @@ function cleanSubjectKey(str) {
     // TWO-PASS SAVE ENGINE: GROUPS FIRST, SINGLE CLASSES SECOND
     // =========================================================================
 
-    function saveSubjectTeachersAssignment() {
+function saveSubjectTeachersAssignment() {
       const cs = window.currentEditingSubject;
       if (!cs) {
         alert("විෂය දත්ත හඳුනාගත නොහැකි විය. කරුණාකර පිටුව Refresh කරන්න.");
@@ -6357,7 +6357,7 @@ function cleanSubjectKey(str) {
       const subKey = cleanSubjectKey(cs.subject);
       const grade = cleanGradeNum(cs.grade);
 
-      // LocalStorage Backup කියවා ගැනීම
+      // 1. තනි ස්ථාවර LocalStorage යතුරකින් Backup කියවීම
       let clusterStorage = {};
       try {
         clusterStorage = JSON.parse(localStorage.getItem("sch_cluster_groups_v1") || "{}");
@@ -6372,37 +6372,38 @@ function cleanSubjectKey(str) {
         return;
       }
 
-      // පන්ති කාණ්ඩ වෙන් කිරීම සඳහා Collections
-      const groupedMap = {};       // { "group_1": [ { cls, classId, teacherId } ], "group_2": [...] }
-      const standaloneList = [];   // [ { cls, classId, teacherId } ]
+      const groupedMap = {};
+      const standaloneList = [];
 
-      // 1. Modal එකේ සියලුම පේළි කියවා Grouped සහ Single ලෙස වර්ගීකරණය කිරීම
+      // 2. පේළි කියවා වර්ගීකරණය කිරීම
       rows.forEach(row => {
-        const groupSel = row.querySelector("select.sub-cluster-group-select");
-        const teacherSel = row.querySelector("select.sub-teacher-assign-select");
+        const groupSel = row.querySelector(".sub-cluster-group-select");
+        const teacherSel = row.querySelector(".sub-teacher-assign-select");
         if (!groupSel || !teacherSel) return;
 
-        let classId = groupSel.getAttribute("data-class-identifier") 
-                   || groupSel.getAttribute("data-class-id")
-                   || teacherSel.getAttribute("data-class-identifier")
-                   || teacherSel.getAttribute("data-class-id");
+        // පන්තියේ Identifier එක ක්‍රම කිහිපයකින්ම නිවැරදිව ලබාගැනීම
+        let classIdentifier = groupSel.getAttribute("data-class-identifier") 
+                           || groupSel.getAttribute("data-class-id")
+                           || teacherSel.getAttribute("data-class-identifier")
+                           || teacherSel.getAttribute("data-class-id");
 
-        if (!classId) {
-          const nameSpan = row.querySelector("span.font-extrabold") || row.querySelector("span");
-          if (nameSpan) classId = nameSpan.textContent.trim();
+        if (!classIdentifier) {
+          const nameSpan = row.querySelector("span");
+          if (nameSpan) classIdentifier = nameSpan.textContent.trim();
         }
 
         const groupVal = (groupSel.value || "none").trim();
         const teacherId = (teacherSel.value || "").trim() || null;
 
+        // schoolClasses තුළින් පන්තිය සොයා ගැනීම
         const cls = (schoolClasses || []).find(c => 
-          String(c.id).trim().toLowerCase() === String(classId).trim().toLowerCase() || 
-          String(c.name).trim().toLowerCase() === String(classId).trim().toLowerCase()
+          String(c.id).trim().toLowerCase() === String(classIdentifier).trim().toLowerCase() || 
+          String(c.name).trim().toLowerCase() === String(classIdentifier).trim().toLowerCase()
         );
 
         if (!cls) return;
 
-        const rowItem = { cls, classId: cls.id || cls.name, teacherId, groupVal };
+        const rowItem = { cls, classIdentifier: String(cls.id || cls.name).trim(), teacherId, groupVal };
 
         if (groupVal && groupVal !== "none") {
           if (!groupedMap[groupVal]) groupedMap[groupVal] = [];
@@ -6415,77 +6416,73 @@ function cleanSubjectKey(str) {
       let debugGroupLog = [];
       let debugSingleLog = [];
 
-      // =========================================================================
-      // 🔴 PASS 1: GROUPS FIRST (කාණ්ඩගත කළ පන්ති පළමුව සුරැකීම)
-      // =========================================================================
+      // 3. PASS 1: කණ්ඩායම් පළමුව සුරැකීම (Groups First)
       Object.keys(groupedMap).forEach(grpKey => {
         const groupItems = groupedMap[grpKey];
 
-        // කණ්ඩායමේ කිසියම් පන්තියකට ලබාදී ඇති ගුරුවරයා සොයා ගැනීම (Group Teacher Sync)
-        let commonGroupTeacherId = null;
-        for (const it of groupItems) {
-          if (it.teacherId) {
-            commonGroupTeacherId = it.teacherId;
+        // කණ්ඩායමට අදාළ පොදු ගුරුවරයා තෝරාගැනීම (අවසන් වරට වෙනස් කළ ගුරුවරයාට ප්‍රමුඛතාවය)
+        let commonTeacherId = null;
+        for (let i = groupItems.length - 1; i >= 0; i--) {
+          if (groupItems[i].teacherId) {
+            commonTeacherId = groupItems[i].teacherId;
             break;
           }
         }
 
-        const groupClassNames = [];
+        const groupNames = [];
 
         groupItems.forEach(it => {
           const cls = it.cls;
           cls.subjectTeachers = cls.subjectTeachers || {};
           cls.combinedSubjectGroups = cls.combinedSubjectGroups || {};
 
-          const storageKey = `${String(it.classId).trim()}___${subKey}`;
+          const storageKey = `${it.classIdentifier}___${subKey}`;
 
-          // Group එක ස්ථිරව සටහන් කිරීම
+          // Group අගය ස්ථිරව ලිවීම
           cls.combinedSubjectGroups[subKey] = grpKey;
           clusterStorage[storageKey] = grpKey;
 
-          // ගුරුවරයා සම්පූර්ණ කණ්ඩායමටම එකවර යෙදීම
-          if (commonGroupTeacherId) {
-            cls.subjectTeachers[subKey] = commonGroupTeacherId;
-            window.classSubjectAllocations[storageKey] = commonGroupTeacherId;
-            assignedTeacherIdsSet.add(commonGroupTeacherId);
+          // ගුරුවරයා යෙදීම
+          if (commonTeacherId) {
+            cls.subjectTeachers[subKey] = commonTeacherId;
+            window.classSubjectAllocations[storageKey] = commonTeacherId;
+            assignedTeacherIdsSet.add(commonTeacherId);
           } else {
             delete cls.subjectTeachers[subKey];
             delete window.classSubjectAllocations[storageKey];
           }
 
-          groupClassNames.push(cls.name || it.classId);
+          groupNames.push(cls.name || it.classIdentifier);
         });
 
-        debugGroupLog.push(`${grpKey.replace("group_", "Grp ")}: [${groupClassNames.join(" + ")}]`);
+        debugGroupLog.push(`${grpKey.replace("group_", "Grp ")}: [${groupNames.join(" + ")}]`);
       });
 
-      // =========================================================================
-      // ⚪ PASS 2: SINGLE CLASSES SECOND (තනි පන්ති දෙවනුව සුරැකීම)
-      // =========================================================================
+      // 4. PASS 2: තනි පන්ති දෙවනුව සුරැකීම (Single Classes Second)
       standaloneList.forEach(it => {
         const cls = it.cls;
         cls.subjectTeachers = cls.subjectTeachers || {};
         cls.combinedSubjectGroups = cls.combinedSubjectGroups || {};
 
-        const storageKey = `${String(it.classId).trim()}___${subKey}`;
+        const storageKey = `${it.classIdentifier}___${subKey}`;
 
-        // තනි පන්තියක් බැවින් Group දත්ත තිබුණේ නම් ඒවා මුළුමනින්ම ඉවත් කිරීම
+        // තනි පන්තියක් බැවින් Group දත්ත සම්පූර්ණයෙන්ම ඉවත් කිරීම
         delete cls.combinedSubjectGroups[subKey];
         delete clusterStorage[storageKey];
 
-        // ගුරුවරයා තනිව සුරැකීම
+        // ගුරුවරයා සුරැකීම
         if (it.teacherId) {
           cls.subjectTeachers[subKey] = it.teacherId;
           window.classSubjectAllocations[storageKey] = it.teacherId;
           assignedTeacherIdsSet.add(it.teacherId);
-          debugSingleLog.push(cls.name || it.classId);
+          debugSingleLog.push(cls.name || it.classIdentifier);
         } else {
           delete cls.subjectTeachers[subKey];
           delete window.classSubjectAllocations[storageKey];
         }
       });
 
-      // LocalStorage එකට ස්ථිරව Write කිරීම
+      // 5. LocalStorage Backup ලිවීම
       try {
         localStorage.setItem("sch_cluster_groups_v1", JSON.stringify(clusterStorage));
       } catch (e) {
@@ -6494,7 +6491,7 @@ function cleanSubjectKey(str) {
 
       cs.teacherIds = Array.from(assignedTeacherIdsSet);
 
-      // ප්‍රධාන Storage එකට සුරැකීම සහ UI Render කිරීම
+      // පද්ධතියේ ප්‍රධාන Storage සහ UI යාවත්කාලීන කිරීම
       if (typeof saveAllToStorage === "function") saveAllToStorage();
       if (typeof renderCurriculumTable === "function") renderCurriculumTable();
       if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
@@ -6503,13 +6500,13 @@ function cleanSubjectKey(str) {
       const modal = document.getElementById("subjectTeachersModal");
       if (modal) modal.classList.add("hidden");
 
-      // සවිස්තරාත්මක Alert පණිවිඩය
+      // තහවුරු කිරීමේ Alert පණිවිඩය
       let msg = `සාර්ථකයි! '${cs.subject}' විෂය සැකසුම් සුරකින ලදි.\n\n`;
       if (debugGroupLog.length > 0) {
-        msg += `🔗 ඒකාබද්ධ කාණ්ඩ (Groups First):\n• ${debugGroupLog.join("\n• ")}\n\n`;
+        msg += `🔗 ඒකාබද්ධ කාණ්ඩ (Groups):\n• ${debugGroupLog.join("\n• ")}\n\n`;
       }
       if (debugSingleLog.length > 0) {
-        msg += `⚪ තනි පන්ති (Single Classes):\n• ${debugSingleLog.join(", ")}\n`;
+        msg += `⚪ තනි පන්ති:\n• ${debugSingleLog.join(", ")}\n`;
       }
       if (debugGroupLog.length === 0 && debugSingleLog.length === 0) {
         msg += `කිසිදු පන්තියකට ගුරුවරයෙකු හෝ කාණ්ඩයක් තෝරා නැත.`;
@@ -6519,8 +6516,6 @@ function cleanSubjectKey(str) {
     }
 
     window.saveSubjectTeachersAssignment = saveSubjectTeachersAssignment;
-
-
     
 // ආරක්ෂිත makeAllocKey ශ්‍රිතය
 function makeAllocKey(classId, subject) {
