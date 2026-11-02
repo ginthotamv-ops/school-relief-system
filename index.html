@@ -3976,24 +3976,21 @@ function handleSlotDragLeave(e) {
           
           const classIdentifier = cls.id || cls.name;
 
-           //චචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචච
-          // පන්තිය දැනට අයත් කණ්ඩායම ලබාගැනීම (Memory + LocalStorage Backup)
+// පන්තියට අදාළ Group එක Memory එකෙන් හෝ LocalStorage එකෙන් ලබාගැනීම
           let currentGroup = "none";
           if (cls.combinedSubjectGroups && cls.combinedSubjectGroups[targetSubNorm]) {
             currentGroup = cls.combinedSubjectGroups[targetSubNorm];
           } else {
             try {
-              const groupBackup = JSON.parse(localStorage.getItem("sch_cluster_groups_v1") || "{}");
-              const allocKey = `${String(cls.id || cls.name).trim()}___${targetSubNorm}`;
-              if (groupBackup[allocKey]) {
-                currentGroup = groupBackup[allocKey];
+              const clusterStorage = JSON.parse(localStorage.getItem("sch_saved_clusters_v1") || "{}");
+              const storageKey = `${String(cls.id || cls.name).trim()}___${targetSubNorm}`;
+              if (clusterStorage[storageKey]) {
+                currentGroup = clusterStorage[storageKey];
                 cls.combinedSubjectGroups = cls.combinedSubjectGroups || {};
                 cls.combinedSubjectGroups[targetSubNorm] = currentGroup;
               }
             } catch (e) {}
           }
-
-          //චචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචචච
           
           // පන්තිය දැනට අයත් ඒකාබද්ධ කණ්ඩායම ලබාගැනීම
         
@@ -4175,44 +4172,51 @@ function handleSlotDragLeave(e) {
 
     */
     // 2. එකම කණ්ඩායම තෝරාගත් පන්ති අතර ගුරුවරයා ස්වයංක්‍රීයව Sync වීම
-    function syncClusterTeachers(subKey, changedSelect) {
-      const parentRow = changedSelect.closest(".sub-cluster-group-select, div").parentElement;
+function syncClusterTeachers(subKey, changedSelect) {
+      const parentRow = changedSelect.closest("#subModalClassList > div");
+      if (!parentRow) return;
       const groupSelect = parentRow.querySelector(".sub-cluster-group-select");
       const selectedGroup = groupSelect ? groupSelect.value : "none";
       const teacherId = changedSelect.value;
 
       if (selectedGroup !== "none") {
-        document.querySelectorAll(".sub-cluster-group-select").forEach(gSel => {
-          if (gSel.value === selectedGroup) {
-            const pRow = gSel.closest("div").parentElement;
+        document.querySelectorAll("#subModalClassList > div").forEach(pRow => {
+          const gSel = pRow.querySelector(".sub-cluster-group-select");
+          if (gSel && gSel.value === selectedGroup) {
             const tSel = pRow.querySelector(".sub-teacher-assign-select");
             if (tSel) tSel.value = teacherId;
           }
         });
       }
     }
+    
 
-    function onClusterGroupChange(grade, subKey, changedGroupSelect) {
+function onClusterGroupChange(grade, subKey, changedGroupSelect) {
       const selectedGroup = changedGroupSelect.value;
       if (selectedGroup === "none") return;
 
-      // මෙම කණ්ඩායමට දැනටමත් ගුරුවරයෙකු තෝරා ඇත්නම් එම ගුරුවරයා මේ පන්තියටද Auto-fill වීම
+      // මෙම Group එක දැනටමත් තෝරා ඇති වෙනත් පන්තියක ගුරුවරයෙකු සිටී නම් එම ගුරුවරයා මෙයට ලබාගැනීම
       let existingTeacherId = "";
-      document.querySelectorAll(".sub-cluster-group-select").forEach(gSel => {
-        if (gSel !== changedGroupSelect && gSel.value === selectedGroup) {
-          const pRow = gSel.closest("div").parentElement;
+      document.querySelectorAll("#subModalClassList > div").forEach(pRow => {
+        const gSel = pRow.querySelector(".sub-cluster-group-select");
+        if (gSel && gSel !== changedGroupSelect && gSel.value === selectedGroup) {
           const tSel = pRow.querySelector(".sub-teacher-assign-select");
           if (tSel && tSel.value) existingTeacherId = tSel.value;
         }
       });
 
       if (existingTeacherId) {
-        const currentRow = changedGroupSelect.closest("div").parentElement;
-        const currentTeacherSelect = currentRow.querySelector(".sub-teacher-assign-select");
-        if (currentTeacherSelect) currentTeacherSelect.value = existingTeacherId;
+        const parentRow = changedGroupSelect.closest("#subModalClassList > div");
+        if (parentRow) {
+          const tSel = parentRow.querySelector(".sub-teacher-assign-select");
+          if (tSel) tSel.value = existingTeacherId;
+        }
       }
     }
 
+    window.syncClusterTeachers = syncClusterTeachers;
+    window.onClusterGroupChange = onClusterGroupChange;
+    
     // 3. පන්ති කීයක් එකතු කළද තනි වාරයක් ලෙස ගණනය වන නිරවද්‍ය Workload Engine
     function getTeacherWorkloadCount(teacherId) {
       if (!teacherId) return 0;
@@ -6834,13 +6838,93 @@ function cleanSubjectKey(str) {
     
    
 
-    // =========================================================================
-    // ERROR-PROOF SAVE & UPDATE HANDLER (WITH INSTANT DIAGNOSTICS)
-    // =========================================================================
 // =========================================================================
     // 1. SAVE ASSIGNMENTS WITH PERSISTENT CLUSTER GROUPS
     // =========================================================================
+// =========================================================================
+    // STEP 1: PURE GROUP SAVING CONTROLLER
+    // =========================================================================
 
+    function saveSubjectTeachersAssignment() {
+      const cs = window.currentEditingSubject;
+      if (!cs) {
+        alert("විෂය දත්ත හඳුනාගත නොහැකි විය.");
+        return;
+      }
+
+      const subKey = cleanSubjectKey(cs.subject);
+      const grade = cleanGradeNum(cs.grade);
+
+      // 1. LocalStorage තුළ දැනට ඇති සියලුම Groups කියවා ගැනීම
+      let clusterStorage = {};
+      try {
+        clusterStorage = JSON.parse(localStorage.getItem("sch_saved_clusters_v1") || "{}");
+      } catch (e) { clusterStorage = {}; }
+
+      // 2. Modal එකේ ඇති සෑම පන්ති පේළියක්ම කියවීම
+      const rows = document.querySelectorAll("#subModalClassList > div");
+      let savedLog = [];
+
+      rows.forEach(row => {
+        const teacherSel = row.querySelector(".sub-teacher-assign-select");
+        const groupSel = row.querySelector(".sub-cluster-group-select");
+
+        if (!teacherSel) return;
+
+        const classIdentifier = teacherSel.getAttribute("data-class-identifier");
+        const teacherId = teacherSel.value ? String(teacherSel.value).trim() : null;
+        const groupVal = groupSel ? groupSel.value : "none"; // none, group_1, group_2...
+
+        // අදාළ Class Object එක සෙවීම
+        const cls = (schoolClasses || []).find(c => 
+          String(c.id).trim() === String(classIdentifier).trim() || 
+          String(c.name).trim() === String(classIdentifier).trim()
+        );
+
+        if (cls) {
+          cls.subjectTeachers = cls.subjectTeachers || {};
+          cls.combinedSubjectGroups = cls.combinedSubjectGroups || {};
+
+          const storageKey = `${String(cls.id || cls.name).trim()}___${subKey}`;
+
+          if (teacherId) {
+            cls.subjectTeachers[subKey] = teacherId;
+            cls.combinedSubjectGroups[subKey] = groupVal;
+            clusterStorage[storageKey] = groupVal; // LocalStorage එකට ලිවීම
+            savedLog.push(`${cls.name} ➔ ${groupVal}`);
+          } else {
+            delete cls.subjectTeachers[subKey];
+            delete cls.combinedSubjectGroups[subKey];
+            delete clusterStorage[storageKey];
+          }
+        }
+      });
+
+      // 3. LocalStorage වෙත ස්ථිරවම Write කිරීම
+      try {
+        localStorage.setItem("sch_saved_clusters_v1", JSON.stringify(clusterStorage));
+      } catch (e) {
+        console.error("Storage Error:", e);
+      }
+
+      // පද්ධතියේ ප්‍රධාන Storage එකට සුරැකීම
+      if (typeof saveAllToStorage === "function") saveAllToStorage();
+      if (typeof renderCurriculumTable === "function") renderCurriculumTable();
+
+      // Modal එක වැසීම
+      const modal = document.getElementById("subjectTeachersModal");
+      if (modal) modal.classList.add("hidden");
+
+      console.log("✅ සුරකින ලද Groups:", savedLog);
+      alert(`සාර්ථකයි! '${cs.subject}' විෂය සඳහා පන්ති කණ්ඩායම් (Groups) සුරකින ලදි.`);
+    }
+
+    window.saveSubjectTeachersAssignment = saveSubjectTeachersAssignment;
+
+    
+
+    
+    /*
     function saveSubjectTeachersAssignment() {
       const cs = window.currentEditingSubject;
       if (!cs) {
@@ -6920,6 +7004,8 @@ function cleanSubjectKey(str) {
 
     window.saveSubjectTeachersAssignment = saveSubjectTeachersAssignment;
     
+*/
+
     
     /*
     // 3. සුරැකීමේදී 35-40 සීමා පරීක්ෂා කර තහවුරු කිරීම
