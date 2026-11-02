@@ -3966,19 +3966,19 @@ function handleSlotDragLeave(e) {
           let optionsHtml = `<option value="">-- ගුරුවරයෙකු තෝරා නැත (Unassigned) --</option>`;
 
           if (primaryTeachers.length > 0) {
-            optionsHtml += `<optgroup label="⭐ ${cs.subject} ප්‍රධාන විෂය වන ගුරුවරුන්" style="font-weight: 800; font-size :150%; color: blue; font-style: normal;">`;
+            optionsHtml += `<optgroup label="⭐ ${cs.subject} ප්‍රධාන විෂය වන ගුරුවරුන්" style="font-weight: 800; font-size :100%; color: blue; font-style: normal;">`;
             primaryTeachers.forEach(t => optionsHtml += buildOption(t));
             optionsHtml += `</optgroup>`;
           }
 
           if (sectionTeachers.length > 0) {
-            optionsHtml += `<optgroup label="👥 ${section} අංශයේ අනෙකුත් ගුරුවරුන්">`;
+            optionsHtml += `<optgroup label="👥 ${section} අංශයේ අනෙකුත් ගුරුවරුන්"style="font-weight: 800; font-size :100%; color: blue; font-style: normal;">`;
             sectionTeachers.forEach(t => optionsHtml += buildOption(t));
             optionsHtml += `</optgroup>`;
           }
 
           if (otherTeachers.length > 0) {
-            optionsHtml += `<optgroup label="🏫 පාසලේ අනෙකුත් ගුරුවරුන්">`;
+            optionsHtml += `<optgroup label="🏫 පාසලේ අනෙකුත් ගුරුවරුන්"style="font-weight: 800; font-size :100%; color: blue; font-style: normal;">`;
             otherTeachers.forEach(t => optionsHtml += buildOption(t));
             optionsHtml += `</optgroup>`;
           }
