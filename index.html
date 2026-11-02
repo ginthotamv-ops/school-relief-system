@@ -3860,8 +3860,8 @@ function openSubjectTeachersModal(arg1, arg2) {
           </div>
 
           <!-- Group Select Dropdown -->
-          <div class="w-24 shrink-0">
-            <select data-class-identifier="${classIdentifier}" onchange="onClusterGroupChange('${grade}', '${targetSubNorm}', this)" class="sub-cluster-group-select w-full py-1.5 px-2 border border-slate-300 rounded-lg text-[11px] font-bold bg-slate-50 text-slate-700 outline-none focus:border-indigo-600">
+<div class="w-24 shrink-0">
+            <select data-class-identifier="${classIdentifier}" data-class-id="${classIdentifier}" onchange="onClusterGroupChange('${grade}', '${targetSubNorm}', this)" class="sub-cluster-group-select w-full py-1.5 px-2 border border-slate-300 rounded-lg text-[11px] font-bold bg-slate-50 text-slate-700 outline-none focus:border-indigo-600">
               <option value="none" ${currentGroup === 'none' ? 'selected' : ''}>— නැත —</option>
               <option value="group_1" ${currentGroup === 'group_1' ? 'selected' : ''} class="text-indigo-700 font-bold">Grp 1</option>
               <option value="group_2" ${currentGroup === 'group_2' ? 'selected' : ''} class="text-emerald-700 font-bold">Grp 2</option>
@@ -6344,17 +6344,21 @@ function cleanSubjectKey(str) {
     // =========================================================================
 
 
-function saveSubjectTeachersAssignment() {
+// =========================================================================
+    // FOOLPROOF GROUP SAVING ENGINE (READS DIRECTLY FROM RENDERED ROWS)
+    // =========================================================================
+
+    function saveSubjectTeachersAssignment() {
       const cs = window.currentEditingSubject;
       if (!cs) {
-        alert("විෂය දත්ත හඳුනාගත නොහැකි විය.");
+        alert("විෂය දත්ත හඳුනාගත නොහැකි විය. කරුණාකර පිටුව Refresh කරන්න.");
         return;
       }
 
       const subKey = cleanSubjectKey(cs.subject);
       const grade = cleanGradeNum(cs.grade);
 
-      // LocalStorage Backup Object
+      // LocalStorage Backup
       let clusterStorage = {};
       try {
         clusterStorage = JSON.parse(localStorage.getItem("sch_cluster_groups_v1") || "{}");
@@ -6364,50 +6368,76 @@ function saveSubjectTeachersAssignment() {
       const assignedTeacherIdsSet = new Set();
       let debugSavedList = [];
 
-      // අදාළ ශ්‍රේණියේ පන්ති සියල්ල ලබාගැනීම
-      const classesOfGrade = (schoolClasses || []).filter(c => cleanGradeNum(c.grade) === grade);
+      // Modal එක තුළ ඇති සියලුම පේළි සෘජුවම ලබාගැනීම
+      const rows = document.querySelectorAll("#subModalClassList > div");
 
-      classesOfGrade.forEach(cls => {
-        const classId = String(cls.id || cls.name).trim();
+      if (rows.length === 0) {
+        alert("දෝෂයකි: පන්ති ලැයිස්තුව හමු නොවීය.");
+        return;
+      }
 
-        // data-class-identifier මඟින් නිශ්චිත Dropdowns සෘජුවම සොයා ගැනීම
-        const groupSel = document.querySelector(`.sub-cluster-group-select[data-class-identifier="${classId}"]`);
-        const teacherSel = document.querySelector(`.sub-teacher-assign-select[data-class-identifier="${classId}"]`);
+      rows.forEach((row, index) => {
+        // පේළිය ඇතුළත ඇති Dropdowns දෙක සෘජුවම සොයාගැනීම
+        const groupSel = row.querySelector("select.sub-cluster-group-select");
+        const teacherSel = row.querySelector("select.sub-teacher-assign-select");
 
-        const teacherId = (teacherSel && teacherSel.value) ? String(teacherSel.value).trim() : null;
-        const groupVal = (groupSel && groupSel.value) ? String(groupSel.value).trim() : "none";
+        if (!groupSel || !teacherSel) return;
 
-        cls.subjectTeachers = cls.subjectTeachers || {};
-        cls.combinedSubjectGroups = cls.combinedSubjectGroups || {};
+        // පන්තියේ Identifier එක ක්‍රම 4කින්ම බැලීම (Attribute නොමැති වුවද පන්තියේ නමින්ම හඳුනාගනී)
+        let classIdentifier = groupSel.getAttribute("data-class-identifier") 
+                           || groupSel.getAttribute("data-class-id")
+                           || teacherSel.getAttribute("data-class-identifier")
+                           || teacherSel.getAttribute("data-class-id");
 
-        const storageKey = `${classId}___${subKey}`;
-
-        // 1. ගුරුවරයා සුරැකීම
-        if (teacherId) {
-          cls.subjectTeachers[subKey] = teacherId;
-          window.classSubjectAllocations[storageKey] = teacherId;
-          assignedTeacherIdsSet.add(teacherId);
-        } else {
-          delete cls.subjectTeachers[subKey];
-          delete window.classSubjectAllocations[storageKey];
+        if (!classIdentifier) {
+          const nameSpan = row.querySelector("span.font-extrabold") || row.querySelector("span");
+          if (nameSpan) classIdentifier = nameSpan.textContent.trim();
         }
 
-        // 2. Group එක සුරැකීම
-        if (groupVal && groupVal !== "none") {
-          cls.combinedSubjectGroups[subKey] = groupVal;
-          clusterStorage[storageKey] = groupVal;
-          debugSavedList.push(`${cls.name} ➔ ${groupVal.replace("group_", "Grp ")}`);
-        } else {
-          delete cls.combinedSubjectGroups[subKey];
-          delete clusterStorage[storageKey];
+        const groupVal = groupSel.value ? groupSel.value.trim() : "none";
+        const teacherId = teacherSel.value ? String(teacherSel.value).trim() : null;
+
+        console.log(`[පේළිය ${index + 1}] Class: ${classIdentifier} | Group: ${groupVal} | Teacher: ${teacherId}`);
+
+        // schoolClasses තුළින් පන්තිය සොයාගැනීම
+        const cls = (schoolClasses || []).find(c => 
+          String(c.id).trim().toLowerCase() === String(classIdentifier).trim().toLowerCase() || 
+          String(c.name).trim().toLowerCase() === String(classIdentifier).trim().toLowerCase()
+        );
+
+        if (cls) {
+          cls.subjectTeachers = cls.subjectTeachers || {};
+          cls.combinedSubjectGroups = cls.combinedSubjectGroups || {};
+
+          const storageKey = `${String(cls.id || cls.name).trim()}___${subKey}`;
+
+          // 1. ගුරුවරයා සුරැකීම
+          if (teacherId) {
+            cls.subjectTeachers[subKey] = teacherId;
+            window.classSubjectAllocations[storageKey] = teacherId;
+            assignedTeacherIdsSet.add(teacherId);
+          } else {
+            delete cls.subjectTeachers[subKey];
+            delete window.classSubjectAllocations[storageKey];
+          }
+
+          // 2. Group එක සුරැකීම
+          if (groupVal && groupVal !== "none") {
+            cls.combinedSubjectGroups[subKey] = groupVal;
+            clusterStorage[storageKey] = groupVal;
+            debugSavedList.push(`${cls.name} ➔ ${groupVal.replace("group_", "Grp ")}`);
+          } else {
+            delete cls.combinedSubjectGroups[subKey];
+            delete clusterStorage[storageKey];
+          }
         }
       });
 
-      // LocalStorage එකට ස්ථිරව සුරැකීම
+      // LocalStorage Backup එක ස්ථිරවම Write කිරීම
       try {
         localStorage.setItem("sch_cluster_groups_v1", JSON.stringify(clusterStorage));
       } catch (e) {
-        console.error("LocalStorage write error:", e);
+        console.error("Storage write error:", e);
       }
 
       cs.teacherIds = Array.from(assignedTeacherIdsSet);
@@ -6420,17 +6450,19 @@ function saveSubjectTeachersAssignment() {
       const modal = document.getElementById("subjectTeachersModal");
       if (modal) modal.classList.add("hidden");
 
-      // තහවුරු කිරීමේ Alert පණිවිඩය
+      // තහවුරු කිරීමේ නිශ්චිත පණිවිඩය
       if (debugSavedList.length > 0) {
-        alert(`සාර්ථකයි!\n'${cs.subject}' විෂය සඳහා පන්ති කණ්ඩායම් (${debugSavedList.join(", ")}) සුරකින ලදි.`);
+        alert(`සාර්ථකයි!\n'${cs.subject}' විෂය සඳහා පන්ති කණ්ඩායම් (${debugSavedList.join(", ")}) ස්ථිරව සුරකින ලදි.`);
       } else {
-        alert(`සාර්ථකයි!\n'${cs.subject}' විෂය සඳහා සියලු පන්ති තනි පන්ති ලෙස සුරකින ලදි.`);
+        alert(`අවවාදයයි!\nකිසිදු පන්තියක් සඳහා Grp 1, Grp 2 තෝරා නොතිබූ බැවින් (සියල්ල '— නැත —' ලෙස පැවති බැවින්) තනි පන්ති ලෙස සුරකින ලදි.`);
       }
     }
 
+    // Modal Save බොත්තම කුමන නමකින් කැඳවුවද ක්‍රියාත්මක වීම සඳහා Aliases
     window.saveSubjectTeachersAssignment = saveSubjectTeachersAssignment;
-
-
+    window.saveSubjectTeachers = saveSubjectTeachersAssignment;
+    window.saveSubjectTeachersModal = saveSubjectTeachersAssignment;
+    
 // ආරක්ෂිත makeAllocKey ශ්‍රිතය
 function makeAllocKey(classId, subject) {
   const c = String(classId || "").trim();
