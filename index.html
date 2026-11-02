@@ -3277,37 +3277,88 @@ function resetSystemData() {
             Number(s.period) === Number(p)
           );
 
-          if (slot && slot.subject) {
-            let teacherName = '<span class="text-rose-500 font-bold text-[10px]">ගුරුවරයෙකු නැත</span>';
-            if (slot.teacherId) {
-              const tch = (teachers || []).find(t => String(t.id).trim().toLowerCase() === String(slot.teacherId).trim().toLowerCase());
-              if (tch) {
-                const no = tch.schoolNo ? `[${tch.schoolNo}]` : "";
-                teacherName = `<span class="text-indigo-900 font-semibold text-[10px] block truncate" title="${tch.name}">${tch.name} ${no}</span>`;
+
+if (slot && slot.subject) {
+            let slotContentHtml = "";
+            let bgClass = "bg-indigo-50/50 hover:bg-indigo-100/70 border-r border-slate-200";
+
+            // A. Basket කාණ්ඩයක් නම්
+            if (slot.isBasket && Array.isArray(slot.basketItems)) {
+              bgClass = "bg-violet-50/80 hover:bg-violet-100 border-r border-violet-200";
+              const miniList = slot.basketItems.map(it => {
+                const t = (teachers || []).find(tch => String(tch.id) === String(it.teacherId));
+                return `<div class="truncate text-[9px] text-violet-950"><b>${it.subject}</b>: ${t ? t.name : 'නැත'}</div>`;
+              }).join("");
+
+              slotContentHtml = `
+                <div class="font-extrabold text-[11px] text-violet-900 flex items-center gap-1">
+                  <i class="fa-solid fa-layer-group text-[10px] text-violet-600"></i> ${slot.subject}
+                </div>
+                <div class="mt-1 space-y-0.5 border-t border-violet-200/60 pt-0.5">${miniList}</div>
+              `;
+
+            // B. පන්ති ඒකාබද්ධ කළ කණ්ඩායමක් නම් (Combined Cluster - Grp 1, Grp 2)
+            } else if (slot.isCombined || (slot.combinedGroup && slot.combinedGroup !== "none")) {
+              bgClass = "bg-emerald-50/80 hover:bg-emerald-100/90 border-r border-emerald-300";
+              
+              let teacherName = "ගුරුවරයෙකු නැත";
+              if (slot.teacherId) {
+                const tch = (teachers || []).find(t => String(t.id).trim().toLowerCase() === String(slot.teacherId).trim().toLowerCase());
+                if (tch) teacherName = tch.name;
               }
+
+              const grpLabel = slot.combinedGroup ? slot.combinedGroup.replace("group_", "Grp ") : "Combined";
+
+              slotContentHtml = `
+                <div class="flex items-center justify-between gap-1">
+                  <span class="font-bold text-xs text-emerald-950 truncate" title="${slot.subject}">${slot.subject}</span>
+                  <span class="text-[9px] bg-emerald-200 text-emerald-900 font-black px-1.5 py-0.2 rounded shadow-2xs">🔗 ${grpLabel}</span>
+                </div>
+                <div class="mt-0.5 text-[10px] text-emerald-800 font-semibold truncate" title="${teacherName}">
+                  <i class="fa-solid fa-user-tie text-[9px] mr-0.5 text-emerald-600"></i>${teacherName}
+                </div>
+              `;
+
+            // C. සාමාන්‍ය තනි විෂයක් නම්
+            } else {
+              let teacherText = '<span class="text-rose-500 font-bold text-[10px]">ගුරුවරයෙකු නැත</span>';
+              if (slot.teacherId) {
+                const tch = (teachers || []).find(t => String(t.id).trim().toLowerCase() === String(slot.teacherId).trim().toLowerCase());
+                if (tch) {
+                  const no = tch.schoolNo ? `[${tch.schoolNo}]` : "";
+                  teacherText = `<span class="text-indigo-900 font-semibold text-[10px] block truncate">${tch.name} ${no}</span>`;
+                }
+              }
+
+              slotContentHtml = `
+                <div class="font-bold text-xs text-indigo-950 truncate pr-4" title="${slot.subject}">
+                  ${slot.subject}
+                </div>
+                <div class="mt-0.5">${teacherText}</div>
+              `;
             }
 
             rowHtml += `
-              <td id="slotCell_${d.id}_${p}" 
-                  ondragover="handleSlotDragOver(event)" 
-                  ondragleave="handleSlotDragLeave(event)" 
+              <td ondragover="handleSlotDragOver(event)"
+                  ondragleave="handleSlotDragLeave(event)"
                   ondrop="handleSlotDrop(event, '${selectedClassId}', ${d.id}, ${p})"
-                  class="p-2 border-r border-slate-200 bg-indigo-50/50 hover:bg-indigo-100/80 transition relative group select-none">
-                <div onclick="openTimetableSlotModal('${selectedClassId}', ${d.id}, ${p})" class="cursor-pointer">
-                  <div class="font-bold text-xs text-indigo-950 truncate" title="${slot.subject}">
-                    ${slot.subject}
-                  </div>
-                  <div class="mt-0.5">
-                    ${teacherName}
-                  </div>
-                </div>
-                <!-- ඉවත් කිරීමේ (Quick Clear) කුඩා බොත්තම -->
-                <button type="button" onclick="event.stopPropagation(); quickRemoveSlot('${selectedClassId}', ${d.id}, ${p})" class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-white/90 hover:bg-rose-600 text-slate-400 hover:text-white rounded-md w-5 h-5 flex items-center justify-center transition shadow-sm" title="කාලච්ඡේදය ඉවත් කරන්න">
-                  <i class="fa-solid fa-xmark text-[10px]"></i>
+                  onclick="openTimetableSlotModal('${selectedClassId}', ${d.id}, ${p})" 
+                  class="p-2 cursor-pointer transition relative group select-none min-w-[95px] ${bgClass}">
+                
+                <button type="button"
+                        onclick="event.stopPropagation(); removeTimetableSlot('${selectedClassId}', ${d.id}, ${p})"
+                        class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-white/90 hover:bg-rose-600 text-slate-400 hover:text-white rounded-md w-5 h-5 flex items-center justify-center transition shadow-xs z-10"
+                        title="මෙම විෂය ඉවත් කරන්න">
+                  <i class="fa-solid fa-xmark text-[11px]"></i>
                 </button>
+
+                ${slotContentHtml}
               </td>
             `;
-          } else {
+          }
+
+          
+          else {
             // හිස් කොටුව (Drop Zone & Clickable to Add)
             rowHtml += `
               <td id="slotCell_${d.id}_${p}" 
@@ -4207,8 +4258,134 @@ function handleSlotDragLeave(e) {
       return standaloneCount + combinedPeriodsTotal;
     }
 
+
+    
     // 4. කාලසටහනට ඇද දැමූ විට එම කණ්ඩායමේ සියලු පන්ති එකවර කාලසටහන්ගත වීම (Auto-Sync to Grid)
+    
+    // =========================================================================
+    // SMART DRAG & DROP CONTROLLER (AUTO-SYNCS COMBINED GROUPS ACROSS CLASSES)
+    // =========================================================================
+
     function handleSlotDrop(e, classId, day, period) {
+      e.preventDefault();
+      e.currentTarget.classList.remove("bg-indigo-100", "border-indigo-400");
+
+      let subjectName = "";
+      if (window.draggedSubjectData && window.draggedSubjectData.subject) {
+        subjectName = window.draggedSubjectData.subject;
+      } else if (e.dataTransfer) {
+        subjectName = e.dataTransfer.getData("text/plain");
+      }
+
+      if (!subjectName) return;
+
+      const cleanClassId = String(classId).trim();
+      const numDay = Number(day);
+      const numPeriod = Number(period);
+      const subKey = cleanSubjectKey(subjectName);
+
+      if (!Array.isArray(masterSchedule)) masterSchedule = [];
+
+      // 1. මෙම පන්තිය සහ විෂය අයත් කණ්ඩායම (Grp 1, Grp 2 හෝ none) හඳුනාගැනීම
+      const currentCls = (schoolClasses || []).find(c => 
+        String(c.id).trim() === cleanClassId || String(c.name).trim() === cleanClassId
+      );
+      const grade = currentCls ? cleanGradeNum(currentCls.grade) : 0;
+
+      let groupVal = "none";
+      if (currentCls && currentCls.combinedSubjectGroups && currentCls.combinedSubjectGroups[subKey]) {
+        groupVal = currentCls.combinedSubjectGroups[subKey];
+      } else {
+        try {
+          const groupBackup = JSON.parse(localStorage.getItem("sch_cluster_groups_v1") || "{}");
+          const allocKey = `${cleanClassId}___${subKey}`;
+          if (groupBackup[allocKey]) groupVal = groupBackup[allocKey];
+        } catch (e) {}
+      }
+
+      // 2. මෙම කණ්ඩායමට අයත් සියලුම පන්ති ලැයිස්තුව සොයාගැනීම
+      let targetClasses = [cleanClassId];
+      if (groupVal && groupVal !== "none") {
+        let groupBackup = {};
+        try { groupBackup = JSON.parse(localStorage.getItem("sch_cluster_groups_v1") || "{}"); } catch (e) {}
+
+        targetClasses = (schoolClasses || []).filter(c => {
+          if (cleanGradeNum(c.grade) !== grade) return false;
+          const cId = String(c.id || c.name).trim();
+          const g = (c.combinedSubjectGroups && c.combinedSubjectGroups[subKey]) 
+            ? c.combinedSubjectGroups[subKey] 
+            : (groupBackup[`${cId}___${subKey}`] || "none");
+          return g === groupVal;
+        }).map(c => String(c.id || c.name).trim());
+      }
+
+      // 3. Quota Limit පරීක්ෂාව
+      if (typeof calculateClassSubjectQuotas === "function") {
+        const quotas = calculateClassSubjectQuotas(cleanClassId);
+        const subQuota = quotas.find(q => cleanSubjectKey(q.subject) === subKey);
+        if (subQuota && subQuota.allocated >= subQuota.maxWeekly) {
+          alert(`අවවාදයයි! '${subjectName}' විෂය සඳහා උපරිම සීමාව (${subQuota.maxWeekly}) සම්පූර්ණයි.`);
+          window.draggedSubjectData = null;
+          return;
+        }
+      }
+
+      // 4. ගුරුවරයා ලබාගැනීම
+      const assignedTeacher = typeof getAssignedTeacherForClassSubject === "function" 
+        ? getAssignedTeacherForClassSubject(cleanClassId, subjectName) 
+        : null;
+      let teacherIdToSet = assignedTeacher ? assignedTeacher.id : null;
+
+      // 5. Clash පරීක්ෂාව (එම කණ්ඩායමේ පන්ති අතර ගැටුමක් නොවේ)
+      if (teacherIdToSet && typeof checkTeacherTimeClash === "function") {
+        const clash = checkTeacherTimeClash(teacherIdToSet, numDay, numPeriod, cleanClassId);
+        if (clash && !targetClasses.includes(String(clash.classId).trim())) {
+          alert(`කාලසටහන් ගැටුමකි (Clash)!\n\n'${assignedTeacher.name}' ගුරුතුමා මෙම වේලාවේදී ${clash.className} පන්තියේ උගන්වයි.`);
+          window.draggedSubjectData = null;
+          return;
+        }
+      }
+
+      // 6. එකම කණ්ඩායමේ සියලු පන්තිවලට එකවර කාලසටහන් Slot ලියැවීම
+      targetClasses.forEach(cId => {
+        let slotIndex = masterSchedule.findIndex(s => 
+          String(s.classId).trim() === cId && 
+          (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, numDay) : Number(s.day) === numDay) && 
+          Number(s.period) === numPeriod
+        );
+
+        const slotObj = {
+          classId: cId,
+          day: numDay,
+          period: numPeriod,
+          subject: subjectName,
+          teacherId: teacherIdToSet,
+          isBasket: false,
+          isCombined: (groupVal !== "none"),
+          combinedGroup: groupVal,
+          linkedClassIds: targetClasses
+        };
+
+        if (slotIndex > -1) {
+          masterSchedule[slotIndex] = slotObj;
+        } else {
+          masterSchedule.push(slotObj);
+        }
+      });
+
+      window.draggedSubjectData = null;
+
+      // 7. දත්ත සුරැකීම සහ කාලසටහන Re-render කිරීම
+      if (typeof saveAllToStorage === "function") saveAllToStorage();
+      if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+      if (typeof renderSubjectQuotaTray === "function") renderSubjectQuotaTray(cleanClassId);
+      if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+    }
+
+    window.handleSlotDrop = handleSlotDrop;
+    
+    
+    /* function handleSlotDrop(e, classId, day, period) {
       e.preventDefault();
       e.currentTarget.classList.remove("bg-indigo-100", "border-indigo-400");
 
@@ -4296,7 +4473,7 @@ function handleSlotDragLeave(e) {
     window.handleSlotDrop = handleSlotDrop;
 
 
-    
+    */
     
 // =========================================================================
     // BASKET & COMBINED CLASSES ENGINE (PERSISTENT & MULTI-CLASS SYNC)
