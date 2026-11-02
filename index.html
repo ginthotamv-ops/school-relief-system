@@ -3872,6 +3872,157 @@ function handleSlotDragLeave(e) {
     // =========================================================================
 
     // 1. Modal එක තුළ ඕනෑම සංයෝජනයක් තෝරාගත හැකි Generic Dropdown එකක් සෑදීම
+
+    function openSubjectTeachersModal(arg1, arg2) {
+      let cs = null;
+
+      if (arg2 !== undefined && arg2 !== null && String(arg2) !== "undefined") {
+        const grade = cleanGradeNum(arg1);
+        const subName = cleanSubjectKey(decodeURIComponent(String(arg2)));
+        cs = (curriculumSubjects || []).find(c => cleanGradeNum(c.grade) === grade && cleanSubjectKey(c.subject) === subName);
+      }
+
+      if (!cs && arg1 !== undefined && arg1 !== null) {
+        const targetId = String(arg1).trim();
+        cs = (curriculumSubjects || []).find(c => c.id && String(c.id).trim() === targetId);
+      }
+
+      if (!cs) {
+        alert("විෂය දත්ත හඳුනාගත නොහැකි විය. කරුණාකර පිටුව Refresh කරන්න.");
+        return;
+      }
+
+      window.currentEditingSubject = cs;
+      window.currentSubjectGrade = cleanGradeNum(cs.grade);
+      window.currentSubjectName = String(cs.subject).trim();
+
+      const grade = window.currentSubjectGrade;
+      const section = typeof getSectionOfGrade === "function" ? getSectionOfGrade(grade) : "All";
+      const subjectPeriods = Number(cs.maxWeekly) || 0;
+
+      document.getElementById("subModalSubjectName").innerText = cs.subject;
+      document.getElementById("subModalGradeSection").innerText = `(Grade ${grade} | අංශය: ${section})`;
+      document.getElementById("subModalPeriodsBadge").innerText = `${subjectPeriods} Periods / සතියට`;
+
+      const classesOfGrade = (schoolClasses || []).filter(c => cleanGradeNum(c.grade) === grade);
+      const container = document.getElementById("subModalClassList");
+      if (!container) return;
+      container.innerHTML = "";
+
+      if (classesOfGrade.length === 0) {
+        container.innerHTML = `
+          <div class="p-4 text-center text-xs text-amber-700 bg-amber-50 rounded-lg">
+            ⚠️ Grade ${grade} සඳහා පන්ති කිසිවක් පද්ධතියේ ලියාපදිංචි කර නොමැත.
+          </div>
+        `;
+      } else {
+        const targetSubNorm = cleanSubjectKey(cs.subject);
+
+        classesOfGrade.forEach(cls => {
+          const currentTeacherId = (typeof getAssignedTeacherIdForClass === "function" 
+            ? getAssignedTeacherIdForClass(cls, cs.subject) 
+            : (cls.subjectTeachers && cls.subjectTeachers[targetSubNorm])) || "";
+          
+          const classIdentifier = cls.id || cls.name;
+
+          // පන්තිය දැනට අයත් ඒකාබද්ධ කණ්ඩායම ලබාගැනීම
+          const currentGroup = (cls.combinedSubjectGroups && cls.combinedSubjectGroups[targetSubNorm]) 
+            ? cls.combinedSubjectGroups[targetSubNorm] 
+            : "none";
+
+          // ගුරු කාණ්ඩ වෙන් කිරීම
+          const primaryTeachers = (teachers || []).filter(t => cleanSubjectKey(t.subject) === targetSubNorm);
+          const sectionTeachers = (teachers || []).filter(t => cleanSubjectKey(t.subject) !== targetSubNorm && (typeof isTeacherInTargetSection === "function" ? isTeacherInTargetSection(t, section) : true));
+          const otherTeachers = (teachers || []).filter(t => !primaryTeachers.some(pt => pt.id === t.id) && !sectionTeachers.some(st => st.id === t.id));
+
+          // Dropdown Option එකක් සාදන Helper ශ්‍රිතය (35-40 Quota නීති සහ සීමා සහිතව)
+          const buildOption = (t) => {
+            const isSelected = String(t.id).trim().toLowerCase() === String(currentTeacherId).trim().toLowerCase();
+            const currentLoad = getTeacherWorkloadCount(t.id, classIdentifier, cs.subject);
+            const projectedLoad = currentLoad + subjectPeriods;
+            const no = t.schoolNo ? `[${t.schoolNo}]` : `[${t.id}]`;
+
+            let labelText = `${t.name} ${no} (${currentLoad}/35)`;
+            let isDisabled = false;
+
+            if (currentLoad >= 40) {
+              // දැනටමත් 40 ක් හෝ ඊට වැඩි නම් සම්පූර්ණයෙන්ම තහනම්
+              labelText = `⛔ ${t.name} ${no} (${currentLoad}/40 - පිරී ඇත)`;
+              if (!isSelected) isDisabled = true;
+            } else if (currentLoad >= 35 || projectedLoad > 35) {
+              if (projectedLoad > 40 && !isSelected) {
+                // මෙම විෂය එක් කළ විට 40 ඉක්මවයි නම් තෝරාගත නොහැක
+                labelText = `⛔ ${t.name} ${no} (${currentLoad}/35 ➔ +${subjectPeriods}=${projectedLoad} > 40 සීමාව ඉක්මවයි)`;
+                isDisabled = true;
+              } else {
+                // 35 සිට 40 දක්වා විශේෂ අවසර සහිතව
+                labelText = `⚠️ ${t.name} ${no} (${currentLoad}/35 - විශේෂ අවසර 40 දක්වා)`;
+              }
+            }
+
+            return `<option value="${t.id}" ${isSelected ? "selected" : ""} ${isDisabled ? "disabled class='text-slate-400 bg-slate-100'" : ""}>${labelText}</option>`;
+          };
+
+          let optionsHtml = `<option value="">-- ගුරුවරයෙකු තෝරා නැත (Unassigned) --</option>`;
+
+          if (primaryTeachers.length > 0) {
+            optionsHtml += `<optgroup label="⭐ ${cs.subject} ප්‍රධාන විෂය වන ගුරුවරුන්">`;
+            primaryTeachers.forEach(t => optionsHtml += buildOption(t));
+            optionsHtml += `</optgroup>`;
+          }
+
+          if (sectionTeachers.length > 0) {
+            optionsHtml += `<optgroup label="👥 ${section} අංශයේ අනෙකුත් ගුරුවරුන්">`;
+            sectionTeachers.forEach(t => optionsHtml += buildOption(t));
+            optionsHtml += `</optgroup>`;
+          }
+
+          if (otherTeachers.length > 0) {
+            optionsHtml += `<optgroup label="🏫 පාසලේ අනෙකුත් ගුරුවරුන්">`;
+            otherTeachers.forEach(t => optionsHtml += buildOption(t));
+            optionsHtml += `</optgroup>`;
+          }
+
+          // පේළිය නිර්මාණය කිරීම (පන්තිය + ඒකාබද්ධ කණ්ඩායම් Dropdown + ගුරු Dropdown)
+          const row = document.createElement("div");
+          row.className = "p-2.5 flex items-center justify-between gap-3 hover:bg-white rounded-xl transition border-b border-slate-100 last:border-b-0";
+          row.innerHTML = `
+            <!-- 1. පන්ති නම සහ අංශය -->
+            <div class="w-28 shrink-0">
+              <span class="font-extrabold text-xs text-slate-800 block">${cls.name}</span>
+              <span class="text-[10px] text-slate-400 font-semibold">${section} අංශය</span>
+            </div>
+
+            <!-- 2. ඒකාබද්ධ කණ්ඩායම් තේරීම (Dynamic Cluster Selector) -->
+            <div class="w-36 shrink-0">
+              <select data-class-id="${classIdentifier}" onchange="onClusterGroupChange('${grade}', '${targetSubNorm}', this)" class="sub-cluster-group-select w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50 text-slate-700 outline-none focus:border-indigo-600">
+                <option value="none" ${currentGroup === 'none' ? 'selected' : ''}>⚪ තනි පන්තිය</option>
+                <option value="group_1" ${currentGroup === 'group_1' ? 'selected' : ''} class="text-indigo-700 font-bold">🔗 කණ්ඩායම 1</option>
+                <option value="group_2" ${currentGroup === 'group_2' ? 'selected' : ''} class="text-emerald-700 font-bold">🔗 කණ්ඩායම 2</option>
+                <option value="group_3" ${currentGroup === 'group_3' ? 'selected' : ''} class="text-violet-700 font-bold">🔗 කණ්ඩායම 3</option>
+                <option value="group_4" ${currentGroup === 'group_4' ? 'selected' : ''} class="text-amber-700 font-bold">🔗 කණ්ඩායම 4</option>
+                <option value="group_5" ${currentGroup === 'group_5' ? 'selected' : ''} class="text-rose-700 font-bold">🔗 කණ්ඩායම 5</option>
+              </select>
+            </div>
+
+            <!-- 3. ගුරු තේරීම (35/40 Quota සීමා සහ Auto-Sync සහිතව) -->
+            <div class="flex-1 min-w-[200px]">
+              <select data-class-identifier="${classIdentifier}" onchange="syncClusterTeachers('${targetSubNorm}', this)" class="sub-teacher-assign-select w-full p-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600">
+                ${optionsHtml}
+              </select>
+            </div>
+          `;
+          container.appendChild(row);
+        });
+      }
+
+      const modal = document.getElementById("subjectTeachersModal");
+      if (modal) modal.classList.remove("hidden");
+    }
+
+    window.openSubjectTeachersModal = openSubjectTeachersModal;
+    
+    /*
     function openSubjectTeachersModal(arg1, arg2) {
       let cs = null;
       if (arg2 !== undefined && arg2 !== null && String(arg2) !== "undefined") {
@@ -3953,6 +4104,7 @@ function handleSlotDragLeave(e) {
       if (modal) modal.classList.remove("hidden");
     }
 
+    */
     // 2. එකම කණ්ඩායම තෝරාගත් පන්ති අතර ගුරුවරයා ස්වයංක්‍රීයව Sync වීම
     function syncClusterTeachers(subKey, changedSelect) {
       const parentRow = changedSelect.closest(".sub-cluster-group-select, div").parentElement;
