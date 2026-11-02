@@ -3966,7 +3966,7 @@ function handleSlotDragLeave(e) {
           let optionsHtml = `<option value="">-- ගුරුවරයෙකු තෝරා නැත (Unassigned) --</option>`;
 
           if (primaryTeachers.length > 0) {
-            optionsHtml += `<optgroup label="⭐ ${cs.subject} ප්‍රධාන විෂය වන ගුරුවරුන්">`;
+            optionsHtml += `<optgroup label="⭐ ${cs.subject} ප්‍රධාන විෂය වන ගුරුවරුන්" style="font-weight: 800; font-size :150%; color: blue; font-style: normal;">`;
             primaryTeachers.forEach(t => optionsHtml += buildOption(t));
             optionsHtml += `</optgroup>`;
           }
