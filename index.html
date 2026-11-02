@@ -1003,101 +1003,82 @@
 
 
 <!-- Modal: Grade-Specific Basket & Combined Classes Setup Modal -->
-  <div id="basketSetupModal" class="fixed inset-0 z-[9999] flex items-center justify-center hidden p-4">
-    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeBasketSetupModal()"></div>
+  <!-- Combined / Basket Grouping Modal -->
+<div id="combinedSubjectModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 hidden p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-slate-200">
+    
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+      <div>
+        <h3 class="text-base font-extrabold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-layer-group text-indigo-600"></i> විෂයයන් සහ පන්ති කාණ්ඩ සැකසුම
+        </h3>
+        <p class="text-xs text-slate-500 mt-0.5">එකම කාලච්ඡේදයේ පැවැත්වෙන තේරීම් හෝ ඒකාබද්ධ විෂයන් කාණ්ඩගත කරන්න</p>
+      </div>
+      <button type="button" onclick="closeCombinedSubjectModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
 
-    <div class="relative z-10 bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-200 flex flex-col max-h-[90vh]">
-      <!-- Header -->
-      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
-        <div>
-          <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-layer-group text-violet-600"></i>
-            <span>කාණ්ඩ විෂයයන් / ඒකාබද්ධ පන්ති සැකසුම</span>
-          </h3>
-          <p class="text-[11px] text-slate-500 font-semibold mt-0.5">ශ්‍රේණිය තෝරා කාණ්ඩ විෂයන් හෝ ඒකාබද්ධ පන්ති සකසන්න.</p>
-        </div>
-        <button type="button" onclick="closeBasketSetupModal()" class="text-slate-400 hover:text-slate-700 text-2xl font-bold p-1 leading-none">&times;</button>
+    <!-- Controls: Grade & Subject & Group Selection -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+      
+      <!-- 1. ශ්‍රේණිය -->
+      <div>
+        <label class="block text-[11px] font-bold text-slate-600 mb-1">ශ්‍රේණිය (Grade)</label>
+        <select id="groupModalGradeSelect" onchange="onGroupModalGradeOrSubjectChange()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-white outline-none focus:border-indigo-600">
+          <!-- Dynamic Grade Options -->
+        </select>
       </div>
 
-      <!-- Body -->
-      <div class="my-4 overflow-y-auto pr-1 flex-1 space-y-4" style="max-height: 60vh;">
-        
-        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-          <input type="hidden" id="basketEditId" value="">
-
-          <!-- 1. ශ්‍රේණිය සහ සතිපතා වාර ගණන -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">1. ශ්‍රේණිය තෝරන්න (Grade) *</label>
-              <select id="basketGradeSelect" onchange="onBasketGradeChange()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none focus:border-violet-600 bg-white">
-                <!-- JavaScript මඟින් ශ්‍රේණි පිරවේ -->
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">2. සතිපතා වාර ගණන (Periods) *</label>
-              <input type="number" id="basketPeriodsInput" min="1" max="10" value="3" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none focus:border-violet-600 bg-white">
-            </div>
-          </div>
-
-          <!-- 2. කාණ්ඩයේ නම -->
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">3. කාණ්ඩයේ / ඒකාබද්ධ විෂයේ නම *</label>
-            <input type="text" id="basketNameInput" placeholder="උදා: 10 සෞන්දර්ය කාණ්ඩය හෝ 10 A+B දෙමළ" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-semibold outline-none focus:border-violet-600 bg-white">
-          </div>
-
-          <!-- 3. එම ශ්‍රේණියේ පන්ති පමණක් -->
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">4. අදාළ පන්ති තෝරන්න (එම ශ්‍රේණියට අයත්) *</label>
-            <div id="basketClassesCheckboxContainer" class="flex flex-wrap gap-2 p-2.5 bg-white border border-slate-200 rounded-lg max-h-24 overflow-y-auto">
-              <!-- තෝරාගත් ශ්‍රේණියේ පන්ති පමණක් මෙහි දිස්වේ -->
-            </div>
-          </div>
-
-          <!-- 4. එම ශ්‍රේණියේ විෂයන් පමණක් (ගුරුවරයා ස්වයංක්‍රීයයි) -->
-          <div>
-            <div class="flex justify-between items-center mb-1">
-              <label class="text-xs font-bold text-slate-700">5. ඇතුළත් විෂයන් (ශ්‍රේණියේ විෂය නිර්දේශයෙන්) *</label>
-              <button type="button" onclick="addBasketSubjectRow()" class="text-violet-600 hover:text-violet-800 text-xs font-bold flex items-center gap-1 cursor-pointer">
-                <i class="fa-solid fa-plus-circle"></i> විෂයක් එක් කරන්න
-              </button>
-            </div>
-            <div id="basketSubjectsContainer" class="space-y-2">
-              <!-- Dynamic Subject Rows -->
-            </div>
-            <p class="text-[10px] text-slate-400 italic mt-1">
-              * ගුරුවරුන් තේරීම අවශ්‍ය නැත; එක් එක් පන්තියට කලින් වෙන් කර ඇති විෂය භාර ගුරුවරයා ස්වයංක්‍රීයව යෙදවේ.
-            </p>
-          </div>
-
-          <!-- Actions -->
-          <div class="flex justify-end gap-2 pt-2 border-t border-slate-200">
-            <button type="button" onclick="resetBasketForm()" class="px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-slate-700">හිස් කරන්න</button>
-            <button type="button" onclick="saveBasketGroup()" class="bg-violet-600 hover:bg-violet-700 text-white font-bold px-4 py-2 rounded-lg text-xs shadow transition">
-              <i class="fa-solid fa-floppy-disk mr-1"></i> කාණ්ඩය සුරකින්න
-            </button>
-          </div>
-        </div>
-
-        <!-- පවතින කාණ්ඩ ලැයිස්තුව -->
-        <div>
-          <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">සකසා ඇති කාණ්ඩ ලැයිස්තුව</h4>
-          <div id="existingBasketsListContainer" class="space-y-2">
-            <!-- Existing baskets list -->
-          </div>
-        </div>
-
+      <!-- 2. විෂය තේරීම -->
+      <div>
+        <label class="block text-[11px] font-bold text-slate-600 mb-1">විෂය (Subject)</label>
+        <select id="groupModalSubjectSelect" onchange="onGroupModalSubjectChange()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-white outline-none focus:border-indigo-600">
+          <!-- Dynamic Subjects -->
+        </select>
       </div>
 
-      <!-- Footer -->
-      <div class="pt-3 border-t border-slate-100 flex justify-end">
-        <button type="button" onclick="closeBasketSetupModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-5 rounded-xl text-xs transition">
-          වසන්න
+      <!-- 3. කාණ්ඩයේ නම / කේතය -->
+      <div>
+        <label class="block text-[11px] font-bold text-slate-600 mb-1">කාණ්ඩ කේතය (Group Code)</label>
+        <select id="groupModalGroupCode" onchange="applyGroupCodeToCurrentSubject()" class="w-full p-2 border border-indigo-300 rounded-lg text-xs font-extrabold text-indigo-800 bg-indigo-50/50 outline-none focus:border-indigo-600">
+          <option value="none">— තනි විෂයයක් ලෙස —</option>
+          <option value="GR 01">GR 01 (කාණ්ඩය 1)</option>
+          <option value="GR 02">GR 02 (කාණ්ඩය 2)</option>
+          <option value="GR 03">GR 03 (කාණ්ඩය 3)</option>
+          <option value="GR 04">GR 04 (කාණ්ඩය 4)</option>
+        </select>
+      </div>
+
+    </div>
+
+    <!-- Class & Teacher Mapping Table -->
+    <div class="mb-4">
+      <div class="flex items-center justify-between text-xs font-bold text-slate-500 mb-2 px-1">
+        <span>පන්තිය</span>
+        <span>ස්වයංක්‍රීයව සම්බන්ධ වන ගුරුවරයා</span>
+      </div>
+      <div id="groupModalClassList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+        <!-- Dynamic Class Rows Rendered Here -->
+      </div>
+    </div>
+
+    <!-- Footer Actions -->
+    <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+      <span id="groupRuleNotice" class="text-[11px] font-bold text-emerald-700"></span>
+      <div class="flex gap-2">
+        <button type="button" onclick="closeCombinedSubjectModal()" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg">
+          අවලංගු කරන්න
+        </button>
+        <button type="button" onclick="saveCombinedSubjectConfiguration()" class="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm">
+          සුරකින්න
         </button>
       </div>
     </div>
+
   </div>
-  
-  
+</div>
 
 <!-- Modal: Annual School Numbers Manager -->
   <div id="schoolNoManagerModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
@@ -4977,6 +4958,9 @@ function renderClassTimetableGrid() {
 
     function deleteClassSlotModalData() { if (!currentModalEditingSlot) return; deleteSingleSlotDirect(currentModalEditingSlot.classId, currentModalEditingSlot.day, currentModalEditingSlot.period); closeClassSlotModal(); }
 
+
+
+    
     // =========================================================================
     // 9. CLASSES & TEACHERS MANAGEMENT
     // =========================================================================
@@ -7218,6 +7202,10 @@ function makeAllocKey(classId, subject) {
     }
 
 
+
+
+
+    
     // =========================================================================
     // 11. BOOTLOADER
     // =========================================================================
@@ -7281,6 +7269,221 @@ window.deleteBasketGroup = deleteBasketGroup;
 window.renderSubjectQuotaTray = renderSubjectQuotaTray;
 window.handleSlotDrop = handleSlotDrop;
     
+ 
+  // =========================================================================
+// DYNAMIC SUBJECT & BASKET GROUP MANAGEMENT
+// =========================================================================
+
+// කාණ්ඩ දත්ත ගබඩාව (Memory + LocalStorage)
+window.subjectBasketGroups = JSON.parse(localStorage.getItem("sch_basket_groups_v1") || "{}");
+
+/**
+ * Modal එක විවෘත කිරීම
+ */
+function openCombinedSubjectModal(targetGrade = null) {
+  const gradeSelect = document.getElementById("groupModalGradeSelect");
+  if (!gradeSelect) return;
+
+  // 1. ශ්‍රේණි ලැයිස්තුව සැකසීම
+  const grades = [...new Set((schoolClasses || []).map(c => cleanGradeNum(c.grade)))].sort((a,b) => a - b);
+  gradeSelect.innerHTML = grades.map(g => `<option value="${g}">Grade ${g}</option>`).join("");
+
+  if (targetGrade && grades.includes(cleanGradeNum(targetGrade))) {
+    gradeSelect.value = cleanGradeNum(targetGrade);
+  }
+
+  loadSubjectsForSelectedGrade();
+
+  const modal = document.getElementById("combinedSubjectModal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeCombinedSubjectModal() {
+  const modal = document.getElementById("combinedSubjectModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+/**
+ * තෝරාගත් ශ්‍රේණියේ විෂයන් Dropdown එකට පැටවීම
+ */
+function loadSubjectsForSelectedGrade() {
+  const grade = cleanGradeNum(document.getElementById("groupModalGradeSelect").value);
+  const subjectSelect = document.getElementById("groupModalSubjectSelect");
+  if (!subjectSelect) return;
+
+  const subjectsOfGrade = (curriculumSubjects || []).filter(cs => cleanGradeNum(cs.grade) === grade);
+  
+  if (subjectsOfGrade.length === 0) {
+    subjectSelect.innerHTML = `<option value="">විෂයන් නැත</option>`;
+  } else {
+    subjectSelect.innerHTML = subjectsOfGrade.map(cs => `<option value="${cs.subject}">${cs.subject}</option>`).join("");
+  }
+
+  onGroupModalSubjectChange();
+}
+
+function onGroupModalGradeOrSubjectChange() {
+  loadSubjectsForSelectedGrade();
+}
+
+/**
+ * විෂය වෙනස් කළ විට ගුරුවරුන් සහ දැනට ඇති Group Code එක කියවීම
+ */
+function onGroupModalSubjectChange() {
+  const grade = cleanGradeNum(document.getElementById("groupModalGradeSelect").value);
+  const subjectName = document.getElementById("groupModalSubjectSelect").value;
+  const groupSelect = document.getElementById("groupModalGroupCode");
+  const container = document.getElementById("groupModalClassList");
+  const notice = document.getElementById("groupRuleNotice");
+
+  if (!subjectName) {
+    container.innerHTML = `<div class="p-3 text-center text-xs text-slate-400">විෂයක් තෝරන්න</div>`;
+    return;
+  }
+
+  const subKey = cleanSubjectKey(subjectName);
+  const storageKey = `G${grade}___${subKey}`;
+
+  // දැනට සුරකින ලද Group Code එක ලබාගැනීම
+  const activeGroup = window.subjectBasketGroups[storageKey] || "none";
+  groupSelect.value = activeGroup;
+
+  // එම විෂයට සුදුසු ගුරුවරයා ස්වයංක්‍රීයව හඳුනාගැනීම (Auto-Link Teacher)
+  const defaultTeacher = (teachers || []).find(t => cleanSubjectKey(t.subject) === subKey);
+
+  // අදාළ ශ්‍රේණියේ පන්ති ලැයිස්තුව පෙන්වීම
+  const classesOfGrade = (schoolClasses || []).filter(c => cleanGradeNum(c.grade) === grade);
+  container.innerHTML = "";
+
+  classesOfGrade.forEach(cls => {
+    // දැනට පන්තියට පවරා ඇති ගුරුවරයා (හෝ Auto-detected ප්‍රධාන ගුරුවරයා)
+    let assignedTeacherId = (cls.subjectTeachers && cls.subjectTeachers[subKey]) || (defaultTeacher ? defaultTeacher.id : "");
+
+    // ගුරු Dropdown විකල්ප සෑදීම
+    let teacherOptions = `<option value="">-- ගුරුවරයෙකු නැත --</option>`;
+    (teachers || []).forEach(t => {
+      const isSelected = String(t.id).trim().toLowerCase() === String(assignedTeacherId).trim().toLowerCase();
+      teacherOptions += `<option value="${t.id}" ${isSelected ? 'selected' : ''}>${t.name} [${t.schoolNo || t.id}]</option>`;
+    });
+
+    const row = document.createElement("div");
+    row.className = "p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3";
+    row.innerHTML = `
+      <div class="w-32">
+        <span class="font-extrabold text-xs text-slate-800 block">${cls.name}</span>
+        <span class="text-[10px] text-indigo-600 font-semibold current-row-grp">${activeGroup === 'none' ? 'තනි විෂය' : activeGroup}</span>
+      </div>
+      <div class="flex-1">
+        <select data-class-id="${cls.id || cls.name}" class="group-modal-teacher-select w-full p-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white outline-none focus:border-indigo-600">
+          ${teacherOptions}
+        </select>
+      </div>
+    `;
+    container.appendChild(row);
+  });
+
+  // එකම කාණ්ඩයට අයත් අනෙකුත් විෂයන් පිළිබඳ දැනුම්දීම (Validation Information)
+  if (activeGroup !== "none") {
+    const siblingSubjects = Object.keys(window.subjectBasketGroups)
+      .filter(k => k.startsWith(`G${grade}___`) && window.subjectBasketGroups[k] === activeGroup && k !== storageKey)
+      .map(k => k.split("___")[1]);
+
+    if (siblingSubjects.length > 0) {
+      notice.innerHTML = `<i class="fa-solid fa-link"></i> ${activeGroup} ට අයත් අනෙකුත් විෂයන්: <b>${siblingSubjects.join(", ")}</b>`;
+    } else {
+      notice.innerText = `${activeGroup} යටතේ ක්‍රියාත්මක වේ.`;
+    }
+  } else {
+    notice.innerText = "";
+  }
+}
+
+/**
+ * Dropdown එකෙන් Group Code එක වෙනස් කළ විට තිරය මත ලේබලය යාවත්කාලීන වීම
+ */
+function applyGroupCodeToCurrentSubject() {
+  const selectedGroup = document.getElementById("groupModalGroupCode").value;
+  document.querySelectorAll(".current-row-grp").forEach(span => {
+    span.textContent = (selectedGroup === "none") ? "තනි විෂය" : selectedGroup;
+  });
+}
+
+/**
+ * දත්ත සුරැකීම (Validation සහ Persistence සහිතව)
+ */
+function saveCombinedSubjectConfiguration() {
+  const grade = cleanGradeNum(document.getElementById("groupModalGradeSelect").value);
+  const subjectName = document.getElementById("groupModalSubjectSelect").value;
+  const groupCode = document.getElementById("groupModalGroupCode").value;
+
+  if (!subjectName) {
+    alert("කරුණාකර විෂයක් තෝරන්න.");
+    return;
+  }
+
+  const subKey = cleanSubjectKey(subjectName);
+  const storageKey = `G${grade}___${subKey}`;
+
+  // 1. Group Code සුරැකීම
+  if (groupCode !== "none") {
+    window.subjectBasketGroups[storageKey] = groupCode;
+  } else {
+    delete window.subjectBasketGroups[storageKey];
+  }
+
+  try {
+    localStorage.setItem("sch_basket_groups_v1", JSON.stringify(window.subjectBasketGroups));
+  } catch (e) {}
+
+  // 2. පන්තිවල ගුරුවරුන් සහ Group දත්ත යාවත්කාලීන කිරීම
+  const rows = document.querySelectorAll("#groupModalClassList > div");
+  const classesOfGrade = (schoolClasses || []).filter(c => cleanGradeNum(c.grade) === grade);
+
+  rows.forEach(row => {
+    const teacherSel = row.querySelector(".group-modal-teacher-select");
+    if (!teacherSel) return;
+
+    const classId = teacherSel.getAttribute("data-class-id");
+    const teacherId = teacherSel.value ? teacherSel.value.trim() : null;
+
+    const cls = classesOfGrade.find(c => String(c.id).trim() === classId || String(c.name).trim() === classId);
+    if (cls) {
+      cls.subjectTeachers = cls.subjectTeachers || {};
+      cls.combinedSubjectGroups = cls.combinedSubjectGroups || {};
+
+      if (teacherId) {
+        cls.subjectTeachers[subKey] = teacherId;
+      } else {
+        delete cls.subjectTeachers[subKey];
+      }
+
+      // පන්තියේ Group දත්ත සටහන් කිරීම
+      if (groupCode !== "none") {
+        cls.combinedSubjectGroups[subKey] = groupCode;
+      } else {
+        delete cls.combinedSubjectGroups[subKey];
+      }
+    }
+  });
+
+  // Main Storage Save
+  if (typeof saveAllToStorage === "function") saveAllToStorage();
+  if (typeof renderCurriculumTable === "function") renderCurriculumTable();
+  if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+
+  closeCombinedSubjectModal();
+  alert(`සාර්ථකයි! Grade ${grade} - '${subjectName}' විෂය සඳහා [${groupCode === 'none' ? 'තනි විෂය' : groupCode}] සාර්ථකව යාවත්කාලීන කරන ලදි.`);
+}
+
+window.openCombinedSubjectModal = openCombinedSubjectModal;
+window.closeCombinedSubjectModal = closeCombinedSubjectModal;
+window.onGroupModalGradeOrSubjectChange = onGroupModalGradeOrSubjectChange;
+window.onGroupModalSubjectChange = onGroupModalSubjectChange;
+window.applyGroupCodeToCurrentSubject = applyGroupCodeToCurrentSubject;
+window.saveCombinedSubjectConfiguration = saveCombinedSubjectConfiguration;
+  
+  
+  
   </script>
 
   
