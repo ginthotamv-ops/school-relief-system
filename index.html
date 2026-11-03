@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V265
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V631
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -4238,6 +4238,74 @@ window.handleSlotDrop = handleSlotDrop;
     /**
  * කාලසටහනෙන් විෂයක් ඉවත් කිරීම (100% Guaranteed Multi-Class Sync)
  */
+
+function removeScheduleSlot(classId, day, period, combinedSubjectId = null, subjectName = null) {
+  day = Number(day);
+  period = Number(period);
+
+  let list = (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) 
+    ? masterSchedule 
+    : (window.masterSchedule || []);
+
+  console.log("🔍 [DEBUG START] Delete ඉල්ලීම ලැබිණි:", { classId, day, period, combinedSubjectId, subjectName });
+
+  // 1. අදාළ වේලාවේ ඇති සියලුම Slots සොයා ගැනීම
+  const sameTimeSlots = list.filter(s => Number(s.day) === day && Number(s.period) === period);
+  console.log(`⏱️ මෙම වේලාවේ (Day ${day}, Period ${period}) පවතින මුළු Slots ගණන:`, sameTimeSlots);
+
+  // 2. ක්ලික් කළ පන්තියේ Slot එක හඳුනාගැනීම
+  const clickedSlot = sameTimeSlots.find(s => 
+    String(s.classId).trim().toLowerCase() === String(classId).trim().toLowerCase()
+  );
+
+  const finalSubName = subjectName || (clickedSlot ? clickedSlot.subject : null);
+  const cleanSubName = finalSubName ? String(finalSubName).trim().toLowerCase() : "";
+
+  console.log("🎯 ඉවත් කිරීමට නියමිත විෂය නම:", cleanSubName);
+
+  // 3. ඉවත් කිරීමේ පෙරහන (Filter)
+  let removedCount = 0;
+  const removedClasses = [];
+
+  const updatedList = list.filter(s => {
+    // වෙනත් වේලාවක නම් තබාගන්න
+    if (Number(s.day) !== day || Number(s.period) !== period) return true;
+
+    const sSub = String(s.subject || "").trim().toLowerCase();
+
+    // කොන්දේසිය: එකම වේලාවේ එකම විෂය නම ඇති සියලු පන්ති මකා දැමීම
+    if (cleanSubName && sSub === cleanSubName) {
+      removedCount++;
+      removedClasses.push(s.classId);
+      return false; // මකන්න
+    }
+
+    // Combined ID ගැළපේ නම් මකා දැමීම
+    if (combinedSubjectId && s.combinedSubjectId === combinedSubjectId) {
+      removedCount++;
+      removedClasses.push(s.classId);
+      return false;
+    }
+
+    return true;
+  });
+
+  // 4. ප්‍රතිඵලය පෙන්වීම
+  console.log(`🗑️ ඉවත් කළ පන්ති (${removedCount}):`, removedClasses);
+  alert(`[DEBUG REPORT]\n• ඉවත් කළ පන්ති ගණන: ${removedCount}\n• අදාළ පන්ති: ${removedClasses.join(", ")}\n\n(ඉතිරි වූ පන්ති ඇත්නම් Console එක බලන්න)`);
+
+  // 5. Memory සහ Storage යාවත්කාලීන කිරීම
+  if (typeof masterSchedule !== "undefined") masterSchedule = updatedList;
+  window.masterSchedule = updatedList;
+
+  if (typeof saveAllToStorage === "function") saveAllToStorage();
+  if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+  if (typeof renderSubjectQuotaTray === "function") renderSubjectQuotaTray(classId);
+}
+
+window.removeScheduleSlot = removeScheduleSlot;
+    
+    /*
 function removeScheduleSlot(classId, day, period, combinedSubjectId = null, subjectName = null) {
   day = Number(day);
   period = Number(period);
@@ -4302,7 +4370,12 @@ function removeScheduleSlot(classId, day, period, combinedSubjectId = null, subj
   if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
 }
 
+  
+
 window.removeScheduleSlot = removeScheduleSlot;
+
+
+    */
     /*
     function removeScheduleSlot(classId, day, period) {
   day = Number(day);
