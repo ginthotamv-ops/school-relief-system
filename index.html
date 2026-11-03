@@ -1007,106 +1007,131 @@
 <!-- Combined Subjects Builder Modal -->
 
   <!-- One-by-One Combined Subject Builder Modal -->
+
+
+<!-- One-by-One Combined Subject Builder Modal (With Edit & Delete) -->
 <div id="combinedSubjectModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 hidden p-4">
-  <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6 border border-slate-200">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6 border border-slate-200 max-h-[90vh] flex flex-col justify-between">
     
     <!-- Modal Header -->
-    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
       <div>
         <h3 class="text-base font-extrabold text-slate-800 flex items-center gap-2">
-          <i class="fa-solid fa-layer-group text-indigo-600"></i> ඒකාබද්ධ විෂයන් සැකසුම (One-by-One Combined Subject Builder)
+          <i class="fa-solid fa-layer-group text-indigo-600"></i> ඒකාබද්ධ විෂයන් සැකසුම (Combined Subject Builder)
         </h3>
-        <p class="text-xs text-slate-500 mt-0.5">තනි තනිව විෂයන් තෝරා ඒකාබද්ධ විෂයයන් සාදන්න.</p>
+        <p class="text-xs text-slate-500 mt-0.5">විෂයන් එක් කර ඒකාබද්ධ කරන්න; අනවශ්‍ය නම් ඉවත් කර තනි විෂයන් Tray එකට ලබාගන්න.</p>
       </div>
       <button type="button" onclick="closeCombinedSubjectModal()" class="text-slate-400 hover:text-slate-600 text-lg">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
 
-    <!-- 1. ශ්‍රේණිය තේරීම -->
-    <div class="mb-4">
-      <label class="block text-xs font-bold text-slate-700 mb-1">ශ්‍රේණිය (Grade)</label>
-      <select id="combModalGradeSelect" onchange="onCombinedGradeChange()" class="w-48 p-2 border border-slate-300 rounded-lg text-xs font-bold bg-white outline-none focus:border-indigo-600">
-        <!-- Grades dynamically generated -->
-      </select>
-    </div>
+    <div class="overflow-y-auto pr-1 flex-1 space-y-4">
+      <!-- 1. ශ්‍රේණිය තේරීම -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">ශ්‍රේණිය (Grade)</label>
+        <select id="combModalGradeSelect" onchange="onCombinedGradeChange()" class="w-48 p-2 border border-slate-300 rounded-lg text-xs font-bold bg-white outline-none focus:border-indigo-600">
+          <!-- Dynamic Grades -->
+        </select>
+      </div>
 
-    <!-- 2. අලුතින් එක් කරන කොටස (Single Subject & Filtered Group) -->
-    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4">
-      <span class="text-[11px] font-bold text-slate-500 block mb-2">අලුතින් එක් කරන්න (Add New)</span>
-      
-      <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-        <!-- තනි විෂයක් තේරීම -->
-        <div class="md:col-span-5">
-          <label class="block text-[11px] font-bold text-slate-600 mb-1">විෂය (Subject)</label>
-          <select id="combOneSubSelect" onchange="onCombOneSubChange()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white outline-none focus:border-indigo-600">
-            <!-- Dynamic Subjects -->
-          </select>
+      <!-- 2. අලුතින් එක් කරන පෝරමය (Add / Select Form) -->
+      <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+        <span class="text-[11px] font-bold text-slate-500 block mb-2">විෂයයන් එකින් එක තෝරන්න (Select Subjects)</span>
+        
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-end">
+          <div class="md:col-span-5">
+            <label class="block text-[11px] font-bold text-slate-600 mb-1">විෂය (Subject)</label>
+            <select id="combOneSubSelect" onchange="onCombOneSubChange()" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white outline-none focus:border-indigo-600">
+              <!-- Dynamic Subjects -->
+            </select>
+          </div>
+
+          <div class="md:col-span-4">
+            <label class="block text-[11px] font-bold text-slate-600 mb-1">කාණ්ඩය (Group)</label>
+            <select id="combOneGrpSelect" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold text-indigo-700 bg-white outline-none focus:border-indigo-600">
+              <!-- Filtered Groups -->
+            </select>
+          </div>
+
+          <div class="md:col-span-3">
+            <button type="button" onclick="addStagedSubjectEntry()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition shadow-xs flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-plus text-[11px]"></i> + එක් කරන්න
+            </button>
+          </div>
         </div>
+      </div>
 
-        <!-- එම විෂයට අදාළ පවතින කාණ්ඩ (Filtered Existing Groups) -->
-        <div class="md:col-span-4">
-          <label class="block text-[11px] font-bold text-slate-600 mb-1">කාණ්ඩය (Group)</label>
-          <select id="combOneGrpSelect" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold text-indigo-700 bg-white outline-none focus:border-indigo-600">
-            <!-- Auto-populated from existing class groups -->
-          </select>
+      <!-- 3. තාවකාලික වගුව (Staging Table) -->
+      <div class="border border-slate-200 rounded-xl overflow-hidden">
+        <div class="max-h-36 overflow-y-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold text-[11px]">
+                <th class="p-2">එකතු කළ විෂය</th>
+                <th class="p-2">කාණ්ඩය සහ පන්ති</th>
+                <th class="p-2 text-center w-16">ඉවත් කිරීම</th>
+              </tr>
+            </thead>
+            <tbody id="combStagedTableBody">
+              <!-- Dynamic Staged Rows -->
+            </tbody>
+          </table>
         </div>
+      </div>
 
-        <!-- තාවකාලික ලැයිස්තුවට එක් කිරීමේ බොත්තම -->
-        <div class="md:col-span-3">
-          <button type="button" onclick="addStagedSubjectEntry()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition shadow-xs flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-plus text-[11px]"></i> + එක් කරන්න
-          </button>
+      <!-- 4. අවසන් කිරීමේ / යාවත්කාලීන කිරීමේ කොටස -->
+      <div class="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-end">
+          <div class="md:col-span-7">
+            <label class="block text-[11px] font-bold text-indigo-950 mb-1">ඒකාබද්ධ විෂයයේ නම (Combined Subject Name)</label>
+            <input type="text" id="combFinalNameInput" placeholder="උදා: සෞන්දර්ය කාණ්ඩය (GR 01)" class="w-full p-2 border border-indigo-300 rounded-lg text-xs font-bold bg-white outline-none focus:border-indigo-600">
+          </div>
+          <div class="md:col-span-5 flex gap-1.5">
+            <button type="button" id="combFinalizeBtn" onclick="finalizeCombinedSubject()" class="flex-1 py-2 bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs rounded-lg transition shadow-sm flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-link text-[11px]"></i> 🔗 ඒකාබද්ධ කරන්න
+            </button>
+            <button type="button" id="combCancelEditBtn" onclick="cancelEditingCombinedSubject()" class="hidden px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-lg transition">
+              අවලංගු
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. දැනට සාදා ඇති ඒකාබද්ධ විෂයන් (Saved Combined Subjects List) -->
+      <div>
+        <span class="text-xs font-extrabold text-slate-700 block mb-1.5">
+          <i class="fa-solid fa-list-check text-indigo-600 mr-1"></i> මෙම ශ්‍රේණියේ පවතින ඒකාබද්ධ විෂයන් (Active Combined Subjects)
+        </span>
+        <div class="border border-slate-200 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 font-bold text-[11px] border-b border-slate-200">
+                <th class="p-2">නම</th>
+                <th class="p-2">අඩංගු විෂයන්</th>
+                <th class="p-2">පන්ති</th>
+                <th class="p-2 text-center w-24">ක්‍රියාකාරකම්</th>
+              </tr>
+            </thead>
+            <tbody id="combSavedListTableBody">
+              <!-- Saved Combined Subjects Rendered Here -->
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
 
-    <!-- 3. එකතු කළ විෂයන්ගේ තාවකාලික වගුව (Staging Table) -->
-    <div class="border border-slate-200 rounded-xl overflow-hidden mb-4">
-      <div class="max-h-48 overflow-y-auto">
-        <table class="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold text-[11px]">
-              <th class="p-2.5">විෂය (Subject)</th>
-              <th class="p-2.5">කාණ්ඩය (Group)</th>
-              <th class="p-2.5 text-center w-20">ක්‍රියාකාරකම්</th>
-            </tr>
-          </thead>
-          <tbody id="combStagedTableBody">
-            <!-- Staged Rows Rendered Here -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- 4. අවසන් ඒකාබද්ධ කිරීමේ කොටස (Finalize Combined Subject) -->
-    <div class="p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl mb-4">
-      <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-        <div class="md:col-span-7">
-          <label class="block text-[11px] font-bold text-indigo-900 mb-1">ඒකාබද්ධ විෂයයේ නම (Combined Subject Name)</label>
-          <input type="text" id="combFinalNameInput" placeholder="උදා: සෞන්දර්ය කාණ්ඩය (GR 01)" class="w-full p-2 border border-indigo-300 rounded-lg text-xs font-bold bg-white outline-none focus:border-indigo-600">
-        </div>
-        <div class="md:col-span-5">
-          <button type="button" onclick="finalizeCombinedSubject()" class="w-full py-2 bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs rounded-lg transition shadow-sm flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-link text-[11px]"></i> 🔗 මෙම විෂයන් ඒකාබද්ධ කරන්න
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Footer Actions -->
-    <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-      <button type="button" onclick="closeCombinedSubjectModal()" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg">
-        අවලංගු කරන්න
-      </button>
-      <button type="button" onclick="saveAllCombinedSubjects()" class="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm">
-        සියල්ල සුරකින්න
+    <!-- Footer -->
+    <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 mt-2">
+      <button type="button" onclick="closeCombinedSubjectModal()" class="px-5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg">
+        වසන්න
       </button>
     </div>
 
   </div>
 </div>
- 
+
+  
 <!-- Modal: Annual School Numbers Manager -->
   <div id="schoolNoManagerModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-slate-200 max-h-[90vh] flex flex-col">
@@ -7538,29 +7563,7 @@ window.combinedCurriculumSubjects = JSON.parse(localStorage.getItem("sch_combine
 /**
  * ශ්‍රේණියට අදාළ විෂයන් සහ සකස් කර ඇති Combined Subjects පෙන්වීම
  */
-function loadCombinedModalData() {
-  const grade = cleanGradeNum(document.getElementById("combModalGradeSelect").value);
-  const chkContainer = document.getElementById("combSubjectCheckboxes");
-  const nameInput = document.getElementById("combNewSubjectName");
 
-  if (nameInput) nameInput.value = "";
-
-  // ශ්‍රේණියට දැනට විෂය නිර්දේශයේ ඇති විෂයන් ලබාගැනීම
-  const subjectsOfGrade = (curriculumSubjects || []).filter(cs => cleanGradeNum(cs.grade) === grade);
-
-  if (subjectsOfGrade.length === 0) {
-    chkContainer.innerHTML = `<span class="text-xs text-slate-400">විෂයන් ලියාපදිංචි කර නැත</span>`;
-  } else {
-    chkContainer.innerHTML = subjectsOfGrade.map(cs => `
-      <label class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 cursor-pointer select-none">
-        <input type="checkbox" value="${cs.subject}" class="comb-sub-checkbox accent-indigo-600 rounded">
-        ${cs.subject}
-      </label>
-    `).join("");
-  }
-
-  renderCombinedSubjectsTable();
-}
 
 /**
  * අලුතින් Combined Subject එකක් සෑදීම (+ ඒකාබද්ධ විෂයක් සාදන්න)
@@ -7661,8 +7664,15 @@ function renderCombinedSubjectsTable() {
 // ONE-BY-ONE COMBINED SUBJECT BUILDER CONTROLLER
 // =========================================================================
 
+
+
+   // =========================================================================
+// ADVANCED COMBINED SUBJECT BUILDER (WITH EDIT, DELETE & TRAY RESTORE)
+// =========================================================================
+
 window.combinedCurriculumSubjects = JSON.parse(localStorage.getItem("sch_combined_subjects_v1") || "[]");
-window.combStagedItems = []; // Staging array for items before clicking "Combine All"
+window.combStagedItems = [];
+window.editingCombinedSubjectId = null; // සංස්කරණය කරන විෂයේ ID එක
 
 function openCombinedSubjectModal(targetGrade = null) {
   const gradeSel = document.getElementById("combModalGradeSelect");
@@ -7675,22 +7685,343 @@ function openCombinedSubjectModal(targetGrade = null) {
     gradeSel.value = cleanGradeNum(targetGrade);
   }
 
-  window.combStagedItems = [];
-  loadCombinedModalSubjects();
+  cancelEditingCombinedSubject();
+  loadCombinedModalData();
 
   const modal = document.getElementById("combinedSubjectModal");
   if (modal) modal.classList.remove("hidden");
 }
 
 function closeCombinedSubjectModal() {
+  cancelEditingCombinedSubject();
   const modal = document.getElementById("combinedSubjectModal");
   if (modal) modal.classList.add("hidden");
 }
 
 function onCombinedGradeChange() {
-  window.combStagedItems = [];
-  loadCombinedModalSubjects();
+  cancelEditingCombinedSubject();
+  loadCombinedModalData();
 }
+
+function loadCombinedModalData() {
+  const grade = cleanGradeNum(document.getElementById("combModalGradeSelect").value);
+  const subSel = document.getElementById("combOneSubSelect");
+  const subjectsOfGrade = (curriculumSubjects || []).filter(cs => cleanGradeNum(cs.grade) === grade);
+
+  if (subjectsOfGrade.length === 0) {
+    subSel.innerHTML = `<option value="">විෂයන් නැත</option>`;
+  } else {
+    subSel.innerHTML = subjectsOfGrade.map(cs => `<option value="${cs.subject}">${cs.subject}</option>`).join("");
+  }
+
+  onCombOneSubChange();
+  renderStagedTable();
+  renderSavedCombinedSubjectsList();
+}
+
+/**
+ * විෂය වෙනස් කළ විට ඊට අදාළ Groups පෙරීම
+ */
+function onCombOneSubChange() {
+  const grade = cleanGradeNum(document.getElementById("combModalGradeSelect").value);
+  const subjectName = document.getElementById("combOneSubSelect").value;
+  const grpSel = document.getElementById("combOneGrpSelect");
+  if (!grpSel || !subjectName) return;
+
+  const subKey = cleanSubjectKey(subjectName);
+  const classesOfGrade = (schoolClasses || []).filter(c => cleanGradeNum(c.grade) === grade);
+
+  let clusterStorage = {};
+  try { clusterStorage = JSON.parse(localStorage.getItem("sch_cluster_groups_v1") || "{}"); } catch(e){}
+
+  const groupMap = {};
+
+  classesOfGrade.forEach(cls => {
+    const cId = String(cls.id || cls.name).trim();
+    const storageKey = `${cId}___${subKey}`;
+
+    let grp = (cls.combinedSubjectGroups && cls.combinedSubjectGroups[subKey]) 
+              ? cls.combinedSubjectGroups[subKey] 
+              : clusterStorage[storageKey];
+
+    if (grp && grp !== "none") {
+      const cleanGrp = grp.replace("group_", "GR 0");
+      if (!groupMap[cleanGrp]) groupMap[cleanGrp] = [];
+      groupMap[cleanGrp].push(cls.name || cId);
+    }
+  });
+
+  const keys = Object.keys(groupMap);
+  if (keys.length === 0) {
+    grpSel.innerHTML = `<option value="">-- කාණ්ඩ (Groups) නැත --</option>`;
+  } else {
+    grpSel.innerHTML = keys.map(k => {
+      return `<option value="${k}" data-classes="${groupMap[k].join("|")}">${k} (${groupMap[k].join(", ")})</option>`;
+    }).join("");
+  }
+}
+
+function addStagedSubjectEntry() {
+  const subjectName = document.getElementById("combOneSubSelect").value;
+  const grpSel = document.getElementById("combOneGrpSelect");
+  const groupCode = grpSel.value;
+
+  if (!subjectName || !groupCode) {
+    alert("කරුණාකර විෂය සහ අදාළ කාණ්ඩය තෝරන්න.");
+    return;
+  }
+
+  const selectedOpt = grpSel.options[grpSel.selectedIndex];
+  const groupClasses = selectedOpt ? selectedOpt.getAttribute("data-classes").split("|") : [];
+
+  if (window.combStagedItems.some(i => i.subject === subjectName)) {
+    alert(`'${subjectName}' දැනටමත් ලැයිස්තුවට එක් කර ඇත.`);
+    return;
+  }
+
+  if (window.combStagedItems.length > 0 && window.combStagedItems[0].groupCode !== groupCode) {
+    alert(`දෝෂයකි: සියලු විෂයන් එකම කාණ්ඩයට (${window.combStagedItems[0].groupCode}) අයත් විය යුතුය.`);
+    return;
+  }
+
+  window.combStagedItems.push({
+    subject: subjectName,
+    groupCode: groupCode,
+    classes: groupClasses
+  });
+
+  const nameInput = document.getElementById("combFinalNameInput");
+  if (!nameInput.value.trim()) {
+    nameInput.value = `සෞන්දර්ය කාණ්ඩය (${groupCode})`;
+  }
+
+  renderStagedTable();
+}
+
+function removeStagedSubjectEntry(index) {
+  window.combStagedItems.splice(index, 1);
+  renderStagedTable();
+}
+
+function renderStagedTable() {
+  const tbody = document.getElementById("combStagedTableBody");
+  if (!tbody) return;
+
+  if (window.combStagedItems.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3" class="p-3 text-center text-slate-400 text-xs">විෂයන් තෝරා '+ එක් කරන්න' ඔබන්න.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = window.combStagedItems.map((item, idx) => `
+    <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+      <td class="p-2 font-bold text-slate-800">${item.subject}</td>
+      <td class="p-2 text-indigo-700 font-bold">${item.groupCode} (${item.classes.join(", ")})</td>
+      <td class="p-2 text-center">
+        <button type="button" onclick="removeStagedSubjectEntry(${idx})" class="text-rose-400 hover:text-rose-600 p-1">
+          <i class="fa-regular fa-trash-can"></i>
+        </button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+/**
+ * ඒකාබද්ධ විෂය සෑදීම හෝ යාවත්කාලීන කිරීම (Create / Update)
+ */
+function finalizeCombinedSubject() {
+  const grade = cleanGradeNum(document.getElementById("combModalGradeSelect").value);
+  const nameInput = document.getElementById("combFinalNameInput");
+  const combinedName = nameInput ? nameInput.value.trim() : "";
+
+  if (window.combStagedItems.length < 2) {
+    alert("ඒකාබද්ධ විෂයක් සඳහා අවම වශයෙන් විෂයන් 2ක් වත් එක් කළ යුතුය.");
+    return;
+  }
+  if (!combinedName) {
+    alert("කරුණාකර ඒකාබද්ධ විෂය සඳහා නමක් ඇතුළත් කරන්න.");
+    return;
+  }
+
+  const groupCode = window.combStagedItems[0].groupCode;
+  const targetClasses = window.combStagedItems[0].classes;
+  const subjectsList = window.combStagedItems.map(it => it.subject);
+
+  const firstSub = (curriculumSubjects || []).find(cs => cleanGradeNum(cs.grade) === grade && cs.subject === subjectsList[0]);
+  const defaultWeekly = firstSub ? Number(firstSub.maxWeekly) || 2 : 2;
+
+  if (window.editingCombinedSubjectId) {
+    // ✏️ UPDATE EXISTING
+    const targetIdx = window.combinedCurriculumSubjects.findIndex(c => c.id === window.editingCombinedSubjectId);
+    if (targetIdx !== -1) {
+      window.combinedCurriculumSubjects[targetIdx].name = combinedName;
+      window.combinedCurriculumSubjects[targetIdx].groupCode = groupCode;
+      window.combinedCurriculumSubjects[targetIdx].targetClassIds = targetClasses;
+      window.combinedCurriculumSubjects[targetIdx].subjects = subjectsList;
+      window.combinedCurriculumSubjects[targetIdx].maxWeekly = defaultWeekly;
+    }
+    alert(`සාර්ථකයි! '${combinedName}' යාවත්කාලීන කරන ලදි.`);
+  } else {
+    // ➕ CREATE NEW
+    const newCombined = {
+      id: `comb_${Date.now()}`,
+      grade: grade,
+      name: combinedName,
+      groupCode: groupCode,
+      targetClassIds: targetClasses,
+      subjects: subjectsList,
+      maxWeekly: defaultWeekly,
+      isCombined: true
+    };
+    window.combinedCurriculumSubjects.push(newCombined);
+    alert(`සාර්ථකයි! '${combinedName}' අලුතින් එක් කරන ලදි.`);
+  }
+
+  saveCombinedSubjectsToStorage();
+  cancelEditingCombinedSubject();
+  loadCombinedModalData();
+  refreshTimetableAndTray();
+}
+
+/**
+ * ✏️ සංස්කරණය සඳහා තොරතුරු පෝරමයට පැටවීම (Edit Handler)
+ */
+function editSavedCombinedSubject(id) {
+  const item = (window.combinedCurriculumSubjects || []).find(c => c.id === id);
+  if (!item) return;
+
+  window.editingCombinedSubjectId = item.id;
+  document.getElementById("combFinalNameInput").value = item.name;
+
+  window.combStagedItems = (item.subjects || []).map(sub => ({
+    subject: sub,
+    groupCode: item.groupCode,
+    classes: item.targetClassIds || []
+  }));
+
+  const btn = document.getElementById("combFinalizeBtn");
+  const cancelBtn = document.getElementById("combCancelEditBtn");
+  if (btn) btn.innerHTML = `<i class="fa-solid fa-pen-to-square text-[11px]"></i> ✏️ යාවත්කාලීන කරන්න`;
+  if (cancelBtn) cancelBtn.classList.remove("hidden");
+
+  renderStagedTable();
+}
+
+function cancelEditingCombinedSubject() {
+  window.editingCombinedSubjectId = null;
+  window.combStagedItems = [];
+  const nameInput = document.getElementById("combFinalNameInput");
+  if (nameInput) nameInput.value = "";
+
+  const btn = document.getElementById("combFinalizeBtn");
+  const cancelBtn = document.getElementById("combCancelEditBtn");
+  if (btn) btn.innerHTML = `<i class="fa-solid fa-link text-[11px]"></i> 🔗 ඒකාබද්ධ කරන්න`;
+  if (cancelBtn) cancelBtn.classList.add("hidden");
+
+  renderStagedTable();
+}
+
+/**
+ * 🗑️ ඉවත් කිරීම සහ තනි විෂයන් නැවත Tray එකට ගෙන්වා ගැනීම (Delete & Restore Handler)
+ */
+function deleteSavedCombinedSubject(id) {
+  const item = (window.combinedCurriculumSubjects || []).find(c => c.id === id);
+  if (!item) return;
+
+  const confirmMsg = `ඔබට '${item.name}' ඒකාබද්ධ විෂය ඉවත් කිරීමට අවශ්‍ය බව තහවුරු කරන්නද?\n\n` +
+                     `• මෙහි අඩංගු (${item.subjects.join(", ")}) තනි විෂයන් නැවත Quota Tray එකට ලැබෙනු ඇත.\n` +
+                     `• කාලසටහනේ මෙම විෂය සඳහා යොදා ඇති Slots තිබේ නම් ඒවාද ඉවත් වේ.`;
+
+  if (!confirm(confirmMsg)) return;
+
+  // 1. කාලසටහනෙන් (masterSchedule) අදාළ Combined Slots ඉවත් කිරීම
+  if (Array.isArray(window.masterSchedule)) {
+    window.masterSchedule = window.masterSchedule.filter(s => s.combinedSubjectId !== id);
+  }
+
+  // 2. Combined Subjects ලැයිස්තුවෙන් ඉවත් කිරීම
+  window.combinedCurriculumSubjects = window.combinedCurriculumSubjects.filter(c => c.id !== id);
+
+  // 3. LocalStorage වෙත සුරැකීම
+  saveCombinedSubjectsToStorage();
+
+  // 4. Modal එකේ ලැයිස්තුව යාවත්කාලීන කිරීම
+  renderSavedCombinedSubjectsList();
+
+  // 5. Grid සහ Drag Tray යාවත්කාලීන කිරීම (තනි විෂයන් ක්ෂණිකව Tray එකට නැවත පෙන්වයි)
+  refreshTimetableAndTray();
+
+  alert(`'${item.name}' සාර්ථකව ඉවත් කරන ලදි. අදාළ තනි විෂයන් නැවත Drag Tray එකට ලැබී ඇත.`);
+}
+
+/**
+ * දැනට සාදා ඇති Combined Subjects ලැයිස්තුව ඇඳීම
+ */
+function renderSavedCombinedSubjectsList() {
+  const grade = cleanGradeNum(document.getElementById("combModalGradeSelect").value);
+  const tbody = document.getElementById("combSavedListTableBody");
+  if (!tbody) return;
+
+  const gradeItems = (window.combinedCurriculumSubjects || []).filter(c => cleanGradeNum(c.grade) === grade);
+
+  if (gradeItems.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-slate-400 text-xs">මෙම ශ්‍රේණිය සඳහා දැනට ඒකාබද්ධ විෂයන් සකසා නැත.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = gradeItems.map(item => `
+    <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+      <td class="p-2 font-extrabold text-slate-800">
+        <span class="text-indigo-600 mr-1"><i class="fa-solid fa-layer-group"></i></span>${item.name}
+      </td>
+      <td class="p-2 font-semibold text-slate-600 text-[11px]">
+        ${item.subjects.join(", ")}
+      </td>
+      <td class="p-2 text-indigo-700 font-bold text-[11px]">
+        ${item.groupCode} (${(item.targetClassIds || []).join(", ")})
+      </td>
+      <td class="p-2 text-center flex items-center justify-center gap-1.5">
+        <button type="button" onclick="editSavedCombinedSubject('${item.id}')" class="text-amber-500 hover:text-amber-600 p-1" title="සංස්කරණය">
+          <i class="fa-solid fa-pen-to-square text-xs"></i>
+        </button>
+        <button type="button" onclick="deleteSavedCombinedSubject('${item.id}')" class="text-rose-500 hover:text-rose-700 p-1" title="ඉවත් කරන්න (Delete)">
+          <i class="fa-solid fa-trash-can text-xs"></i>
+        </button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function saveCombinedSubjectsToStorage() {
+  try {
+    localStorage.setItem("sch_combined_subjects_v1", JSON.stringify(window.combinedCurriculumSubjects));
+  } catch(e) {
+    console.error("Storage Error:", e);
+  }
+}
+
+function refreshTimetableAndTray() {
+  if (typeof saveAllToStorage === "function") saveAllToStorage();
+  if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+  
+  const activeClassId = window.currentSelectedClassId || (schoolClasses && schoolClasses[0] ? schoolClasses[0].id : null);
+  if (activeClassId && typeof renderSubjectQuotaTray === "function") {
+    renderSubjectQuotaTray(activeClassId);
+  }
+}
+
+// Global Window Bindings
+window.openCombinedSubjectModal = openCombinedSubjectModal;
+window.closeCombinedSubjectModal = closeCombinedSubjectModal;
+window.onCombinedGradeChange = onCombinedGradeChange;
+window.onCombOneSubChange = onCombOneSubChange;
+window.addStagedSubjectEntry = addStagedSubjectEntry;
+window.removeStagedSubjectEntry = removeStagedSubjectEntry;
+window.finalizeCombinedSubject = finalizeCombinedSubject;
+window.editSavedCombinedSubject = editSavedCombinedSubject;
+window.cancelEditingCombinedSubject = cancelEditingCombinedSubject;
+window.deleteSavedCombinedSubject = deleteSavedCombinedSubject; 
+
+
 
 /**
  * තෝරාගත් ශ්‍රේණියේ විෂයන් Dropdown එකට පැටවීම
@@ -7713,177 +8044,18 @@ function loadCombinedModalSubjects() {
 /**
  * තෝරාගත් විෂයට අදාළව දැනට පද්ධතියේ ඇති Groups පමණක් පෙරීම (Filter Groups)
  */
-function onCombOneSubChange() {
-  const grade = cleanGradeNum(document.getElementById("combModalGradeSelect").value);
-  const subjectName = document.getElementById("combOneSubSelect").value;
-  const grpSel = document.getElementById("combOneGrpSelect");
-  if (!grpSel || !subjectName) return;
 
-  const subKey = cleanSubjectKey(subjectName);
-  const classesOfGrade = (schoolClasses || []).filter(c => cleanGradeNum(c.grade) === grade);
-
-  let clusterStorage = {};
-  try { clusterStorage = JSON.parse(localStorage.getItem("sch_cluster_groups_v1") || "{}"); } catch(e){}
-
-  // විෂය සඳහා පන්ති බෙදී ඇති Groups සොයා ගැනීම
-  const groupMap = {}; // { "GR 01": ["10-A", "10-B"], "GR 02": [...] }
-
-  classesOfGrade.forEach(cls => {
-    const cId = String(cls.id || cls.name).trim();
-    const storageKey = `${cId}___${subKey}`;
-
-    let grp = (cls.combinedSubjectGroups && cls.combinedSubjectGroups[subKey]) 
-              ? cls.combinedSubjectGroups[subKey] 
-              : clusterStorage[storageKey];
-
-    if (grp && grp !== "none") {
-      const cleanGrp = grp.replace("group_", "GR 0");
-      if (!groupMap[cleanGrp]) groupMap[cleanGrp] = [];
-      groupMap[cleanGrp].push(cls.name || cId);
-    }
-  });
-
-  const availableGroupKeys = Object.keys(groupMap);
-
-  if (availableGroupKeys.length === 0) {
-    grpSel.innerHTML = `<option value="">-- මෙම විෂය සඳහා කාණ්ඩ (Groups) සකසා නැත --</option>`;
-  } else {
-    grpSel.innerHTML = availableGroupKeys.map(grpCode => {
-      const classListStr = groupMap[grpCode].join(", ");
-      return `<option value="${grpCode}" data-classes="${groupMap[grpCode].join("|")}">${grpCode} (${classListStr})</option>`;
-    }).join("");
-  }
-}
 
 /**
  * විෂය සහ Group එක තාවකාලික වගුවට එක් කිරීම (+ එක් කරන්න)
  */
-function addStagedSubjectEntry() {
-  const subjectName = document.getElementById("combOneSubSelect").value;
-  const grpSel = document.getElementById("combOneGrpSelect");
-  const groupCode = grpSel.value;
 
-  if (!subjectName) {
-    alert("කරුණාකර විෂයක් තෝරන්න.");
-    return;
-  }
-  if (!groupCode) {
-    alert("තෝරාගත් විෂය සඳහා පන්ති කාණ්ඩ සකසා නොමැත. කරුණාකර පළමුව 'ගුරුවරුන්' සැකසුමෙන් අදාළ පන්ති කාණ්ඩගත කරන්න.");
-    return;
-  }
 
-  const selectedOpt = grpSel.options[grpSel.selectedIndex];
-  const groupClasses = selectedOpt ? selectedOpt.getAttribute("data-classes").split("|") : [];
 
-  // දැනටමත් මෙම විෂය ලැයිස්තුවේ ඇත්දැයි බැලීම
-  if (window.combStagedItems.some(item => item.subject === subjectName)) {
-    alert(`'${subjectName}' විෂය දැනටමත් මෙම ලැයිස්තුවට එක් කර ඇත.`);
-    return;
-  }
-
-  // වෙනත් Group කේතයක් සමඟ මිශ්‍ර වීම වැළැක්වීම (Bucket Consistency)
-  if (window.combStagedItems.length > 0 && window.combStagedItems[0].groupCode !== groupCode) {
-    alert(`දෝෂයකි: සියලු විෂයන් එකම කාණ්ඩයට (${window.combStagedItems[0].groupCode}) අයත් විය යුතුය.`);
-    return;
-  }
-
-  window.combStagedItems.push({
-    subject: subjectName,
-    groupCode: groupCode,
-    classes: groupClasses
-  });
-
-  // Default Combined Name එකක් සූදානම් කිරීම
-  const nameInput = document.getElementById("combFinalNameInput");
-  if (!nameInput.value.trim()) {
-    nameInput.value = `සෞන්දර්ය කාණ්ඩය (${groupCode})`;
-  }
-
-  renderStagedTable();
-}
-
-function removeStagedSubjectEntry(index) {
-  window.combStagedItems.splice(index, 1);
-  renderStagedTable();
-}
-
-function renderStagedTable() {
-  const tbody = document.getElementById("combStagedTableBody");
-  if (!tbody) return;
-
-  if (window.combStagedItems.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="3" class="p-4 text-center text-slate-400 font-semibold text-xs">
-          තවමත් කිසිදු විෂයක් එක් කර නොමැත. ඉහතින් විෂයක් සහ කාණ්ඩයක් තෝරා '+ එක් කරන්න' ඔබන්න.
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  tbody.innerHTML = window.combStagedItems.map((item, idx) => `
-    <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
-      <td class="p-2.5 font-bold text-slate-800">
-        <i class="fa-solid fa-book-open text-indigo-500 mr-1.5"></i>${item.subject}
-      </td>
-      <td class="p-2.5 font-semibold text-indigo-700">
-        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-indigo-50 border border-indigo-200">
-          <i class="fa-solid fa-link text-[9px]"></i> ${item.groupCode} (${item.classes.join(", ")})
-        </span>
-      </td>
-      <td class="p-2.5 text-center">
-        <button type="button" onclick="removeStagedSubjectEntry(${idx})" class="text-rose-400 hover:text-rose-600 p-1" title="ඉවත් කරන්න">
-          <i class="fa-regular fa-trash-can text-sm"></i>
-        </button>
-      </td>
-    </tr>
-  `).join("");
-}
 
 /**
  * මෙම විෂයන් සියල්ල එකතු කර Combined Subject එක සෑදීම
  */
-function finalizeCombinedSubject() {
-  const grade = cleanGradeNum(document.getElementById("combModalGradeSelect").value);
-  const nameInput = document.getElementById("combFinalNameInput");
-  const combinedName = nameInput ? nameInput.value.trim() : "";
-
-  if (window.combStagedItems.length < 2) {
-    alert("ඒකාබද්ධ විෂයක් සෑදීම සඳහා අවම වශයෙන් විෂයන් 2ක් වත් ලැයිස්තුවට එක් කළ යුතුය.");
-    return;
-  }
-  if (!combinedName) {
-    alert("කරුණාකර ඒකාබද්ධ විෂය සඳහා නමක් ඇතුළත් කරන්න.");
-    return;
-  }
-
-  const groupCode = window.combStagedItems[0].groupCode;
-  const targetClasses = window.combStagedItems[0].classes;
-  const subjectsList = window.combStagedItems.map(it => it.subject);
-
-  // සතිපතා උපරිම වාර ගණන කියවීම
-  const firstSub = (curriculumSubjects || []).find(cs => cleanGradeNum(cs.grade) === grade && cs.subject === subjectsList[0]);
-  const defaultWeekly = firstSub ? Number(firstSub.maxWeekly) || 2 : 2;
-
-  const newCombinedSubject = {
-    id: `comb_${Date.now()}`,
-    grade: grade,
-    name: combinedName,
-    groupCode: groupCode,
-    targetClassIds: targetClasses,
-    subjects: subjectsList,
-    maxWeekly: defaultWeekly,
-    isCombined: true
-  };
-
-  window.combinedCurriculumSubjects.push(newCombinedSubject);
-  window.combStagedItems = [];
-  nameInput.value = "";
-  renderStagedTable();
-
-  alert(`සාර්ථකයි! '${combinedName}' සාදන ලදි. 'සියල්ල සුරකින්න' ඔබා වෙනස්කම් ස්ථිර කරන්න.`);
-}
 
 function saveAllCombinedSubjects() {
   try {
