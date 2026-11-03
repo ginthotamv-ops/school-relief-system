@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V111
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V10000
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -3330,6 +3330,7 @@ function resetSystemData() {
 
     
     // 3. කාලසටහනේ දින 5ම Render කිරීම සහ Drop Zones සැකසීම
+
 function renderClassTimetableGrid() {
       if (typeof populateClassTimetableDropdown === "function") {
         populateClassTimetableDropdown();
@@ -3501,7 +3502,6 @@ function renderClassTimetableGrid() {
     // පැරණි නමින් කැඳවීමක් ආවද නව ශ්‍රිතයම ක්‍රියාත්මක වීමට Alias එකක් සැකසීම
     window.removeTimetableSlot = window.removeScheduleSlot;
     window.renderClassTimetableGrid = renderClassTimetableGrid;
-
     // 4. Drag & Drop Event Handlers
 // =========================================================================
     // BULLETPROOF DRAG & DROP CONTROLLERS FOR TIMETABLE GRID
