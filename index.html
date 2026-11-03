@@ -4231,91 +4231,103 @@ window.handleSlotDrop = handleSlotDrop;
  * කාලසටහනෙන් විෂයක් ඉවත් කිරීම (Bulletproof Direct Peer Propagation)
  * 6-A, 6-B, 6-C අතුරින් ඕනෑම පන්තියකින් ඉවත් කළ විට කාණ්ඩයේ සියලු පන්තිවලින් එකවර මැකී යයි.
  */
+/**
+ * කාලසටහනෙන් විෂයක් ඉවත් කිරීම (Foolproof Multi-Class Sync)
+ */
 function removeScheduleSlot(classId, day, period) {
   day = Number(day);
   period = Number(period);
   const targetCid = String(classId).trim().toLowerCase();
 
-  // 1. පන්තියේ Class Object එක සොයා ගැනීම (ID හෝ Name මඟින්)
-  const currentClsObj = (window.schoolClasses || []).find(c => 
+  // 1. masterSchedule අරාව ලබාගැනීම
+  let scheduleList = (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) 
+    ? masterSchedule 
+    : (window.masterSchedule || []);
+
+  // 2. අදාළ පන්තිය සහ ශ්‍රේණිය හඳුනාගැනීම
+  const clsObj = (window.schoolClasses || schoolClasses || []).find(c => 
     String(c.id).trim().toLowerCase() === targetCid || 
     String(c.name).trim().toLowerCase() === targetCid
   );
-  const currentActualId = currentClsObj ? String(currentClsObj.id).trim().toLowerCase() : targetCid;
-  const currentActualName = currentClsObj ? String(currentClsObj.name).trim().toLowerCase() : targetCid;
+  const cId = clsObj ? String(clsObj.id).trim().toLowerCase() : targetCid;
+  const cName = clsObj ? String(clsObj.name).trim().toLowerCase() : targetCid;
+  const classGrade = clsObj ? (typeof cleanGradeNum === "function" ? cleanGradeNum(clsObj.grade) : clsObj.grade) : null;
 
-  // 2. දැනට ක්ලික් කළ පන්තියේ අදාළ Slot එක සොයා ගැනීම
-  const currentSlot = (window.masterSchedule || []).find(s => {
+  // 3. දැනට ක්ලික් කළ පන්තියේ අදාළ Slot එක සොයා ගැනීම
+  const targetSlot = scheduleList.find(s => {
     const sCid = String(s.classId).trim().toLowerCase();
-    const isMatchingClass = (sCid === currentActualId || sCid === currentActualName || sCid === targetCid);
-    return isMatchingClass && Number(s.day) === day && Number(s.period) === period;
+    return (sCid === cId || sCid === cName) && Number(s.day) === day && Number(s.period) === period;
   });
 
-  if (!currentSlot) {
+  if (!targetSlot) {
     console.warn("⚠️ ඉවත් කිරීමට අදාළ Slot එක හමු නොවීය:", { classId, day, period });
     return;
   }
 
-  // 3. එය Combined විෂයක්දැයි නිශ්චය කිරීම
+  // 4. Combined විෂයක්දැයි හඳුනාගැනීම (Firebase එකෙන් ID එක හැළුණද විෂය නාමයෙන් හඳුනාගනී)
+  const targetSubName = String(targetSlot.subject || "").trim().toLowerCase();
+  
+  const combDef = (window.combinedCurriculumSubjects || []).find(c => 
+    (targetSlot.combinedSubjectId && c.id === targetSlot.combinedSubjectId) ||
+    (c.name && String(c.name).trim().toLowerCase() === targetSubName)
+  );
+
   const isCombined = !!(
-    currentSlot.isCombined || 
-    currentSlot.combinedSubjectId || 
-    currentSlot.basketItems || 
-    currentSlot.groupCode
+    targetSlot.isCombined || 
+    targetSlot.combinedSubjectId || 
+    targetSlot.basketItems || 
+    targetSlot.groupCode || 
+    combDef
   );
 
   if (isCombined) {
-    // A. ඒකාබද්ධ විෂයේ ID එක සහ නම ලබාගැනීම
-    const targetCombId = currentSlot.combinedSubjectId || null;
-    const targetSubjectName = String(currentSlot.subject || "").trim().toLowerCase();
-    const targetGroupCode = String(currentSlot.groupCode || "").trim().toLowerCase();
-
-    // B. කාණ්ඩයේ සියලු පන්ති හඳුනාගැනීම (Target Class Identifiers Set)
+    // A. ඉවත් විය යුතු සියලුම සහෝදර පන්ති (Peer Classes) ලැයිස්තුගත කිරීම
     const peerIdentifiers = new Set();
-    peerIdentifiers.add(currentActualId);
-    peerIdentifiers.add(currentActualName);
+    peerIdentifiers.add(cId);
+    peerIdentifiers.add(cName);
     peerIdentifiers.add(targetCid);
-
-    // combinedCurriculumSubjects වෙතින් අදාළ විෂය සෙවීම
-    const combDef = (window.combinedCurriculumSubjects || []).find(c => 
-      (targetCombId && c.id === targetCombId) || 
-      (c.name && String(c.name).trim().toLowerCase() === targetSubjectName)
-    );
 
     if (combDef && Array.isArray(combDef.targetClassIds)) {
       combDef.targetClassIds.forEach(t => {
         const tStr = String(t).trim().toLowerCase();
         peerIdentifiers.add(tStr);
-        const sc = (window.schoolClasses || []).find(c => 
+        const sc = (window.schoolClasses || schoolClasses || []).find(c => 
           String(c.id).trim().toLowerCase() === tStr || 
           String(c.name).trim().toLowerCase() === tStr
         );
         if (sc) {
-          peerIdentifiers.add(String(sc.id).trim().toLowerCase());
-          peerIdentifiers.add(String(sc.name).trim().toLowerCase());
+          if (sc.id) peerIdentifiers.add(String(sc.id).trim().toLowerCase());
+          if (sc.name) peerIdentifiers.add(String(sc.name).trim().toLowerCase());
         }
       });
     }
 
-    // C. කාණ්ඩයේ සියලු පන්තිවලින් අදාළ කාලච්ඡේදය එකවර ඉවත් කිරීම (Direct Peer Propagation Filter)
-    window.masterSchedule = (window.masterSchedule || []).filter(s => {
-      // වෙනත් Day හෝ Period එකක නම් එලෙසම තබන්න
+    // B. කාණ්ඩයේ සියලු පන්තිවලින් අදාළ කාලච්ඡේදය මකා දැමීම
+    scheduleList = scheduleList.filter(s => {
+      // වෙනත් දිනයක් හෝ වේලාවක් නම් කිසිදු වෙනසක් නොකරන්න
       if (Number(s.day) !== day || Number(s.period) !== period) return true;
 
       const sCid = String(s.classId).trim().toLowerCase();
 
-      // කොන්දේසි 1: එකම Combined Subject ID එකක් ඇත්නම් (වඩාත්ම නිවැරදි ක්‍රමය)
-      if (targetCombId && s.combinedSubjectId && s.combinedSubjectId === targetCombId) {
-        return false; // මකා දමන්න
+      // කොන්දේසි 1: targetClassIds ලැයිස්තුවේ ඇති පන්තියක් සහ එකම විෂය නම් -> මකන්න
+      if (peerIdentifiers.has(sCid) && String(s.subject || "").trim().toLowerCase() === targetSubName) {
+        return false;
       }
 
-      // කොන්දේසි 2: එකම විෂය නම, Group Code එක සහ සහෝදර පන්තියක් වීම
-      const isPeerClass = peerIdentifiers.has(sCid);
-      const isSameSubject = String(s.subject || "").trim().toLowerCase() === targetSubjectName;
-      const isSameGroup = targetGroupCode && String(s.groupCode || "").trim().toLowerCase() === targetGroupCode;
+      // කොන්දේසි 2: එකම Combined ID එකක් ඇත්නම් -> මකන්න
+      if (targetSlot.combinedSubjectId && s.combinedSubjectId === targetSlot.combinedSubjectId) {
+        return false;
+      }
 
-      if (isPeerClass && isSameSubject && (isSameGroup || s.isCombined)) {
-        return false; // මකා දමන්න
+      // කොන්දේසි 3 (Fail-safe): එකම ශ්‍රේණියේ එකම වේලාවේ ඇති එම විෂයම නම් -> මකන්න
+      if (classGrade) {
+        const sc = (window.schoolClasses || schoolClasses || []).find(c => 
+          String(c.id).trim().toLowerCase() === sCid || String(c.name).trim().toLowerCase() === sCid
+        );
+        const itemGrade = sc ? (typeof cleanGradeNum === "function" ? cleanGradeNum(sc.grade) : sc.grade) : null;
+        if (itemGrade === classGrade && String(s.subject || "").trim().toLowerCase() === targetSubName) {
+          return false;
+        }
       }
 
       return true;
@@ -4323,26 +4335,28 @@ function removeScheduleSlot(classId, day, period) {
 
   } else {
     // සාමාන්‍ය තනි විෂයක් නම් අදාළ පන්තියෙන් පමණක් ඉවත් කිරීම
-    window.masterSchedule = (window.masterSchedule || []).filter(s => {
+    scheduleList = scheduleList.filter(s => {
       const sCid = String(s.classId).trim().toLowerCase();
-      const isMatchingClass = (sCid === currentActualId || sCid === currentActualName || sCid === targetCid);
-      return !(isMatchingClass && Number(s.day) === day && Number(s.period) === period);
+      return !((sCid === cId || sCid === cName) && Number(s.day) === day && Number(s.period) === period);
     });
   }
 
-  // 4. දත්ත LocalStorage සහ Firebase වෙත ස්වයංක්‍රීයව Sync කිරීම
-  if (typeof saveAllToStorage === "function") saveAllToStorage();
-  
-  // 5. තිරයේ දර්ශන යාවත්කාලීන කිරීම
+  // 🔴 5. අතිශය වැදගත්: Scope දෝෂ මඟහරවා ගැනීමට විචල්‍ය දෙකම එකවර යාවත්කාලීන කිරීම
+  if (typeof masterSchedule !== "undefined") {
+    masterSchedule = scheduleList;
+  }
+  window.masterSchedule = scheduleList;
+
+  // 🔴 6. Firebase සහ LocalStorage වෙත ක්ෂණිකව ලිවීම
+  if (typeof saveAllToStorage === "function") {
+    saveAllToStorage();
+  }
+
+  // 🔴 7. UI අලුත් කිරීම
   if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
-  
   const activeClassId = window.currentSelectedClassId || classId;
-  if (typeof renderSubjectQuotaTray === "function") {
-    renderSubjectQuotaTray(activeClassId);
-  }
-  if (typeof renderIndividualTeacherSchedule === "function") {
-    renderIndividualTeacherSchedule();
-  }
+  if (typeof renderSubjectQuotaTray === "function") renderSubjectQuotaTray(activeClassId);
+  if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
 }
 
 window.removeScheduleSlot = removeScheduleSlot;
