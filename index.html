@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V99
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V265
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -4234,7 +4234,77 @@ window.handleSlotDrop = handleSlotDrop;
 /**
  * කාලසටහනෙන් විෂයක් ඉවත් කිරීම (Foolproof Multi-Class Sync)
  */
-function removeScheduleSlot(classId, day, period) {
+
+    /**
+ * කාලසටහනෙන් විෂයක් ඉවත් කිරීම (100% Guaranteed Multi-Class Sync)
+ */
+function removeScheduleSlot(classId, day, period, combinedSubjectId = null, subjectName = null) {
+  day = Number(day);
+  period = Number(period);
+  const targetCid = String(classId).trim().toLowerCase();
+
+  // 1. masterSchedule ලබාගැනීම
+  let scheduleList = (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) 
+    ? masterSchedule 
+    : (window.masterSchedule || []);
+
+  // 2. අදාළ Slot එක සොයා ගැනීම (නම හෝ ID නැතිනම් පමණක් සොයයි)
+  const currentSlot = scheduleList.find(s => 
+    String(s.classId).trim().toLowerCase() === targetCid && 
+    Number(s.day) === day && 
+    Number(s.period) === period
+  );
+
+  const finalCombId = combinedSubjectId || (currentSlot ? currentSlot.combinedSubjectId : null);
+  const finalSubName = subjectName || (currentSlot ? currentSlot.subject : null);
+  const isCombined = !!(finalCombId || (currentSlot && (currentSlot.isCombined || currentSlot.basketItems)));
+
+  // -----------------------------------------------------------------------
+  // A. COMBINED SUBJECT එකක් නම් (කාණ්ඩයේ සියලුම පන්තිවලින් එකවර මැකීම)
+  // -----------------------------------------------------------------------
+  if (isCombined) {
+    const cleanSubName = finalSubName ? String(finalSubName).trim().toLowerCase() : "";
+
+    // එකම දිනය සහ වේලාවේ ඇති මෙම Combined විෂය සහිත සියලු පන්ති (6A, 6B, 6C ආදී සියල්ල) එකවර මකා දැමීම
+    scheduleList = scheduleList.filter(s => {
+      if (Number(s.day) === day && Number(s.period) === period) {
+        // 1. Combined ID එක සමාන නම් මකන්න
+        if (finalCombId && s.combinedSubjectId === finalCombId) return false;
+        
+        // 2. විෂය නම සමාන නම් (උදා: "සෞන්දර්ය කාණ්ඩය (GR 01)") මකන්න
+        if (cleanSubName && String(s.subject || "").trim().toLowerCase() === cleanSubName) return false;
+      }
+      return true; // අනෙක් ඒවා තබාගන්න
+    });
+
+  } else {
+    // -----------------------------------------------------------------------
+    // B. සාමාන්‍ය තනි විෂයක් නම් (අදාළ පන්තියෙන් පමණක් මැකීම)
+    // -----------------------------------------------------------------------
+    scheduleList = scheduleList.filter(s => 
+      !(String(s.classId).trim().toLowerCase() === targetCid && 
+        Number(s.day) === day && 
+        Number(s.period) === period)
+    );
+  }
+
+  // 3. මතකය (Memory) යාවත්කාලීන කිරීම
+  if (typeof masterSchedule !== "undefined") masterSchedule = scheduleList;
+  window.masterSchedule = scheduleList;
+
+  // 4. Firebase සහ LocalStorage වෙත සුරැකීම
+  if (typeof saveAllToStorage === "function") saveAllToStorage();
+
+  // 5. UI සහ Drag Tray නැවත ඇඳීම
+  if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+  const activeClassId = window.currentSelectedClassId || classId;
+  if (typeof renderSubjectQuotaTray === "function") renderSubjectQuotaTray(activeClassId);
+  if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+}
+
+window.removeScheduleSlot = removeScheduleSlot;
+    /*
+    function removeScheduleSlot(classId, day, period) {
   day = Number(day);
   period = Number(period);
   const targetCid = String(classId).trim().toLowerCase();
@@ -4360,7 +4430,7 @@ function removeScheduleSlot(classId, day, period) {
 }
 
 window.removeScheduleSlot = removeScheduleSlot;
-
+*/
 /**
  * 3. කාලසටහනේ කොටුවක් ඇතුළත Combined Subject පෙන්වීම (Timetable Grid Cell Render)
  */
@@ -4383,9 +4453,12 @@ function getSlotDisplayHtml(slot) {
             ${teachersList}
           </div>
         </div>
-        <button onclick="removeScheduleSlot('${slot.classId}', ${slot.day}, ${slot.period})" class="self-end text-rose-400 hover:text-rose-600 text-[10px] p-0.5" title="කාණ්ඩයෙන්ම ඉවත් කරන්න">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
+       <button type="button" 
+        onclick="event.stopPropagation(); removeScheduleSlot('${slot.classId}', ${slot.day}, ${slot.period}, '${slot.combinedSubjectId || ''}', '${slot.subject || ''}')" 
+        class="self-end text-rose-400 hover:text-rose-600 text-[10px] p-0.5" 
+        title="කාණ්ඩයෙන්ම ඉවත් කරන්න">
+  <i class="fa-solid fa-xmark"></i>
+</button>
       </div>
     `;
   }
