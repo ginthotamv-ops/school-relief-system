@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V525
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V103
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -1563,55 +1563,8 @@ window.saveSubjectTeachersAssignment = function() {
       }).filter(Boolean);
     }
 
-    function saveAllToStorage() {
-      const cleanCurriculum = (Array.isArray(curriculumSubjects) ? curriculumSubjects : Object.values(curriculumSubjects || {})).map((cs, idx) => ({
-        id: cs.id || (typeof getSubjectUniqueId === "function" ? getSubjectUniqueId(cs, idx) : `cs_${cs.grade}_${idx}`),
-        grade: cs.grade,
-        subject: cs.subject,
-        maxWeekly: cs.maxWeekly,
-        teacherIds: getNormalizedTeacherIds(cs.teacherIds) // කිසිවිටෙක හිස් නොවේ
-      }));
 
-      const rawPayload = {
-        grades: gradeSettings || [],
-        classes: schoolClasses || [],
-        curriculum: cleanCurriculum,
-        classSubjectAllocations: window.classSubjectAllocations || {},
-        gradeMaster: gradeMasterSchedule || [],
-        teachers: (teachers || []).map(t => ({
-          id: t.id,
-          schoolNo: t.schoolNo || "",
-          name: t.name || "",
-          phone: t.phone || "",
-          subject: t.subject || "",
-          sections: t.sections || ["All"],
-          leaveStatus: t.leaveStatus || "present",
-          isExempt: !!t.isExempt,
-          allowOver35: !!t.allowOver35
-        })),
-        schedule: masterSchedule || []
-      };
-
-      const cleanPayload = JSON.parse(JSON.stringify(rawPayload));
-
-      try {
-        localStorage.setItem("sch_app_data_v2026_final", JSON.stringify(cleanPayload));
-      } catch (err) {
-        console.error("LocalStorage Save Error:", err);
-      }
-
-      if (isFirebaseActive && firebaseDb) {
-        firebaseDb.ref("timetable_system").set(cleanPayload, (error) => {
-          if (error) {
-            console.error("❌ Firebase Sync Error:", error);
-          } else {
-            console.log("✅ Firebase Synchronized (Data Protected)!");
-          }
-        });
-      }
-    }
-
-    function initFirebaseCloud() {
+function initFirebaseCloud() {
       const badge = document.getElementById("cloudStatusBadge");
       try {
         if (typeof firebase !== "undefined" && firebaseConfig && firebaseConfig.apiKey) {
@@ -1625,8 +1578,6 @@ window.saveSubjectTeachersAssignment = function() {
               if (data.grades) gradeSettings = data.grades;
               if (data.classes) schoolClasses = data.classes;
 
-              
-              // Firebase Object එක Array එකක් බවට තහවුරු කිරීම
               if (data.curriculum) {
                 curriculumSubjects = Array.isArray(data.curriculum) ? data.curriculum : Object.values(data.curriculum);
                 curriculumSubjects.forEach(cs => {
@@ -1636,27 +1587,51 @@ window.saveSubjectTeachersAssignment = function() {
 
               if (data.gradeMaster) gradeMasterSchedule = data.gradeMaster;
               if (data.teachers) teachers = data.teachers;
-       
 
-              // Schedule දත්ත කියවීම (Strict Empty Array Enforcement)
+              // Schedule දත්ත කියවීම
               if (data.schedule && (Array.isArray(data.schedule) || typeof data.schedule === "object")) {
                 masterSchedule = Array.isArray(data.schedule) ? data.schedule : Object.values(data.schedule);
               } else {
-                // Cloud එකේ schedule නොමැති නම් අනිවාර්යයෙන්ම හිස් Array එකක් විය යුතුය (Fallback වැළැක්වීම)
                 masterSchedule = [];
               }
 
-              
               if (data.classSubjectAllocations) {
-      window.classSubjectAllocations = data.classSubjectAllocations;
-    }
+                window.classSubjectAllocations = data.classSubjectAllocations;
+              }
+
+              // 🔴 1. Combined Subjects Cloud එකෙන් කියවා ගැනීම (අනිවාර්යයි):
+              if (data.combinedCurriculumSubjects) {
+                window.combinedCurriculumSubjects = Array.isArray(data.combinedCurriculumSubjects) 
+                  ? data.combinedCurriculumSubjects 
+                  : Object.values(data.combinedCurriculumSubjects);
+                try {
+                  localStorage.setItem("sch_combined_subjects_v1", JSON.stringify(window.combinedCurriculumSubjects));
+                } catch(e) {}
+              } else {
+                window.combinedCurriculumSubjects = [];
+              }
+
+              // 🔴 2. Cluster Groups (පන්ති කාණ්ඩ) Cloud එකෙන් කියවා ගැනීම:
+              if (data.clusterGroups) {
+                try {
+                  localStorage.setItem("sch_cluster_groups_v1", JSON.stringify(data.clusterGroups));
+                } catch(e) {}
+              }
 
               localStorage.setItem("sch_app_data_v2026_final", JSON.stringify(data));
               if (badge) {
                 badge.className = "bg-emerald-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm";
                 badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-white"></span> Live Cloud (Firebase)';
               }
+
               refreshAllUI();
+
+              // 🔴 3. දෙවන පරිගණකයේ Drag Tray එක ක්ෂණිකව යාවත්කාලීන කිරීම:
+              const activeClassId = window.currentSelectedClassId || (schoolClasses && schoolClasses[0] ? schoolClasses[0].id : null);
+              if (activeClassId && typeof renderSubjectQuotaTray === "function") {
+                renderSubjectQuotaTray(activeClassId);
+              }
+
             } else {
               saveAllToStorage();
               refreshAllUI();
@@ -1671,6 +1646,8 @@ window.saveSubjectTeachersAssignment = function() {
         if (typeof markLocalStorageMode === "function") markLocalStorageMode();
       }
     }
+
+    
    //***************************
 
     function loadAllFromStorage() {
@@ -7664,7 +7641,71 @@ function renderCombinedSubjectsTable() {
 // ONE-BY-ONE COMBINED SUBJECT BUILDER CONTROLLER
 // =========================================================================
 
+function saveAllToStorage() {
+      const cleanCurriculum = (Array.isArray(curriculumSubjects) ? curriculumSubjects : Object.values(curriculumSubjects || {})).map((cs, idx) => ({
+        id: cs.id || (typeof getSubjectUniqueId === "function" ? getSubjectUniqueId(cs, idx) : `cs_${cs.grade}_${idx}`),
+        grade: cs.grade,
+        subject: cs.subject,
+        maxWeekly: cs.maxWeekly,
+        teacherIds: getNormalizedTeacherIds(cs.teacherIds)
+      }));
 
+      // 🔴 LocalStorage වලින් පවතින Combined Subjects සහ Groups කියවා ගැනීම
+      let currentCombined = window.combinedCurriculumSubjects;
+      if (!currentCombined || currentCombined.length === 0) {
+        try {
+          currentCombined = JSON.parse(localStorage.getItem("sch_combined_subjects_v1") || "[]");
+        } catch(e) { currentCombined = []; }
+      }
+
+      let currentClusters = {};
+      try {
+        currentClusters = JSON.parse(localStorage.getItem("sch_cluster_groups_v1") || "{}");
+      } catch(e) { currentClusters = {}; }
+
+      const rawPayload = {
+        grades: gradeSettings || [],
+        classes: schoolClasses || [],
+        curriculum: cleanCurriculum,
+        classSubjectAllocations: window.classSubjectAllocations || {},
+        gradeMaster: gradeMasterSchedule || [],
+        teachers: (teachers || []).map(t => ({
+          id: t.id,
+          schoolNo: t.schoolNo || "",
+          name: t.name || "",
+          phone: t.phone || "",
+          subject: t.subject || "",
+          sections: t.sections || ["All"],
+          leaveStatus: t.leaveStatus || "present",
+          isExempt: !!t.isExempt,
+          allowOver35: !!t.allowOver35
+        })),
+        schedule: masterSchedule || [],
+        // 🔴 අලුතින් එක් කළ අත්‍යවශ්‍ය පේළි 2 (Firebase වෙත Combined Subjects යැවීම සඳහා):
+        combinedCurriculumSubjects: currentCombined || [],
+        clusterGroups: currentClusters || {}
+      };
+
+      const cleanPayload = JSON.parse(JSON.stringify(rawPayload));
+
+      try {
+        localStorage.setItem("sch_app_data_v2026_final", JSON.stringify(cleanPayload));
+      } catch (err) {
+        console.error("LocalStorage Save Error:", err);
+      }
+
+      if (isFirebaseActive && firebaseDb) {
+        firebaseDb.ref("timetable_system").set(cleanPayload, (error) => {
+          if (error) {
+            console.error("❌ Firebase Sync Error:", error);
+          } else {
+            console.log("✅ Firebase Synchronized (Combined Subjects ඇතුළුව දත්ත සුරකින ලදි)!");
+          }
+        });
+      }
+    }
+
+    
 
    // =========================================================================
 // ADVANCED COMBINED SUBJECT BUILDER (WITH EDIT, DELETE & TRAY RESTORE)
