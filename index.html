@@ -109,6 +109,26 @@
           <i class="fa-solid fa-rotate-left"></i> Reset
         </button>
       </div>
+
+      
+      <div class="flex items-center gap-2">
+  <!-- 1. සම්පූර්ණ පාසල සඳහා (Green/Emerald Button) -->
+  <button type="button" 
+          onclick="openAutoFillModal('ALL_SCHOOL')" 
+          class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-xs flex items-center gap-1.5"
+          title="පාසලේ සියලුම පන්ති සඳහා කාලසටහන ස්වයංක්‍රීයව සකසන්න">
+    <i class="fa-solid fa-wand-magic-sparkles text-[11px]"></i> මුළු පාසලම Auto-Fill
+  </button>
+
+  <!-- 2. තෝරාගත් පන්තිය සඳහා පමණක් (Blue Button) -->
+  <button type="button" 
+          onclick="openAutoFillModal('CURRENT_CLASS')" 
+          class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition shadow-xs flex items-center gap-1.5"
+          title="දැනට තෝරාගෙන ඇති පන්තිය සඳහා පමණක් ස්වයංක්‍රීයව සකසන්න">
+    <i class="fa-solid fa-bolt text-[11px]"></i> මෙම පන්තිය Auto-Fill
+  </button>
+</div>
+      
     </div>
   </header>
 
@@ -1087,9 +1107,140 @@
   </div>
 
 
+  
+  <!-- Auto-Fill Rules & Priority Configuration Modal -->
+<div id="autoFillConfigModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 hidden p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-slate-200 max-h-[90vh] flex flex-col justify-between">
+    
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+      <div>
+        <h3 class="text-base font-extrabold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-indigo-600"></i> Auto-Fill සැකසුම් සහ කොන්දේසි
+        </h3>
+        <p class="text-xs text-slate-500 mt-0.5" id="autoFillTargetLabel">ඉලක්කය: සම්පූර්ණ පාසල</p>
+      </div>
+      <button type="button" onclick="closeAutoFillModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="overflow-y-auto pr-1 flex-1 space-y-4">
+      
+      <!-- කොන්දේසිය 1: විශේෂ ප්‍රමුඛතා (Priority Selection) -->
+      <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+        <label class="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-800">
+          <input type="checkbox" id="chkEnablePriority" checked onchange="togglePrioritySection()" class="w-4 h-4 accent-indigo-600 rounded">
+          <span>1. විශේෂ අවධානය / ප්‍රමුඛතාවය ලබාදීම (Priority Scheduling)</span>
+        </label>
+        
+        <div id="priorityOptionsContainer" class="mt-3 space-y-3 pl-6 border-l-2 border-indigo-200">
+          <!-- A. ප්‍රමුඛතා ගුරුවරුන් -->
+          <div>
+            <span class="text-[11px] font-bold text-slate-600 block mb-1">ප්‍රමුඛතා ගුරුවරුන් (Priority Teachers):</span>
+            <div id="priorityTeachersTray" class="flex flex-wrap gap-1 p-2 bg-white border border-slate-200 rounded-lg max-h-24 overflow-y-auto">
+              <!-- Checkboxes dynamically populated -->
+            </div>
+          </div>
+
+          <!-- B. ප්‍රමුඛතා විෂයන් -->
+          <div>
+            <span class="text-[11px] font-bold text-slate-600 block mb-1">ප්‍රමුඛතා විෂයන් (Priority Subjects - උදා: ගණිතය, විද්‍යාව):</span>
+            <div id="prioritySubjectsTray" class="flex flex-wrap gap-1 p-2 bg-white border border-slate-200 rounded-lg max-h-24 overflow-y-auto">
+              <!-- Checkboxes dynamically populated -->
+            </div>
+          </div>
+
+          <!-- C. ප්‍රමුඛතා පන්ති -->
+          <div>
+            <span class="text-[11px] font-bold text-slate-600 block mb-1">ප්‍රමුඛතා පන්ති (Priority Classes - උදා: 11-A, 11-B):</span>
+            <div id="priorityClassesTray" class="flex flex-wrap gap-1 p-2 bg-white border border-slate-200 rounded-lg max-h-24 overflow-y-auto">
+              <!-- Checkboxes dynamically populated -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- කොන්දේසිය 2: පන්තිභාර ගුරුතුමා / ගුරුතුමිය -->
+      <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+        <label class="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-800">
+          <input type="checkbox" id="chkClassTeacherMorning" checked class="w-4 h-4 accent-indigo-600 rounded">
+          <span>2. පන්තිභාර ගුරුතුමා උදෑසන කාලච්ඡේද (Period 1) සඳහා යෙදීම</span>
+        </label>
+        <p class="text-[10px] text-slate-500 pl-6 mt-0.5">
+          පන්තිභාර ගුරුතුමාට අදාළ පන්තියේ විෂයක් තිබේ නම්, එය දිනයේ පළමු කාලච්ඡේදයට (Period 1) යෙදීමට උපරිම උත්සාහ කරයි. ගුරුවරයෙක් නොමැති නම් ස්වයංක්‍රීයව මඟහැරේ.
+        </p>
+      </div>
+
+      <!-- කොන්දේසිය 3: දැනට පවතින කාලසටහන රැකගැනීම (Preserve Slots) -->
+      <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+        <label class="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-800">
+          <input type="checkbox" id="chkPreserveExisting" checked class="w-4 h-4 accent-indigo-600 rounded">
+          <span>3. දැනට අතින් සකසා ඇති කාලසටහන් කොටු (Slots) ඒ අයුරින්ම තබා ගැනීම</span>
+        </label>
+      </div>
+
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 mt-2">
+      <button type="button" onclick="closeAutoFillModal()" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg">
+        අවලංගු කරන්න
+      </button>
+      <button type="button" onclick="executeAutoFillProcess()" class="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm flex items-center gap-1.5">
+        <i class="fa-solid fa-play text-[11px]"></i> Auto-Fill ආරම්භ කරන්න
+      </button>
+    </div>
+
+  </div>
+</div>
+  
+<!-- Clash & Crash Report Modal -->
+<div id="clashReportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 hidden p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-rose-200">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+      <div class="flex items-center gap-2 text-rose-600">
+        <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+        <h3 class="text-base font-extrabold text-slate-800">Auto-Fill ගැටුම් වාර්තාව (Crash Report)</h3>
+      </div>
+      <button type="button" onclick="closeClashReportModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <p class="text-xs text-slate-600 mb-3">
+      පහත විෂයන් සඳහා කාලසටහනේ නිදහස් ඉඩ නොමැති වීම හෝ ගුරුවරුන්ගේ වේලාවන් ගැටීම හේතුවෙන් ස්වයංක්‍රීයව සම්පූර්ණ කළ නොහැකි විය. කරුණාකර අතින් සකස් කරන්න (Manual Edit):
+    </p>
+
+    <div class="border border-slate-200 rounded-xl overflow-hidden max-h-60 overflow-y-auto mb-4">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead class="bg-rose-50 border-b border-rose-100 text-rose-900 font-bold">
+          <tr>
+            <th class="p-2">පන්තිය</th>
+            <th class="p-2">විෂය</th>
+            <th class="p-2">ගුරුතුමා</th>
+            <th class="p-2">නොයෙදූ වාර</th>
+            <th class="p-2 text-center">ක්‍රියාමාර්ගය</th>
+          </tr>
+        </thead>
+        <tbody id="clashReportTableBody">
+          <!-- Dynamically Populated Clashes -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="flex justify-end gap-2">
+      <button type="button" onclick="closeClashReportModal()" class="px-5 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg">
+        හරි, මම අතින් සංස්කරණය කරන්නම්
+      </button>
+    </div>
+  </div>
+</div>
+  
+
+  
 <!-- Modal: Grade-Specific Basket & Combined Classes Setup Modal -->
-  <!-- Combined / Basket Grouping Modal -->
-<!-- Combined Subjects Builder Modal -->
+
+  
 
   <!-- One-by-One Combined Subject Builder Modal -->
 
@@ -5031,6 +5182,270 @@ function renderSubjectQuotaTray(classId) {
       });
     }
 
+// =========================================================================
+// INTELLIGENT AUTO-FILL ENGINE WITH PRIORITY & CONSTRAINTS
+// =========================================================================
+
+window.autoFillMode = "ALL_SCHOOL"; // ALL_SCHOOL or CURRENT_CLASS
+
+function openAutoFillModal(mode) {
+  window.autoFillMode = mode;
+  const label = document.getElementById("autoFillTargetLabel");
+  const selClassId = document.getElementById("activeClassSelect")?.value;
+
+  if (mode === "CURRENT_CLASS") {
+    const cls = (schoolClasses || []).find(c => String(c.id) === String(selClassId));
+    if (label) label.innerText = `ඉලක්කය: ${cls ? cls.name : selClassId} පන්තිය පමණි`;
+  } else {
+    if (label) label.innerText = `ඉලක්කය: පාසලේ සියලුම පන්ති`;
+  }
+
+  // Populate Priority Lists
+  populatePriorityTrays();
+
+  const modal = document.getElementById("autoFillConfigModal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeAutoFillModal() {
+  const modal = document.getElementById("autoFillConfigModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function togglePrioritySection() {
+  const chk = document.getElementById("chkEnablePriority");
+  const box = document.getElementById("priorityOptionsContainer");
+  if (box) box.style.display = chk.checked ? "block" : "none";
+}
+
+function populatePriorityTrays() {
+  // 1. Teachers
+  const tTray = document.getElementById("priorityTeachersTray");
+  if (tTray) {
+    tTray.innerHTML = (teachers || []).map(t => `
+      <label class="inline-flex items-center gap-1 text-[11px] bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded cursor-pointer">
+        <input type="checkbox" value="${t.id}" class="pri-teacher-chk accent-indigo-600"> ${t.name}
+      </label>
+    `).join("");
+  }
+
+  // 2. Subjects
+  const sTray = document.getElementById("prioritySubjectsTray");
+  if (sTray) {
+    const uniqueSubs = [...new Set((curriculumSubjects || []).map(cs => cs.subject))];
+    sTray.innerHTML = uniqueSubs.map(sub => `
+      <label class="inline-flex items-center gap-1 text-[11px] bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded cursor-pointer">
+        <input type="checkbox" value="${sub}" class="pri-subject-chk accent-indigo-600"> ${sub}
+      </label>
+    `).join("");
+  }
+
+  // 3. Classes
+  const cTray = document.getElementById("priorityClassesTray");
+  if (cTray) {
+    cTray.innerHTML = (schoolClasses || []).map(c => `
+      <label class="inline-flex items-center gap-1 text-[11px] bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded cursor-pointer">
+        <input type="checkbox" value="${c.id}" class="pri-class-chk accent-indigo-600"> ${c.name}
+      </label>
+    `).join("");
+  }
+}
+
+/**
+ * ප්‍රධාන Auto-Fill ක්‍රියාවලිය ක්‍රියාත්මක කිරීම
+ */
+function executeAutoFillProcess() {
+  closeAutoFillModal();
+
+  const isPriorityEnabled = document.getElementById("chkEnablePriority").checked;
+  const isClassTeacherMorning = document.getElementById("chkClassTeacherMorning").checked;
+  const isPreserveExisting = document.getElementById("chkPreserveExisting").checked;
+
+  const priTeacherIds = isPriorityEnabled ? Array.from(document.querySelectorAll(".pri-teacher-chk:checked")).map(c => c.value) : [];
+  const priSubjects = isPriorityEnabled ? Array.from(document.querySelectorAll(".pri-subject-chk:checked")).map(c => c.value) : [];
+  const priClassIds = isPriorityEnabled ? Array.from(document.querySelectorAll(".pri-class-chk:checked")).map(c => c.value) : [];
+
+  let targetClasses = [];
+  if (window.autoFillMode === "CURRENT_CLASS") {
+    const selClassId = document.getElementById("activeClassSelect")?.value;
+    targetClasses = (schoolClasses || []).filter(c => String(c.id) === String(selClassId));
+  } else {
+    targetClasses = [...(schoolClasses || [])];
+  }
+
+  // ප්‍රමුඛතා පන්ති පළමුව පෙළගැස්වීම (Sort classes by priority)
+  targetClasses.sort((a, b) => {
+    const aPri = priClassIds.includes(String(a.id));
+    const bPri = priClassIds.includes(String(b.id));
+    return (bPri ? 1 : 0) - (aPri ? 1 : 0);
+  });
+
+  let schedule = isPreserveExisting ? [...(window.masterSchedule || masterSchedule || [])] : [];
+  const clashList = [];
+
+  // Helper: ගුරුවරයා එම වේලාවේ නිදහස්දැයි බැලීම (Clash Check)
+  function isTeacherFree(teacherId, day, period) {
+    if (!teacherId) return true;
+    return !schedule.some(s => s.teacherId === teacherId && Number(s.day) === day && Number(s.period) === period);
+  }
+
+  // -----------------------------------------------------------------------
+  // STEP 1: පන්තිභාර ගුරුතුමා Period 1 වෙත යෙදීම
+  // -----------------------------------------------------------------------
+  if (isClassTeacherMorning) {
+    targetClasses.forEach(cls => {
+      if (!cls.classTeacherId) return; // ගුරුවරයෙක් නැතිනම් skip කිරීම
+
+      // පන්තිභාර ගුරුතුමා උගන්වන විෂය සෙවීම
+      const subEntries = Object.entries(cls.subjectTeachers || {});
+      const ctSubjectEntry = subEntries.find(([subKey, tId]) => String(tId) === String(cls.classTeacherId));
+
+      if (ctSubjectEntry) {
+        const subName = ctSubjectEntry[0];
+        // සතියේ දින 5 පුරා උදෑසන (period 1) පිරවීමට උත්සාහ කිරීම
+        for (let d = 0; d < 5; d++) {
+          const hasSlot = schedule.some(s => String(s.classId) === String(cls.id) && s.day === d && s.period === 1);
+          if (!hasSlot && isTeacherFree(cls.classTeacherId, d, 1)) {
+            schedule.push({
+              classId: cls.id,
+              day: d,
+              period: 1,
+              subject: subName,
+              teacherId: cls.classTeacherId,
+              isCombined: false
+            });
+            break; // එක් වාරයක් යෙදීමෙන් පසු ප්‍රමාණවත්
+          }
+        }
+      }
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // STEP 2: ප්‍රමුඛතා විෂයන් සහ සෙසු විෂයන් පිරවීම
+  // -----------------------------------------------------------------------
+  targetClasses.forEach(cls => {
+    const gradeNum = typeof cleanGradeNum === "function" ? cleanGradeNum(cls.grade) : cls.grade;
+    let subjects = (curriculumSubjects || []).filter(cs => 
+      (typeof cleanGradeNum === "function" ? cleanGradeNum(cs.grade) : cs.grade) === gradeNum
+    );
+
+    // ප්‍රමුඛතා විෂයන් සහ ප්‍රමුඛතා ගුරුවරුන් සිටින විෂයන් පළමුව තැබීම
+    subjects.sort((a, b) => {
+      const aPri = priSubjects.includes(a.subject);
+      const bPri = priSubjects.includes(b.subject);
+      return (bPri ? 1 : 0) - (aPri ? 1 : 0);
+    });
+
+    subjects.forEach(cs => {
+      const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(cs.subject) : cs.subject.toLowerCase();
+      const teacherId = cls.subjectTeachers ? cls.subjectTeachers[subKey] : null;
+
+      const currentAllocated = schedule.filter(s => String(s.classId) === String(cls.id) && s.subject === cs.subject).length;
+      let needed = (Number(cs.maxWeekly) || 0) - currentAllocated;
+
+      if (needed <= 0) return;
+
+      // කාලසටහනේ හිස් තැන් සොයා පිරවීම (දින 5, කාලච්ඡේද 8)
+      for (let p = 1; p <= 8; p++) {
+        for (let d = 0; d < 5; d++) {
+          if (needed <= 0) break;
+
+          const slotTaken = schedule.some(s => String(s.classId) === String(cls.id) && s.day === d && s.period === p);
+          if (!slotTaken && isTeacherFree(teacherId, d, p)) {
+            schedule.push({
+              classId: cls.id,
+              day: d,
+              period: p,
+              subject: cs.subject,
+              teacherId: teacherId,
+              isCombined: false
+            });
+            needed--;
+          }
+        }
+      }
+
+      // තවමත් නොපිරවූ වාර ඇත්නම් Clash Report එකට එකතු කිරීම
+      if (needed > 0) {
+        const tObj = (teachers || []).find(t => String(t.id) === String(teacherId));
+        clashList.push({
+          className: cls.name || cls.id,
+          classId: cls.id,
+          subject: cs.subject,
+          teacherName: tObj ? tObj.name : "නැත",
+          unassigned: needed
+        });
+      }
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // STEP 3: අවසන් කිරීම, සුරැකීම සහ Clash Report පෙන්වීම
+  // -----------------------------------------------------------------------
+  if (typeof masterSchedule !== "undefined") masterSchedule = schedule;
+  window.masterSchedule = schedule;
+
+  if (typeof saveAllToStorage === "function") saveAllToStorage();
+  if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+  if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+
+  if (clashList.length > 0) {
+    showClashReportModal(clashList);
+  } else {
+    alert("සාර්ථකයි! කිසිදු විෂය ගැටුමකින් තොරව කාලසටහන සම්පූර්ණයෙන්ම Auto-Fill කරන ලදි.");
+  }
+}
+
+/**
+ * Crash Report පෙන්වීම
+ */
+function showClashReportModal(clashList) {
+  const tbody = document.getElementById("clashReportTableBody");
+  if (tbody) {
+    tbody.innerHTML = clashList.map(c => `
+      <tr class="border-b border-slate-100 hover:bg-rose-50/50">
+        <td class="p-2 font-bold text-slate-800">${c.className}</td>
+        <td class="p-2 font-bold text-indigo-700">${c.subject}</td>
+        <td class="p-2 text-slate-600">${c.teacherName}</td>
+        <td class="p-2 font-bold text-rose-600 text-center">${c.unassigned}</td>
+        <td class="p-2 text-center">
+          <button type="button" onclick="goToManualClassEdit('${c.classId}')" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[10px] font-bold">
+            Manual Edit
+          </button>
+        </td>
+      </tr>
+    `).join("");
+  }
+
+  const modal = document.getElementById("clashReportModal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeClashReportModal() {
+  const modal = document.getElementById("clashReportModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function goToManualClassEdit(classId) {
+  closeClashReportModal();
+  const select = document.getElementById("activeClassSelect") || document.getElementById("classTimetableSelectClass");
+  if (select) {
+    select.value = classId;
+    if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+  }
+}
+
+// Global Bindings
+window.openAutoFillModal = openAutoFillModal;
+window.closeAutoFillModal = closeAutoFillModal;
+window.togglePrioritySection = togglePrioritySection;
+window.executeAutoFillProcess = executeAutoFillProcess;
+window.closeClashReportModal = closeClashReportModal;
+window.goToManualClassEdit = goToManualClassEdit;
+
+
+    
 
     
 // කාලසටහන් කොටුවෙන් විෂය ඉවත් කිරීමේ ශ්‍රිතය
