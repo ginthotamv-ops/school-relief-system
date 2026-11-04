@@ -492,6 +492,15 @@
               <label class="text-xs font-bold text-slate-600 block mb-1">සතියකට උපරිම කාලච්ඡේද (ශ්‍රේණියකට):</label>
               <input type="number" id="curriculumMaxPeriods" min="1" max="15" value="5" required class="w-full p-2 border rounded-lg text-xs bg-white">
             </div>
+            <!-- 🔴 Dropdown එක මෙතැනට දමන්න -->
+<div class="mt-2">
+  <label class="block text-xs font-bold text-slate-700 mb-1">කාලච්ඡේද සැකසුම</label>
+  <select id="curriculumPeriodTypeSelect" class="w-full p-2 border rounded-lg text-xs font-bold">
+    <option value="SINGLE">Single </option>
+    <option value="DOUBLE">Double </option>
+    <option value="TRIPLE">Triple </option>
+  </select>
+</div>
             <div class="flex gap-2">
               <button type="submit" id="curriculumSubmitBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-3 rounded-lg shadow transition">
                 <i class="fa-solid fa-plus"></i> විෂය එක් කරන්න
@@ -3361,22 +3370,6 @@ function resetSystemData() {
         const max = Number(cs.maxWeekly || cs.periods || cs.weeklyPeriods || 5);
         const remaining = Math.max(0, max - allocatedCount);
 
-        <!-- විෂය නම සහ සතිපතා වාර ගණන ඇති කොටසට පහළින්: -->
-<div class="mt-3">
-  <label class="block text-xs font-bold text-slate-700 mb-1">
-    කාලච්ඡේද සැකසුම (Period Block Type)
-  </label>
-  <select id="curriculumPeriodTypeSelect" 
-          class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold bg-white text-slate-800 outline-none focus:border-indigo-600">
-    <option value="SINGLE">Single (තනි කාලච්ඡේදය - 1)</option>
-    <option value="DOUBLE">Double (යුගල කාලච්ඡේද - 2 එකවර)</option>
-    <option value="TRIPLE">Triple (ත්‍රිත්ව කාලච්ඡේද - 3 එකවර)</option>
-  </select>
-  <span class="text-[10px] text-slate-400 mt-0.5 block">
-    ප්‍රායෝගික / තාක්ෂණික හෝ විද්‍යාගාර විෂයන් සඳහා Double / Triple යොදන්න.
-  </span>
-</div>
-      
         // පන්තියට ගුරුවරයෙකු පවරා ඇත්දැයි බැලීම (නැතිනම් null වේ)
         let assignedTeacher = null;
         if (typeof getAssignedTeacherForClassSubject === "function") {
