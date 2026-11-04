@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V8999
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V1000
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -5254,12 +5254,16 @@ function populatePriorityTrays() {
 /**
  * ප්‍රධාන Auto-Fill ක්‍රියාවලිය ක්‍රියාත්මක කිරීම
  */
+ /**
+ * INTELLIGENT AUTO-FILL ENGINE (TRAY-AWARE & COMBINED-FIRST)
+ * පන්තියේ Tray එකේ පවතින විෂයන් පමණක් යොදාගනිමින් කාලසටහන සම්පූර්ණ කරයි.
+ */
 function executeAutoFillProcess() {
   closeAutoFillModal();
 
-  const isPriorityEnabled = document.getElementById("chkEnablePriority").checked;
-  const isClassTeacherMorning = document.getElementById("chkClassTeacherMorning").checked;
-  const isPreserveExisting = document.getElementById("chkPreserveExisting").checked;
+  const isPriorityEnabled = document.getElementById("chkEnablePriority")?.checked ?? true;
+  const isClassTeacherMorning = document.getElementById("chkClassTeacherMorning")?.checked ?? true;
+  const isPreserveExisting = document.getElementById("chkPreserveExisting")?.checked ?? true;
 
   const priTeacherIds = isPriorityEnabled ? Array.from(document.querySelectorAll(".pri-teacher-chk:checked")).map(c => c.value) : [];
   const priSubjects = isPriorityEnabled ? Array.from(document.querySelectorAll(".pri-subject-chk:checked")).map(c => c.value) : [];
@@ -5273,7 +5277,7 @@ function executeAutoFillProcess() {
     targetClasses = [...(schoolClasses || [])];
   }
 
-  // ප්‍රමුඛතා පන්ති පළමුව පෙළගැස්වීම (Sort classes by priority)
+  // ප්‍රමුඛතා පන්ති පළමුව තැබීම
   targetClasses.sort((a, b) => {
     const aPri = priClassIds.includes(String(a.id));
     const bPri = priClassIds.includes(String(b.id));
@@ -5283,29 +5287,41 @@ function executeAutoFillProcess() {
   let schedule = isPreserveExisting ? [...(window.masterSchedule || masterSchedule || [])] : [];
   const clashList = [];
 
-  // Helper: ගුරුවරයා එම වේලාවේ නිදහස්දැයි බැලීම (Clash Check)
   function isTeacherFree(teacherId, day, period) {
     if (!teacherId) return true;
-    return !schedule.some(s => s.teacherId === teacherId && Number(s.day) === day && Number(s.period) === period);
+    return !schedule.some(s => {
+      if (Number(s.day) !== day || Number(s.period) !== period) return false;
+      if (s.teacherId && String(s.teacherId).trim() === String(teacherId).trim()) return true;
+      if (s.basketItems && Array.isArray(s.basketItems)) {
+        return s.basketItems.some(bi => bi.teacherId && String(bi.teacherId).trim() === String(teacherId).trim());
+      }
+      return false;
+    });
   }
 
-  // -----------------------------------------------------------------------
+  function isClassSlotFree(classId, day, period) {
+    const cleanCid = String(classId).trim().toLowerCase();
+    return !schedule.some(s => 
+      String(s.classId).trim().toLowerCase() === cleanCid && 
+      Number(s.day) === day && 
+      Number(s.period) === period
+    );
+  }
+
+  // -------------------------------------------------------------------------
   // STEP 1: පන්තිභාර ගුරුතුමා Period 1 වෙත යෙදීම
-  // -----------------------------------------------------------------------
+  // -------------------------------------------------------------------------
   if (isClassTeacherMorning) {
     targetClasses.forEach(cls => {
-      if (!cls.classTeacherId) return; // ගුරුවරයෙක් නැතිනම් skip කිරීම
+      if (!cls.classTeacherId) return;
 
-      // පන්තිභාර ගුරුතුමා උගන්වන විෂය සෙවීම
       const subEntries = Object.entries(cls.subjectTeachers || {});
-      const ctSubjectEntry = subEntries.find(([subKey, tId]) => String(tId) === String(cls.classTeacherId));
+      const ctEntry = subEntries.find(([subKey, tId]) => String(tId) === String(cls.classTeacherId));
 
-      if (ctSubjectEntry) {
-        const subName = ctSubjectEntry[0];
-        // සතියේ දින 5 පුරා උදෑසන (period 1) පිරවීමට උත්සාහ කිරීම
+      if (ctEntry) {
+        const subName = ctEntry[0];
         for (let d = 0; d < 5; d++) {
-          const hasSlot = schedule.some(s => String(s.classId) === String(cls.id) && s.day === d && s.period === 1);
-          if (!hasSlot && isTeacherFree(cls.classTeacherId, d, 1)) {
+          if (isClassSlotFree(cls.id, d, 1) && isTeacherFree(cls.classTeacherId, d, 1)) {
             schedule.push({
               classId: cls.id,
               day: d,
@@ -5314,45 +5330,151 @@ function executeAutoFillProcess() {
               teacherId: cls.classTeacherId,
               isCombined: false
             });
-            break; // එක් වාරයක් යෙදීමෙන් පසු ප්‍රමාණවත්
+            break;
           }
         }
       }
     });
   }
 
-  // -----------------------------------------------------------------------
-  // STEP 2: ප්‍රමුඛතා විෂයන් සහ සෙසු විෂයන් පිරවීම
-  // -----------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // STEP 2: COMBINED SUBJECTS පළමුව පිරවීම (6A, 6B, 6C සමගාමීව Sync කිරීම)
+  // -------------------------------------------------------------------------
+  const allCombinedDefs = window.combinedCurriculumSubjects || [];
+  const appliedCombinedIds = new Set();
+
   targetClasses.forEach(cls => {
     const gradeNum = typeof cleanGradeNum === "function" ? cleanGradeNum(cls.grade) : cls.grade;
-    let subjects = (curriculumSubjects || []).filter(cs => 
-      (typeof cleanGradeNum === "function" ? cleanGradeNum(cs.grade) : cs.grade) === gradeNum
+    const cleanCid = String(cls.id || cls.name).trim().toLowerCase();
+
+    const classCombList = allCombinedDefs.filter(c => {
+      if ((typeof cleanGradeNum === "function" ? cleanGradeNum(c.grade) : c.grade) !== gradeNum) return false;
+      return (c.targetClassIds || []).some(id => String(id).trim().toLowerCase() === cleanCid);
+    });
+
+    classCombList.forEach(comb => {
+      if (appliedCombinedIds.has(comb.id)) return;
+      appliedCombinedIds.add(comb.id);
+
+      const targetPeerClasses = (comb.targetClassIds || []).map(id => String(id).trim());
+      const maxWeekly = Number(comb.maxWeekly) || 2;
+
+      const currentAllocated = schedule.filter(s => 
+        String(s.classId).trim().toLowerCase() === targetPeerClasses[0]?.toLowerCase() && 
+        (s.combinedSubjectId === comb.id || s.subject === comb.name)
+      ).length;
+
+      let needed = maxWeekly - currentAllocated;
+      if (needed <= 0) return;
+
+      for (let p = 1; p <= 8; p++) {
+        for (let d = 0; d < 5; d++) {
+          if (needed <= 0) break;
+
+          const allClassesFree = targetPeerClasses.every(cId => isClassSlotFree(cId, d, p));
+          if (!allClassesFree) continue;
+
+          let allTeachersFree = true;
+          const classBasketMap = {};
+
+          for (const cId of targetPeerClasses) {
+            const classObj = (schoolClasses || []).find(sc => 
+              String(sc.id).trim().toLowerCase() === cId.toLowerCase() || 
+              String(sc.name).trim().toLowerCase() === cId.toLowerCase()
+            );
+
+            const basketItems = (comb.subjects || []).map(subName => {
+              const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(subName) : subName.trim().toLowerCase();
+              const tid = (classObj && classObj.subjectTeachers && classObj.subjectTeachers[subKey]) || null;
+              if (tid && !isTeacherFree(tid, d, p)) {
+                allTeachersFree = false;
+              }
+              return { subject: subName, teacherId: tid };
+            });
+
+            classBasketMap[cId] = basketItems;
+          }
+
+          if (allTeachersFree) {
+            targetPeerClasses.forEach(cId => {
+              schedule.push({
+                classId: cId,
+                day: d,
+                period: p,
+                subject: comb.name,
+                combinedSubjectId: comb.id,
+                groupCode: comb.groupCode,
+                isCombined: true,
+                basketItems: classBasketMap[cId]
+              });
+            });
+            needed--;
+          }
+        }
+      }
+
+      if (needed > 0) {
+        clashList.push({
+          className: targetPeerClasses.join(", "),
+          classId: targetPeerClasses[0],
+          subject: comb.name + ` (${comb.groupCode || 'COMBINED'})`,
+          teacherName: "බහු ගුරුවරුන් (Parallel Group)",
+          unassigned: needed
+        });
+      }
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // STEP 3: සාමාන්‍ය තනි විෂයන් පිරවීම (TRAY QUOTAS ONLY - SUPPRESSED EXCLUDED)
+  // -------------------------------------------------------------------------
+  targetClasses.forEach(cls => {
+    const cleanCid = String(cls.id || cls.name).trim().toLowerCase();
+    const gradeNum = typeof cleanGradeNum === "function" ? cleanGradeNum(cls.grade) : cls.grade;
+
+    // මෙම පන්තියට අදාළ Combined Subject වලට අයත් විෂයන් ඉවත් කිරීම (Suppression Rule)
+    const classCombines = allCombinedDefs.filter(c => 
+      (typeof cleanGradeNum === "function" ? cleanGradeNum(c.grade) : c.grade) === gradeNum &&
+      (c.targetClassIds || []).some(id => String(id).trim().toLowerCase() === cleanCid)
     );
 
-    // ප්‍රමුඛතා විෂයන් සහ ප්‍රමුඛතා ගුරුවරුන් සිටින විෂයන් පළමුව තැබීම
-    subjects.sort((a, b) => {
+    const suppressedSubjectKeys = new Set();
+    classCombines.forEach(c => {
+      (c.subjects || []).forEach(s => {
+        suppressedSubjectKeys.add(typeof cleanSubjectKey === "function" ? cleanSubjectKey(s) : s.trim().toLowerCase());
+      });
+    });
+
+    let activeTraySubjects = (curriculumSubjects || []).filter(cs => {
+      if ((typeof cleanGradeNum === "function" ? cleanGradeNum(cs.grade) : cs.grade) !== gradeNum) return false;
+      const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(cs.subject) : cs.subject.trim().toLowerCase();
+      return !suppressedSubjectKeys.has(sKey);
+    });
+
+    activeTraySubjects.sort((a, b) => {
       const aPri = priSubjects.includes(a.subject);
       const bPri = priSubjects.includes(b.subject);
       return (bPri ? 1 : 0) - (aPri ? 1 : 0);
     });
 
-    subjects.forEach(cs => {
-      const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(cs.subject) : cs.subject.toLowerCase();
+    activeTraySubjects.forEach(cs => {
+      const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(cs.subject) : cs.subject.trim().toLowerCase();
       const teacherId = cls.subjectTeachers ? cls.subjectTeachers[subKey] : null;
 
-      const currentAllocated = schedule.filter(s => String(s.classId) === String(cls.id) && s.subject === cs.subject).length;
-      let needed = (Number(cs.maxWeekly) || 0) - currentAllocated;
+      const currentAllocated = schedule.filter(s => 
+        String(s.classId).trim().toLowerCase() === cleanCid && 
+        s.subject === cs.subject && 
+        !s.isCombined
+      ).length;
 
+      let needed = (Number(cs.maxWeekly) || 0) - currentAllocated;
       if (needed <= 0) return;
 
-      // කාලසටහනේ හිස් තැන් සොයා පිරවීම (දින 5, කාලච්ඡේද 8)
       for (let p = 1; p <= 8; p++) {
         for (let d = 0; d < 5; d++) {
           if (needed <= 0) break;
 
-          const slotTaken = schedule.some(s => String(s.classId) === String(cls.id) && s.day === d && s.period === p);
-          if (!slotTaken && isTeacherFree(teacherId, d, p)) {
+          if (isClassSlotFree(cls.id, d, p) && isTeacherFree(teacherId, d, p)) {
             schedule.push({
               classId: cls.id,
               day: d,
@@ -5366,37 +5488,49 @@ function executeAutoFillProcess() {
         }
       }
 
-      // තවමත් නොපිරවූ වාර ඇත්නම් Clash Report එකට එකතු කිරීම
       if (needed > 0) {
-        const tObj = (teachers || []).find(t => String(t.id) === String(teacherId));
+        const tObj = (teachers || []).find(t => String(t.id).trim() === String(teacherId).trim());
         clashList.push({
           className: cls.name || cls.id,
           classId: cls.id,
           subject: cs.subject,
-          teacherName: tObj ? tObj.name : "නැත",
+          teacherName: tObj ? tObj.name : "ගුරුවරයෙකු නැත",
           unassigned: needed
         });
       }
     });
   });
 
-  // -----------------------------------------------------------------------
-  // STEP 3: අවසන් කිරීම, සුරැකීම සහ Clash Report පෙන්වීම
-  // -----------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // STEP 4: දත්ත සුරැකීම සහ අතුරුමුහුණත යාවත්කාලීන කිරීම
+  // -------------------------------------------------------------------------
   if (typeof masterSchedule !== "undefined") masterSchedule = schedule;
   window.masterSchedule = schedule;
 
   if (typeof saveAllToStorage === "function") saveAllToStorage();
   if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
-  if (typeof renderIndividualTeacherSchedule === "function") renderIndividualTeacherSchedule();
+  
+  const activeClassId = document.getElementById("activeClassSelect")?.value || (schoolClasses && schoolClasses[0] ? schoolClasses[0].id : null);
+  if (activeClassId && typeof renderSubjectQuotaTray === "function") {
+    renderSubjectQuotaTray(activeClassId);
+  }
+  if (typeof renderIndividualTeacherSchedule === "function") {
+    renderIndividualTeacherSchedule();
+  }
 
   if (clashList.length > 0) {
-    showClashReportModal(clashList);
+    if (typeof showClashReportModal === "function") {
+      showClashReportModal(clashList);
+    } else {
+      alert(`Auto-Fill අවසන් විය. නමුත් ගැටුම් ${clashList.length} ක් හඳුනාගන්නා ලදි.`);
+    }
   } else {
-    alert("සාර්ථකයි! කිසිදු විෂය ගැටුමකින් තොරව කාලසටහන සම්පූර්ණයෙන්ම Auto-Fill කරන ලදි.");
+    alert("සාර්ථකයි! Tray එකේ ඇති සියලුම විෂයන් (Combined විෂයන් ඇතුළුව) නිවැරදිව Auto-Fill කරන ලදි.");
   }
 }
 
+window.executeAutoFillProcess = executeAutoFillProcess;
+    
 /**
  * Crash Report පෙන්වීම
  */
