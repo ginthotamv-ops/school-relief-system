@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V547
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V56
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -455,87 +455,106 @@
     </div>
 
     <!-- TAB 5: CURRICULUM -->
-    <div id="subjectCurriculumTab" class="hidden space-y-6">
-      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-3 border-b border-slate-100 gap-3">
-          <div>
-            <h2 class="text-lg font-bold text-slate-800 mb-1">ශ්‍රේණි සඳහා විෂයන් සහ සතිපතා උපරිම කාලච්ඡේද සීමා</h2>
-            <p class="text-xs text-slate-500">එකම ශ්‍රේණියට එකම විෂය නැවත ඇතුළත් කළ නොහැක.</p>
-          </div>
-          <select id="curriculumFilterGradeSelect" onchange="renderCurriculumTable()" class="p-2 border rounded-xl font-bold text-xs bg-slate-50 outline-none">
-            <option value="All">සියලුම ශ්‍රේණි (All)</option>
-          </select>
-        </div>
-        
-<button type="button" onclick="openClearAllocationsModal()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2 px-3.5 rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer">
-  <i class="fa-solid fa-eraser"></i> පැවරීම් ඉවත් කරන්න (Clear)
-</button>
-        
-<form id="curriculumForm" onsubmit="handleSaveCurriculumSubject(event)" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 my-4">
-          <input type="hidden" id="curriculumEditId" value="">
-          <div>
-            <div class="flex items-center justify-between mb-1.5">
-              <label class="text-xs font-bold text-slate-700">අදාළ ශ්‍රේණි තෝරන්න (එක් විෂයක් ශ්‍රේණි කිහිපයකට එකවර දැමිය හැක):</label>
-              <label class="text-[11px] font-bold text-indigo-700 cursor-pointer flex items-center gap-1 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
-                <input type="checkbox" id="curriculumSelectAllGrades" onchange="toggleSelectAllCurriculumGrades(this)" class="w-3.5 h-3.5 text-indigo-600 rounded">
-                <span>සියලුම ශ්‍රේණි (Select All)</span>
-              </label>
-            </div>
-            <div id="curriculumGradesCheckboxContainer" class="flex flex-wrap gap-2 p-2.5 bg-white border border-slate-200 rounded-lg"></div>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-            <div>
-              <label class="text-xs font-bold text-slate-600 block mb-1">විෂයයේ නම:</label>
-              <input type="text" id="curriculumSubjectName" placeholder="උදා: English, Science" required class="w-full p-2 border rounded-lg text-xs bg-white">
-            </div>
-            <div>
-              <label class="text-xs font-bold text-slate-600 block mb-1">සතියකට උපරිම කාලච්ඡේද (ශ්‍රේණියකට):</label>
-              <input type="number" id="curriculumMaxPeriods" min="1" max="15" value="5" required class="w-full p-2 border rounded-lg text-xs bg-white">
-            </div>
-            <!-- 🔴 Dropdown එක මෙතැනට දමන්න -->
-<div class="mt-2">
-  <label class="block text-xs font-bold text-slate-700 mb-1">කාලච්ඡේද සැකසුම</label>
-  <select id="curriculumPeriodTypeSelect" class="w-full p-2 border rounded-lg text-xs font-bold">
-    <option value="SINGLE">Single </option>
-    <option value="DOUBLE">Double </option>
-    <option value="TRIPLE">Triple </option>
-  </select>
-</div>
-            <div class="flex gap-2">
-              <button type="submit" id="curriculumSubmitBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-3 rounded-lg shadow transition">
-                <i class="fa-solid fa-plus"></i> විෂය එක් කරන්න
-              </button>
-              <button type="button" id="curriculumCancelEditBtn" onclick="cancelCurriculumEdit()" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs py-2 px-3 rounded-lg transition">
-                අවලංගු
-              </button>
-            </div>
-          </div>
-        </form>
+ 
+        <!-- ========================================================================= -->
+<!-- 1. විෂය එකතු කිරීමේ සහ සංස්කරණය කිරීමේ පෝරමය (Curriculum Form Modal/Card) -->
+<!-- ========================================================================= -->
+<!-- ========================================================================= -->
+<!-- 1. විෂය එකතු කිරීමේ සහ සංස්කරණය කිරීමේ පෝරමය (Curriculum Form Modal/Card) -->
+<!-- ========================================================================= -->
+<form id="curriculumForm" onsubmit="handleSaveCurriculumSubject(event)" class="space-y-4">
+  <input type="hidden" id="curriculumEditId" value="">
 
-        
-        <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-sm bg-white mt-4">
-          <table class="w-full text-xs text-left border-collapse" id="curriculumTable">
-            <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-              <tr>
-                <th class="p-2.5 w-20">ශ්‍රේණිය</th>
-                <th class="p-2.5 w-24">අංශය</th>
-                <th class="p-2.5">විෂය නම</th>
-                <th class="p-2.5 w-28">සතියට වාර</th>
-                <!-- 🔴 මෙම තීරුව අලුතින් එක් කරන්න -->
-                <th class="p-2.5 text-center">වර්ගය</th>
-                <th class="p-2.5 text-left">ගුරුවරයෙකු නොමැති පන්ති</th>
-                <th class="p-2.5 text-center w-48">ක්‍රියාකාරකම්</th>
-              </tr>
-            </thead>
-            <tbody id="curriculumTableBody" class="divide-y divide-slate-100 font-medium">
-              <!-- JavaScript මඟින් ගුරුවරුන්ගේ Badges සහිත පේළි මෙතැනට ස්වයංක්‍රීයව render වේ -->
-            </tbody>
-          </table>
-        </div>
-
-        
-      </div>
+  <!-- ශ්‍රේණි තේරීම -->
+  <div>
+    <div class="flex items-center justify-between mb-1.5">
+      <label class="block text-xs font-bold text-slate-700">ශ්‍රේණිය (Grades)</label>
+      <label class="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 cursor-pointer">
+        <input type="checkbox" id="curriculumSelectAllGrades" onchange="toggleSelectAllGrades(this)" class="rounded accent-indigo-600">
+        සියලු ශ්‍රේණි
+      </label>
     </div>
+    <div id="curriculumGradesCheckboxContainer" class="flex flex-wrap gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg">
+      <!-- Grade checkboxes (6, 7, 8, 9, 10, 11, 12, 13) -->
+      <label class="inline-flex items-center gap-1 text-xs font-semibold text-slate-700">
+        <input type="checkbox" value="6" class="curriculum-grade-chk accent-indigo-600 rounded" onchange="onGradeSelectionChanged()"> 6
+      </label>
+      <label class="inline-flex items-center gap-1 text-xs font-semibold text-slate-700">
+        <input type="checkbox" value="7" class="curriculum-grade-chk accent-indigo-600 rounded" onchange="onGradeSelectionChanged()"> 7
+      </label>
+      <label class="inline-flex items-center gap-1 text-xs font-semibold text-slate-700">
+        <input type="checkbox" value="8" class="curriculum-grade-chk accent-indigo-600 rounded" onchange="onGradeSelectionChanged()"> 8
+      </label>
+      <label class="inline-flex items-center gap-1 text-xs font-semibold text-slate-700">
+        <input type="checkbox" value="9" class="curriculum-grade-chk accent-indigo-600 rounded" onchange="onGradeSelectionChanged()"> 9
+      </label>
+      <label class="inline-flex items-center gap-1 text-xs font-semibold text-slate-700">
+        <input type="checkbox" value="10" class="curriculum-grade-chk accent-indigo-600 rounded" onchange="onGradeSelectionChanged()"> 10
+      </label>
+      <label class="inline-flex items-center gap-1 text-xs font-semibold text-slate-700">
+        <input type="checkbox" value="11" class="curriculum-grade-chk accent-indigo-600 rounded" onchange="onGradeSelectionChanged()"> 11
+      </label>
+      <label class="inline-flex items-center gap-1 text-xs font-semibold text-slate-700">
+        <input type="checkbox" value="12" class="curriculum-grade-chk accent-indigo-600 rounded" onchange="onGradeSelectionChanged()"> 12
+      </label>
+      <label class="inline-flex items-center gap-1 text-xs font-semibold text-slate-700">
+        <input type="checkbox" value="13" class="curriculum-grade-chk accent-indigo-600 rounded" onchange="onGradeSelectionChanged()"> 13
+      </label>
+    </div>
+  </div>
+
+  <!-- විෂය නාමය -->
+  <div>
+    <label class="block text-xs font-bold text-slate-700 mb-1">විෂය නාමය</label>
+    <input type="text" id="curriculumSubjectName" required placeholder="උදා: බුද්ධ ධර්මය, විද්‍යාව, BC"
+           class="w-full p-2.5 border border-slate-300 rounded-lg text-xs font-bold bg-white text-slate-800 outline-none focus:border-indigo-600">
+  </div>
+
+  <!-- සතිපතා උපරිම වාර ගණන -->
+  <div>
+    <label class="block text-xs font-bold text-slate-700 mb-1">සතිපතා වාර ගණන (Max Periods)</label>
+    <input type="number" id="curriculumMaxPeriods" min="1" max="15" value="5" required
+           class="w-full p-2.5 border border-slate-300 rounded-lg text-xs font-bold bg-white text-slate-800 outline-none focus:border-indigo-600">
+  </div>
+
+  <!-- කාලච්ඡේද සැකසුම (Single / Double / Triple) -->
+  <div>
+    <label class="block text-xs font-bold text-slate-700 mb-1">කාලච්ඡේද සැකසුම (Period Block Type)</label>
+    <select id="curriculumPeriodTypeSelect" 
+            class="w-full p-2.5 border border-slate-300 rounded-lg text-xs font-bold bg-white text-slate-800 outline-none focus:border-indigo-600">
+      <option value="SINGLE">Single (තනි කාලච්ඡේදය - 1)</option>
+      <option value="DOUBLE">Double (යුගල කාලච්ඡේද - 2 එකවර)</option>
+      <option value="TRIPLE">Triple (ත්‍රිත්ව කාලච්ඡේද - 3 එකවර)</option>
+    </select>
+    <span class="text-[10px] text-slate-400 mt-0.5 block">
+      ප්‍රායෝගික හෝ විද්‍යාගාර විෂයන් සඳහා Double / Triple තෝරන්න.
+    </span>
+  </div>
+
+  <!-- අදාළ පන්ති තේරීම (Applicable Classes Checkboxes) -->
+  <div id="curriculumApplicableClassesWrapper" class="hidden">
+    <div class="flex items-center justify-between mb-1">
+      <label class="block text-xs font-bold text-slate-700">අදාළ පන්ති (Applicable Classes)</label>
+      <label class="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 cursor-pointer">
+        <input type="checkbox" id="curriculumAllClassesChk" onchange="toggleAllApplicableClasses(this)" checked class="rounded accent-indigo-600">
+        සියලු පන්ති සඳහා
+      </label>
+    </div>
+    <div id="curriculumApplicableClassesContainer" class="flex flex-wrap gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded-lg max-h-28 overflow-y-auto">
+      <!-- තෝරාගත් ශ්‍රේණියේ පන්ති මෙහි පෙන්වයි -->
+    </div>
+  </div>
+
+  <!-- ක්‍රියාකාරී බොත්තම් -->
+  <div class="flex items-center justify-end gap-2 pt-2">
+    <button type="button" id="curriculumCancelEditBtn" onclick="cancelCurriculumEdit()" class="hidden px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
+      අවලංගු කරන්න
+    </button>
+    <button type="submit" id="curriculumSubmitBtn" class="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition flex items-center gap-1.5">
+      <i class="fa-solid fa-plus"></i> විෂය එක් කරන්න
+    </button>
+  </div>
+</form>
 
     <!-- TAB 6: GRADE & CLASS SETTINGS -->
     <div id="gradeSettingsTab" class="hidden space-y-6">
@@ -1250,7 +1269,74 @@
 
   
 <!-- Modal: Grade-Specific Basket & Combined Classes Setup Modal -->
+<!-- ========================================================================= -->
+<!-- 2. "ACTIVE CLASSES" ඉක්මන් සැකසුම් MODAL කවුළුව                         -->
+<!-- ========================================================================= -->
+<div id="activeClassesModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 hidden p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 border border-slate-200">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+      <div>
+        <h3 class="text-sm font-extrabold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-chalkboard-user text-indigo-600"></i> සක්‍රීය පන්ති සැකසුම (Active Classes)
+        </h3>
+        <p class="text-xs text-slate-500 mt-0.5">
+          විෂය: <span id="activeClassesSubjectTitle" class="font-bold text-indigo-700">-</span>
+        </p>
+      </div>
+      <button type="button" onclick="closeActiveClassesModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
 
+    <input type="hidden" id="activeClassesTargetSubjectId">
+
+    <div class="flex items-center justify-between p-2.5 bg-indigo-50/70 border border-indigo-100 rounded-xl mb-3">
+      <span class="text-xs font-bold text-indigo-950">මෙම ශ්‍රේණියේ සියලු පන්ති සඳහා</span>
+      <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs font-bold text-indigo-700">
+        <input type="checkbox" id="activeClassesSelectAllChk" onchange="toggleAllActiveClasses(this)" class="w-4 h-4 rounded accent-indigo-600">
+        සියල්ල තෝරන්න
+      </label>
+    </div>
+
+    <div class="mb-4">
+      <span class="block text-xs font-bold text-slate-700 mb-1.5">විෂය උගන්වන පන්ති පමණක් සලකුණු කරන්න:</span>
+      <div id="activeClassesListContainer" class="grid grid-cols-2 gap-2 p-2 bg-slate-50 border border-slate-200 rounded-xl max-h-48 overflow-y-auto">
+        <!-- පන්ති Checkboxes මෙහි පිරවේ -->
+      </div>
+    </div>
+
+    <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+      <button type="button" onclick="closeActiveClassesModal()" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg">
+        අවලංගු කරන්න
+      </button>
+      <button type="button" onclick="saveActiveClassesSelection()" class="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm flex items-center gap-1.5">
+        <i class="fa-solid fa-check text-[11px]"></i> සුරකින්න
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 3. විෂය නිර්දේශ වගු ආකෘතිය (CURRICULUM TABLE STRUCTURE)                 -->
+<!-- ========================================================================= -->
+<div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm mt-4">
+  <table class="w-full text-left border-collapse bg-white">
+    <thead class="bg-slate-100 text-slate-700 font-bold text-xs border-b border-slate-200">
+      <tr>
+        <th class="p-2.5">ශ්‍රේණිය</th>
+        <th class="p-2.5">අංශය</th>
+        <th class="p-2.5">විෂය නාමය</th>
+        <th class="p-2.5">වාර ගණන</th>
+        <th class="p-2.5 text-center">කාලච්ඡේද වර්ගය</th>
+        <th class="p-2.5">ගුරු පත්වීම් තත්ත්වය</th>
+        <th class="p-2.5 text-center">ක්‍රියාමාර්ග</th>
+      </tr>
+    </thead>
+    <tbody id="curriculumTableBody" class="divide-y divide-slate-100">
+      <!-- Rows will be injected here dynamically -->
+    </tbody>
+  </table>
+</div>
   
 
   <!-- One-by-One Combined Subject Builder Modal -->
@@ -5026,175 +5112,184 @@ window.saveClassSpecificCombinedSubject = saveClassSpecificCombinedSubject;
     // 2. TRAY RENDER CONTROLLER (INCLUDES BOTH REGULAR & BASKET SUBJECTS)
     // =========================================================================
 
+// =========================================================================
+// 6. SUBJECT QUOTA TRAY RENDERER (SUPPRESSION & APPLICABLE FILTERED)
+// =========================================================================
+
 function renderSubjectQuotaTray(classId) {
-      const tray = document.getElementById("classSubjectQuotaTray") || document.getElementById("classSubjectQuotaStatus");
-      if (!tray) return;
-      tray.innerHTML = "";
+  const tray = document.getElementById("classSubjectQuotaTray") || document.getElementById("classSubjectQuotaStatus");
+  if (!tray) return;
+  tray.innerHTML = "";
 
-      if (!classId) {
-        tray.innerHTML = '<span class="text-xs text-slate-400 font-bold p-2">කරුණාකර පන්තියක් තෝරන්න.</span>';
-        return;
+  if (!classId) {
+    tray.innerHTML = '<span class="text-xs text-slate-400 font-bold p-2">කරුණාකර පන්තියක් තෝරන්න.</span>';
+    return;
+  }
+
+  const cleanClassId = String(classId).trim();
+  const currentCls = (schoolClasses || []).find(c => 
+    String(c.id).trim().toLowerCase() === cleanClassId.toLowerCase() || 
+    String(c.name).trim().toLowerCase() === cleanClassId.toLowerCase()
+  );
+  const currentGrade = currentCls ? cleanGradeNum(currentCls.grade) : 0;
+  const currentClassName = currentCls ? currentCls.name : cleanClassId;
+
+  // 1. COMBINED SUBJECTS හඳුනාගැනීම
+  const relevantCombined = (window.combinedCurriculumSubjects || []).filter(comb => {
+    if (cleanGradeNum(comb.grade) !== currentGrade) return false;
+    return (comb.targetClassIds || []).some(cid => 
+      String(cid).trim().toLowerCase() === cleanClassId.toLowerCase() ||
+      String(cid).trim().toLowerCase() === currentClassName.toLowerCase()
+    );
+  });
+
+  const suppressedSubjects = new Set();
+  relevantCombined.forEach(comb => {
+    (comb.subjects || []).forEach(sub => suppressedSubjects.add(cleanSubjectKey(sub)));
+  });
+
+  // 2. COMBINED CARDS RENDER කිරීම
+  relevantCombined.forEach(comb => {
+    let allocatedCount = 0;
+    (masterSchedule || []).forEach(s => {
+      if (String(s.classId).trim().toLowerCase() === cleanClassId.toLowerCase() && (s.subject === comb.name || s.combinedSubjectId === comb.id)) {
+        allocatedCount++;
       }
+    });
 
-      const cleanClassId = String(classId).trim();
+    const max = Number(comb.maxWeekly) || 2;
+    const remaining = Math.max(0, max - allocatedCount);
+    const isCompleted = allocatedCount >= max;
 
-      const currentCls = (schoolClasses || []).find(c => 
-        String(c.id).trim() === cleanClassId || String(c.name).trim() === cleanClassId
-      );
-      const currentGrade = currentCls ? (typeof cleanGradeNum === "function" ? cleanGradeNum(currentCls.grade) : currentCls.grade) : 0;
-      const currentClassName = currentCls ? currentCls.name : cleanClassId;
+    const card = document.createElement("div");
+    card.className = `p-2.5 rounded-xl border-2 shadow-sm transition flex items-center justify-between gap-3 select-none ${
+      isCompleted 
+        ? "bg-indigo-50/60 border-indigo-200 text-indigo-900 opacity-75" 
+        : "bg-gradient-to-r from-indigo-50 to-emerald-50 border-indigo-400 text-indigo-950 hover:shadow-md cursor-grab active:cursor-grabbing"
+    }`;
 
-      // =========================================================================
-      // 1. මෙම පන්තිය අයත් COMBINED SUBJECTS හඳුනාගැනීම
-      // =========================================================================
-      const relevantCombined = (window.combinedCurriculumSubjects || []).filter(comb => {
-        if ((typeof cleanGradeNum === "function" ? cleanGradeNum(comb.grade) : comb.grade) !== currentGrade) return false;
-        return (comb.targetClassIds || []).some(cid => 
-          String(cid).trim().toLowerCase() === cleanClassId.toLowerCase() ||
-          String(cid).trim().toLowerCase() === currentClassName.toLowerCase()
-        );
-      });
-
-      // 🔴 මෙම පන්තිය සඳහා Quota Tray එකෙන් ඉවත් කළ යුතු (Suppressed) තනි විෂයන් ලැයිස්තුව
-      const suppressedSubjects = new Set();
-      relevantCombined.forEach(comb => {
-        (comb.subjects || []).forEach(sub => suppressedSubjects.add(cleanSubjectKey(sub)));
-      });
-
-      // =========================================================================
-      // 2. COMBINED SUBJECT CARDS (ඉහළින්ම දිස්වීම)
-      // =========================================================================
-      relevantCombined.forEach(comb => {
-        let allocatedCount = 0;
-        (masterSchedule || []).forEach(s => {
-          if (String(s.classId).trim() === cleanClassId && (s.subject === comb.name || s.combinedSubjectId === comb.id)) {
-            allocatedCount++;
-          }
-        });
-
-        const max = Number(comb.maxWeekly) || 2;
-        const remaining = Math.max(0, max - allocatedCount);
-        const isCompleted = allocatedCount >= max;
-
-        const card = document.createElement("div");
-        card.className = `p-2.5 rounded-xl border-2 shadow-sm transition flex items-center justify-between gap-3 select-none ${
-          isCompleted 
-            ? "bg-indigo-50/60 border-indigo-200 text-indigo-900 opacity-75" 
-            : "bg-gradient-to-r from-indigo-50 to-emerald-50 border-indigo-400 text-indigo-950 hover:shadow-md cursor-grab active:cursor-grabbing"
-        }`;
-
-        if (remaining > 0) {
-          card.draggable = true;
-          card.title = `ඇදගෙන ගොස් කාලසටහනට දමන්න (ඉතිරි: ${remaining})`;
-          card.addEventListener("dragstart", (e) => {
-            window.draggedSubjectData = {
-              type: "COMBINED_SUBJECT",
-              isCombined: true,
-              combinedId: comb.id,
-              subject: comb.name,
-              subList: comb.subjects,
-              sourceClassId: cleanClassId
-            };
-            e.dataTransfer.setData("text/plain", comb.name);
-            e.dataTransfer.effectAllowed = "copy";
-          });
-        }
-
-        const subNames = (comb.subjects || []).join(", ");
-
-        card.innerHTML = `
-          <div>
-            <div class="font-extrabold text-xs flex items-center gap-1.5 text-indigo-950">
-              <i class="fa-solid fa-layer-group text-indigo-600"></i>
-              <span>${comb.name}</span>
-              <span class="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded font-black border border-indigo-200">${comb.groupCode}</span>
-            </div>
-            <div class="text-[10px] text-slate-500 font-semibold truncate max-w-[140px] mt-0.5" title="${subNames}">
-              ${subNames}
-            </div>
-          </div>
-          <div class="flex flex-col items-end gap-0.5">
-            <span class="text-[10px] font-black px-2 py-0.5 rounded-md border bg-indigo-100 text-indigo-800 border-indigo-300">
-              ${allocatedCount} / ${max}
-            </span>
-            <span class="text-[9px] font-bold ${remaining > 0 ? 'text-indigo-600' : 'text-slate-400'}">
-              ${remaining > 0 ? `ඉතිරි: ${remaining}` : 'අවසන්'}
-            </span>
-          </div>
-        `;
-
-        tray.appendChild(card);
-      });
-
-      // =========================================================================
-      // 3. සාමාන්‍ය තනි විෂයන් (REGULAR SUBJECTS)
-      // =========================================================================
-      const quotas = typeof calculateClassSubjectQuotas === "function" ? calculateClassSubjectQuotas(cleanClassId) : [];
-      
-      // 🔴 අදාළ පන්තිය සඳහා Group එකට අයත් තනි විෂයන් පමණක් ඉවත් කර ඉතිරි විෂයන් පෙන්වීම
-      const filteredQuotas = quotas.filter(q => !suppressedSubjects.has(cleanSubjectKey(q.subject)));
-
-      filteredQuotas.forEach(q => {
-        const isCompleted = q.allocated === q.maxWeekly;
-
-        let teacherDisplayHtml = "";
-        if (q.assignedTeacher && q.assignedTeacher.name) {
-          const no = q.assignedTeacher.schoolNo ? `[${q.assignedTeacher.schoolNo}]` : "";
-          teacherDisplayHtml = `
-            <div class="text-[10px] text-indigo-900 font-bold truncate max-w-[130px]" title="${q.assignedTeacher.name}">
-              <i class="fa-solid fa-user-tie text-[9px] mr-1 text-indigo-600"></i>${q.assignedTeacher.name} ${no}
-            </div>
-          `;
-        } else {
-          teacherDisplayHtml = `
-            <div class="text-[10px] text-rose-600 font-bold truncate max-w-[130px]">
-              <i class="fa-solid fa-circle-exclamation text-[9px] mr-1 text-rose-500"></i>ගුරුවරයෙකු නැත
-            </div>
-          `;
-        }
-
-        const card = document.createElement("div");
-        card.className = `p-2.5 rounded-xl border shadow-sm transition flex items-center justify-between gap-3 select-none bg-white border-slate-200 text-slate-800 hover:border-indigo-400 ${
-          q.remaining > 0 ? "cursor-grab active:cursor-grabbing hover:shadow-md" : "opacity-75 cursor-not-allowed"
-        }`;
-
-        if (q.remaining > 0) {
-          card.draggable = true;
-          card.title = `ඇදගෙන ගොස් කාලසටහනට දමන්න (ඉතිරි: ${q.remaining})`;
-          card.addEventListener("dragstart", (e) => {
-            window.draggedSubjectData = {
-              type: "NEW_SUBJECT",
-              subject: q.subject,
-              sourceClassId: cleanClassId
-            };
-            e.dataTransfer.setData("text/plain", q.subject);
-            e.dataTransfer.effectAllowed = "copy";
-          });
-        }
-
-        card.innerHTML = `
-          <div>
-            <div class="font-bold text-xs flex items-center gap-1.5">
-              <span>${q.subject}</span>
-              ${isCompleted ? '<i class="fa-solid fa-circle-check text-emerald-600 text-[11px]"></i>' : ''}
-            </div>
-            <div class="mt-0.5">
-              ${teacherDisplayHtml}
-            </div>
-          </div>
-          <div class="flex flex-col items-end gap-0.5">
-            <span class="text-[10px] font-black px-2 py-0.5 rounded-md border bg-indigo-50 text-indigo-700 border-indigo-200">
-              ${q.allocated} / ${q.maxWeekly}
-            </span>
-            <span class="text-[9px] font-bold ${q.remaining > 0 ? 'text-indigo-600' : 'text-slate-400'}">
-              ${q.remaining > 0 ? `ඉතිරි: ${q.remaining}` : 'අවසන්'}
-            </span>
-          </div>
-        `;
-
-        tray.appendChild(card);
+    if (remaining > 0) {
+      card.draggable = true;
+      card.title = `ඇදගෙන ගොස් කාලසටහනට දමන්න (ඉතිරි: ${remaining})`;
+      card.addEventListener("dragstart", (e) => {
+        window.draggedSubjectData = {
+          type: "COMBINED_SUBJECT",
+          isCombined: true,
+          combinedId: comb.id,
+          subject: comb.name,
+          subList: comb.subjects,
+          sourceClassId: cleanClassId
+        };
+        e.dataTransfer.setData("text/plain", comb.name);
+        e.dataTransfer.effectAllowed = "copy";
       });
     }
+
+    const subNames = (comb.subjects || []).join(", ");
+    card.innerHTML = `
+      <div>
+        <div class="font-extrabold text-xs flex items-center gap-1.5 text-indigo-950">
+          <i class="fa-solid fa-layer-group text-indigo-600"></i>
+          <span>${comb.name}</span>
+          <span class="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded font-black border border-indigo-200">${comb.groupCode}</span>
+        </div>
+        <div class="text-[10px] text-slate-500 font-semibold truncate max-w-[140px] mt-0.5" title="${subNames}">${subNames}</div>
+      </div>
+      <div class="flex flex-col items-end gap-0.5">
+        <span class="text-[10px] font-black px-2 py-0.5 rounded-md border bg-indigo-100 text-indigo-800 border-indigo-300">
+          ${allocatedCount} / ${max}
+        </span>
+        <span class="text-[9px] font-bold ${remaining > 0 ? 'text-indigo-600' : 'text-slate-400'}">
+          ${remaining > 0 ? `ඉතිරි: ${remaining}` : 'අවසන්'}
+        </span>
+      </div>
+    `;
+    tray.appendChild(card);
+  });
+
+  // 3. සාමාන්‍ය තනි විෂයන් (SUPPRESSED & APPLICABLE පෙරීම)
+  const quotas = typeof calculateClassSubjectQuotas === "function" ? calculateClassSubjectQuotas(cleanClassId) : [];
+  
+  const filteredQuotas = quotas.filter(q => {
+    if (suppressedSubjects.has(cleanSubjectKey(q.subject))) return false;
+
+    const cs = (curriculumSubjects || []).find(c => 
+      cleanGradeNum(c.grade) === currentGrade &&
+      c.subject.trim().toLowerCase() === q.subject.trim().toLowerCase()
+    );
+
+    if (cs && cs.applicableClassIds && cs.applicableClassIds.length > 0) {
+      const isApplicable = cs.applicableClassIds.some(id => 
+        String(id).trim().toLowerCase() === cleanClassId.toLowerCase() ||
+        String(id).trim().toLowerCase() === currentClassName.toLowerCase()
+      );
+      if (!isApplicable) return false;
+    }
+    return true;
+  });
+
+  filteredQuotas.forEach(q => {
+    const isCompleted = q.allocated === q.maxWeekly;
+
+    let teacherDisplayHtml = "";
+    if (q.assignedTeacher && q.assignedTeacher.name) {
+      const no = q.assignedTeacher.schoolNo ? `[${q.assignedTeacher.schoolNo}]` : "";
+      teacherDisplayHtml = `
+        <div class="text-[10px] text-indigo-900 font-bold truncate max-w-[130px]" title="${q.assignedTeacher.name}">
+          <i class="fa-solid fa-user-tie text-[9px] mr-1 text-indigo-600"></i>${q.assignedTeacher.name} ${no}
+        </div>
+      `;
+    } else {
+      teacherDisplayHtml = `
+        <div class="text-[10px] text-rose-600 font-bold truncate max-w-[130px]">
+          <i class="fa-solid fa-circle-exclamation text-[9px] mr-1 text-rose-500"></i>ගුරුවරයෙකු නැත
+        </div>
+      `;
+    }
+
+    const card = document.createElement("div");
+    card.className = `p-2.5 rounded-xl border shadow-sm transition flex items-center justify-between gap-3 select-none bg-white border-slate-200 text-slate-800 hover:border-indigo-400 ${
+      q.remaining > 0 ? "cursor-grab active:cursor-grabbing hover:shadow-md" : "opacity-75 cursor-not-allowed"
+    }`;
+
+    if (q.remaining > 0) {
+      card.draggable = true;
+      card.title = `ඇදගෙන ගොස් කාලසටහනට දමන්න (ඉතිරි: ${q.remaining})`;
+      card.addEventListener("dragstart", (e) => {
+        window.draggedSubjectData = {
+          type: "NEW_SUBJECT",
+          subject: q.subject,
+          sourceClassId: cleanClassId
+        };
+        e.dataTransfer.setData("text/plain", q.subject);
+        e.dataTransfer.effectAllowed = "copy";
+      });
+    }
+
+    card.innerHTML = `
+      <div>
+        <div class="font-bold text-xs flex items-center gap-1.5">
+          <span>${q.subject}</span>
+          ${isCompleted ? '<i class="fa-solid fa-circle-check text-emerald-600 text-[11px]"></i>' : ''}
+        </div>
+        <div class="mt-0.5">${teacherDisplayHtml}</div>
+      </div>
+      <div class="flex flex-col items-end gap-0.5">
+        <span class="text-[10px] font-black px-2 py-0.5 rounded-md border bg-indigo-50 text-indigo-700 border-indigo-200">
+          ${q.allocated} / ${q.maxWeekly}
+        </span>
+        <span class="text-[9px] font-bold ${q.remaining > 0 ? 'text-indigo-600' : 'text-slate-400'}">
+          ${q.remaining > 0 ? `ඉතිරි: ${q.remaining}` : 'අවසන්'}
+        </span>
+      </div>
+    `;
+    tray.appendChild(card);
+  });
+}
+
+// =========================================================================
+// 7. INTELLIGENT AUTO-FILL ENGINE (TRAY-AWARE, COMBINED & BLOCKS FIRST)
+// =========================================================================
 
 // =========================================================================
 // INTELLIGENT AUTO-FILL ENGINE WITH PRIORITY & CONSTRAINTS
@@ -5272,8 +5367,9 @@ function populatePriorityTrays() {
  * INTELLIGENT AUTO-FILL ENGINE (TRAY-AWARE & COMBINED-FIRST)
  * පන්තියේ Tray එකේ පවතින විෂයන් පමණක් යොදාගනිමින් කාලසටහන සම්පූර්ණ කරයි.
  */
-function executeAutoFillProcess() {
-  closeAutoFillModal();
+
+    function executeAutoFillProcess() {
+  if (typeof closeAutoFillModal === "function") closeAutoFillModal();
 
   const isPriorityEnabled = document.getElementById("chkEnablePriority")?.checked ?? true;
   const isClassTeacherMorning = document.getElementById("chkClassTeacherMorning")?.checked ?? true;
@@ -5291,7 +5387,6 @@ function executeAutoFillProcess() {
     targetClasses = [...(schoolClasses || [])];
   }
 
-  // ප්‍රමුඛතා පන්ති පළමුව තැබීම
   targetClasses.sort((a, b) => {
     const aPri = priClassIds.includes(String(a.id));
     const bPri = priClassIds.includes(String(b.id));
@@ -5301,7 +5396,8 @@ function executeAutoFillProcess() {
   let schedule = isPreserveExisting ? [...(window.masterSchedule || masterSchedule || [])] : [];
   const clashList = [];
 
-  function isTeacherFree(teacherId, day, period) {
+
+      function isTeacherFree(teacherId, day, period) {
     if (!teacherId) return true;
     return !schedule.some(s => {
       if (Number(s.day) !== day || Number(s.period) !== period) return false;
@@ -5313,7 +5409,7 @@ function executeAutoFillProcess() {
     });
   }
 
-  function isClassSlotFree(classId, day, period) {
+function isClassSlotFree(classId, day, period) {
     const cleanCid = String(classId).trim().toLowerCase();
     return !schedule.some(s => 
       String(s.classId).trim().toLowerCase() === cleanCid && 
@@ -5321,10 +5417,7 @@ function executeAutoFillProcess() {
       Number(s.period) === period
     );
   }
-
-  // -------------------------------------------------------------------------
-  // STEP 1: පන්තිභාර ගුරුතුමා Period 1 වෙත යෙදීම
-  // -------------------------------------------------------------------------
+// STEP 1: පන්තිභාර ගුරුතුමා Period 1 වෙත යෙදීම
   if (isClassTeacherMorning) {
     targetClasses.forEach(cls => {
       if (!cls.classTeacherId) return;
@@ -5351,18 +5444,16 @@ function executeAutoFillProcess() {
     });
   }
 
-  // -------------------------------------------------------------------------
-  // STEP 2: COMBINED SUBJECTS පළමුව පිරවීම (6A, 6B, 6C සමගාමීව Sync කිරීම)
-  // -------------------------------------------------------------------------
+  // STEP 2: COMBINED SUBJECTS පිරවීම (සියලු පන්ති සමගාමීව Sync කිරීම)
   const allCombinedDefs = window.combinedCurriculumSubjects || [];
   const appliedCombinedIds = new Set();
 
   targetClasses.forEach(cls => {
-    const gradeNum = typeof cleanGradeNum === "function" ? cleanGradeNum(cls.grade) : cls.grade;
+    const gradeNum = cleanGradeNum(cls.grade);
     const cleanCid = String(cls.id || cls.name).trim().toLowerCase();
 
     const classCombList = allCombinedDefs.filter(c => {
-      if ((typeof cleanGradeNum === "function" ? cleanGradeNum(c.grade) : c.grade) !== gradeNum) return false;
+      if (cleanGradeNum(c.grade) !== gradeNum) return false;
       return (c.targetClassIds || []).some(id => String(id).trim().toLowerCase() === cleanCid);
     });
 
@@ -5398,7 +5489,7 @@ function executeAutoFillProcess() {
             );
 
             const basketItems = (comb.subjects || []).map(subName => {
-              const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(subName) : subName.trim().toLowerCase();
+              const subKey = cleanSubjectKey(subName);
               const tid = (classObj && classObj.subjectTeachers && classObj.subjectTeachers[subKey]) || null;
               if (tid && !isTeacherFree(tid, d, p)) {
                 allTeachersFree = false;
@@ -5439,29 +5530,34 @@ function executeAutoFillProcess() {
     });
   });
 
-  // -------------------------------------------------------------------------
-  // STEP 3: සාමාන්‍ය තනි විෂයන් පිරවීම (TRAY QUOTAS ONLY - SUPPRESSED EXCLUDED)
-  // -------------------------------------------------------------------------
+  // STEP 3: සාමාන්‍ය තනි විෂයන් පිරවීම (TRAY QUOTAS & APPLICABLE CLASSES ONLY)
   targetClasses.forEach(cls => {
     const cleanCid = String(cls.id || cls.name).trim().toLowerCase();
-    const gradeNum = typeof cleanGradeNum === "function" ? cleanGradeNum(cls.grade) : cls.grade;
+    const gradeNum = cleanGradeNum(cls.grade);
 
-    // මෙම පන්තියට අදාළ Combined Subject වලට අයත් විෂයන් ඉවත් කිරීම (Suppression Rule)
     const classCombines = allCombinedDefs.filter(c => 
-      (typeof cleanGradeNum === "function" ? cleanGradeNum(c.grade) : c.grade) === gradeNum &&
+      cleanGradeNum(c.grade) === gradeNum &&
       (c.targetClassIds || []).some(id => String(id).trim().toLowerCase() === cleanCid)
     );
 
     const suppressedSubjectKeys = new Set();
     classCombines.forEach(c => {
-      (c.subjects || []).forEach(s => {
-        suppressedSubjectKeys.add(typeof cleanSubjectKey === "function" ? cleanSubjectKey(s) : s.trim().toLowerCase());
-      });
+      (c.subjects || []).forEach(s => suppressedSubjectKeys.add(cleanSubjectKey(s)));
     });
 
     let activeTraySubjects = (curriculumSubjects || []).filter(cs => {
-      if ((typeof cleanGradeNum === "function" ? cleanGradeNum(cs.grade) : cs.grade) !== gradeNum) return false;
-      const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(cs.subject) : cs.subject.trim().toLowerCase();
+      if (cleanGradeNum(cs.grade) !== gradeNum) return false;
+
+      // අදාළ පන්ති පරීක්ෂාව
+      if (cs.applicableClassIds && cs.applicableClassIds.length > 0) {
+        const isApplicable = cs.applicableClassIds.some(id => 
+          String(id).trim().toLowerCase() === cleanCid || 
+          String(id).trim().toLowerCase() === String(cls.id).trim().toLowerCase()
+        );
+        if (!isApplicable) return false;
+      }
+
+      const sKey = cleanSubjectKey(cs.subject);
       return !suppressedSubjectKeys.has(sKey);
     });
 
@@ -5472,7 +5568,7 @@ function executeAutoFillProcess() {
     });
 
     activeTraySubjects.forEach(cs => {
-      const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(cs.subject) : cs.subject.trim().toLowerCase();
+      const subKey = cleanSubjectKey(cs.subject);
       const teacherId = cls.subjectTeachers ? cls.subjectTeachers[subKey] : null;
 
       const currentAllocated = schedule.filter(s => 
@@ -5484,10 +5580,26 @@ function executeAutoFillProcess() {
       let needed = (Number(cs.maxWeekly) || 0) - currentAllocated;
       if (needed <= 0) return;
 
+      const pType = cs.periodType || "SINGLE";
+
       for (let p = 1; p <= 8; p++) {
         for (let d = 0; d < 5; d++) {
           if (needed <= 0) break;
 
+          // DOUBLE PERIOD BLOCK CHECK (Period 4 සහ 5 මැද විවේකය මඟහැරීම)
+          if (pType === "DOUBLE" && needed >= 2 && p !== 4 && p < 8) {
+            if (isClassSlotFree(cls.id, d, p) && isClassSlotFree(cls.id, d, p + 1) &&
+                isTeacherFree(teacherId, d, p) && isTeacherFree(teacherId, d, p + 1)) {
+              
+              schedule.push({ classId: cls.id, day: d, period: p, subject: cs.subject, teacherId: teacherId, isCombined: false });
+              schedule.push({ classId: cls.id, day: d, period: p + 1, subject: cs.subject, teacherId: teacherId, isCombined: false });
+              needed -= 2;
+              p++; // ඊළඟ කාලච්ඡේදය මඟහැරීම
+              continue;
+            }
+          }
+
+          // SINGLE PERIOD CHECK
           if (isClassSlotFree(cls.id, d, p) && isTeacherFree(teacherId, d, p)) {
             schedule.push({
               classId: cls.id,
@@ -5515,9 +5627,7 @@ function executeAutoFillProcess() {
     });
   });
 
-  // -------------------------------------------------------------------------
-  // STEP 4: දත්ත සුරැකීම සහ අතුරුමුහුණත යාවත්කාලීන කිරීම
-  // -------------------------------------------------------------------------
+  // STEP 4: දත්ත සුරැකීම සහ UI Refresh
   if (typeof masterSchedule !== "undefined") masterSchedule = schedule;
   window.masterSchedule = schedule;
 
@@ -5539,12 +5649,9 @@ function executeAutoFillProcess() {
       alert(`Auto-Fill අවසන් විය. නමුත් ගැටුම් ${clashList.length} ක් හඳුනාගන්නා ලදි.`);
     }
   } else {
-    alert("සාර්ථකයි! Tray එකේ ඇති සියලුම විෂයන් (Combined විෂයන් ඇතුළුව) නිවැරදිව Auto-Fill කරන ලදි.");
+    alert("සාර්ථකයි! Tray එකේ ඇති සියලුම විෂයන් නිවැරදිව Auto-Fill කරන ලදි.");
   }
 }
-
-window.executeAutoFillProcess = executeAutoFillProcess;
-    
 /**
  * Crash Report පෙන්වීම
  */
@@ -7326,122 +7433,135 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       }
     }
 
-    function handleSaveCurriculumSubject(e) {
-      e.preventDefault();
-      const editId = document.getElementById("curriculumEditId").value;
-      const subject = document.getElementById("curriculumSubjectName").value.trim();
-      const maxWeekly = parseInt(document.getElementById("curriculumMaxPeriods").value);
+function handleSaveCurriculumSubject(event) {
+  if (event) event.preventDefault();
 
-      const checkedGrades = Array.from(document.querySelectorAll(".curriculum-grade-chk:checked")).map(c => parseInt(c.value));
-      if (checkedGrades.length === 0) {
-        alert("කරුණාකර අවම වශයෙන් එක් ශ්‍රේණියක්වත් තෝරන්න.");
-        return;
-      }
+  const editId = document.getElementById("curriculumEditId").value;
+  const subject = document.getElementById("curriculumSubjectName").value.trim();
+  const maxWeekly = parseInt(document.getElementById("curriculumMaxPeriods").value) || 1;
 
-      // 🔴 1. selectedPeriodType මෙතැනදී නිර්වචනය කරන්න
+  // Period Type කියවා ගැනීම
   const pTypeSelect = document.getElementById("curriculumPeriodTypeSelect");
   const selectedPeriodType = pTypeSelect ? pTypeSelect.value : "SINGLE";
-      
-      if (editId) {
-        // Edit mode - updates the specific subject record
-        const existing = curriculumSubjects.find(cs => cs.id === editId);
-        if (existing) {
-          const selectedGrade = checkedGrades[0];
-          const isDuplicate = curriculumSubjects.some(cs => cs.id !== editId && cs.grade === selectedGrade && cs.subject.trim().toLowerCase() === subject.toLowerCase());
-          if (isDuplicate) {
-            alert(`Grade ${selectedGrade} සඳහා '${subject}' විෂය දැනටමත් පවතී.`);
-            return;
-          }
-          existing.grade = selectedGrade;
-          existing.subject = subject;
-          existing.maxWeekly = maxWeekly;
-          // 🔴 මෙම පේළිය අනිවාර්යයෙන්ම එක් කරන්න:
-    existing.periodType = selectedPeriodType;
-        }
-        cancelCurriculumEdit();
-      } else {
-        // Add mode - adds the subject to ALL checked grades simultaneously
-        let addedCount = 0;
-        let skippedGrades = [];
 
-        checkedGrades.forEach(grade => {
-          const alreadyExists = curriculumSubjects.some(cs => cs.grade === grade && cs.subject.trim().toLowerCase() === subject.toLowerCase());
- if (!alreadyExists) {
-            // Dropdown එකෙන් periodType අගය ලබා ගැනීම (නැතහොත් 'SINGLE' ලෙස තැබීම)
-            const periodTypeSelect = document.getElementById("curriculumPeriodTypeSelect");
-            const selectedPeriodType = periodTypeSelect ? periodTypeSelect.value : "SINGLE";
+  // තෝරාගත් ශ්‍රේණි
+  const checkedGrades = Array.from(document.querySelectorAll(".curriculum-grade-chk:checked")).map(c => parseInt(c.value));
+  if (checkedGrades.length === 0) {
+    alert("කරුණාකර අවම වශයෙන් එක් ශ්‍රේණියක් තෝරන්න.");
+    return;
+  }
+  if (!subject) {
+    alert("කරුණාකර විෂය නාමය ඇතුළත් කරන්න.");
+    return;
+  }
 
-            curriculumSubjects.push({
-              id: "CS" + Date.now().toString().slice(-4) + Math.floor(Math.random() * 1000),
-              grade: grade,
-              subject: subject,
-              maxWeekly: maxWeekly,
-              periodType: selectedPeriodType, // 🔴 මෙම පේළිය අලුතින් එක් කරන්න
-              teacherIds: [] // ගුරු හැඳුනුම්පත් අරාව හිස්ව ආරම්භ කිරීම
-            });
-            addedCount++;
-          } else {
-            // දැනටමත් විෂය පවතී නම්, එහි periodType එක පමණක් Update කිරීමට අවශ්‍ය නම් මෙතැනටද යෙදිය හැක:
-            const existingItem = curriculumSubjects.find(cs => cs.grade === grade && cs.subject === subject);
-            if (existingItem) {
-              const periodTypeSelect = document.getElementById("curriculumPeriodTypeSelect");
-              if (periodTypeSelect) existingItem.periodType = periodTypeSelect.value;
-            }
+  // අදාළ පන්ති කියවා ගැනීම
+  const allChk = document.getElementById("curriculumAllClassesChk");
+  const classChks = document.querySelectorAll(".applicable-class-chk:checked");
+  let applicableClassIds = [];
+  if (!allChk || !allChk.checked) {
+    applicableClassIds = Array.from(classChks).map(c => c.value);
+  }
 
-            skippedGrades.push("Grade " + grade);
-          }
-        });
-
-        document.getElementById("curriculumSubjectName").value = "";
-        document.querySelectorAll(".curriculum-grade-chk").forEach(c => c.checked = false);
-        const selectAll = document.getElementById("curriculumSelectAllGrades");
-        if (selectAll) selectAll.checked = false;
-
-        if (skippedGrades.length > 0) {
-          alert(`විෂය එක් කරන ලදි. (${skippedGrades.join(', ')} තුළ මෙම විෂය දැනටමත් තිබූ බැවින් මඟහරින ලදි).`);
-        }
+  // EDIT MODE
+  if (editId) {
+    const existing = (window.curriculumSubjects || []).find(cs => String(cs.id) === String(editId));
+    if (existing) {
+      const selectedGrade = checkedGrades[0];
+      const isDuplicate = curriculumSubjects.some(cs => 
+        String(cs.id) !== String(editId) && 
+        cs.grade === selectedGrade && 
+        cs.subject.trim().toLowerCase() === subject.toLowerCase()
+      );
+      if (isDuplicate) {
+        alert(`Grade ${selectedGrade} සඳහා '${subject}' විෂය දැනටමත් පවතී.`);
+        return;
       }
-
-      saveAllToStorage();
-      renderCurriculumTable();
-      onTeacherSectionCheckboxesChange();
-      renderGradeMasterGrid();
+      existing.grade = selectedGrade;
+      existing.subject = subject;
+      existing.maxWeekly = maxWeekly;
+      existing.periodType = selectedPeriodType;
+      existing.applicableClassIds = applicableClassIds;
     }
+    cancelCurriculumEdit();
+  } 
+  // ADD NEW MODE
+  else {
+    checkedGrades.forEach(grade => {
+      const isDuplicate = (curriculumSubjects || []).some(cs => 
+        cs.grade === grade && cs.subject.trim().toLowerCase() === subject.toLowerCase()
+      );
+      if (!isDuplicate) {
+        curriculumSubjects.push({
+          id: "CS" + Date.now().toString().slice(-4) + Math.floor(Math.random() * 1000),
+          grade: grade,
+          subject: subject,
+          maxWeekly: maxWeekly,
+          periodType: selectedPeriodType,
+          applicableClassIds: checkedGrades.length === 1 ? applicableClassIds : [],
+          teacherIds: []
+        });
+      }
+    });
+    cancelCurriculumEdit();
+  }
 
-    function editCurriculumSubject(id) {
-      const cs = curriculumSubjects.find(c => c.id === id);
-      if (!cs) return;
-      document.getElementById("curriculumEditId").value = cs.id;
-      document.getElementById("curriculumSubjectName").value = cs.subject;
-      document.getElementById("curriculumMaxPeriods").value = cs.maxWeekly;
+  if (typeof saveAllToStorage === "function") saveAllToStorage();
+  if (typeof renderCurriculumTable === "function") renderCurriculumTable();
+}
 
-      // 🔴 අලුතින් එක් කළ කොටස: පවතින Period Type අගය Dropdown එකට ලබාදීම
+// =========================================================================
+// 3. CURRICULUM FORM: EDIT, SAVE & CANCEL FUNCTIONS
+// =========================================================================
+
+function editCurriculumSubject(id) {
+  const cs = (window.curriculumSubjects || []).find(c => String(c.id) === String(id));
+  if (!cs) return;
+
+  document.getElementById("curriculumEditId").value = cs.id;
+  document.getElementById("curriculumSubjectName").value = cs.subject;
+  document.getElementById("curriculumMaxPeriods").value = cs.maxWeekly;
+
+  // Period Type Dropdown එකට අගය ලබාදීම
   const pTypeSelect = document.getElementById("curriculumPeriodTypeSelect");
   if (pTypeSelect) {
     pTypeSelect.value = cs.periodType || "SINGLE";
   }
-      // Uncheck all and check only this record's grade
-      document.querySelectorAll(".curriculum-grade-chk").forEach(chk => {
-        chk.checked = (parseInt(chk.value) === cs.grade);
-      });
-      const selectAll = document.getElementById("curriculumSelectAllGrades");
-      if (selectAll) selectAll.checked = false;
 
-      document.getElementById("curriculumSubmitBtn").innerHTML = '<i class="fa-solid fa-check"></i> යාවත්කාලීන කරන්න';
-      document.getElementById("curriculumCancelEditBtn").classList.remove("hidden");
-    }
+  // අදාළ ශ්‍රේණිය තේරීම
+  document.querySelectorAll(".curriculum-grade-chk").forEach(chk => {
+    chk.checked = (parseInt(chk.value) === cs.grade);
+  });
+  const selectAll = document.getElementById("curriculumSelectAllGrades");
+  if (selectAll) selectAll.checked = false;
 
-    function cancelCurriculumEdit() {
-      document.getElementById("curriculumEditId").value = "";
-      document.getElementById("curriculumSubjectName").value = "";
-      document.getElementById("curriculumMaxPeriods").value = 5;
-      document.querySelectorAll(".curriculum-grade-chk").forEach(chk => chk.checked = false);
-      const selectAll = document.getElementById("curriculumSelectAllGrades");
-      if (selectAll) selectAll.checked = false;
+  // අදාළ පන්ති කොටස පෙන්වීම සහ Render කිරීම
+  const wrapper = document.getElementById("curriculumApplicableClassesWrapper");
+  if (wrapper) wrapper.classList.remove("hidden");
+  renderApplicableClassesCheckboxes(cs.grade, cs.applicableClassIds || []);
 
-      document.getElementById("curriculumSubmitBtn").innerHTML = '<i class="fa-solid fa-plus"></i> විෂය එක් කරන්න';
-      document.getElementById("curriculumCancelEditBtn").classList.add("hidden");
-    }
+  document.getElementById("curriculumSubmitBtn").innerHTML = '<i class="fa-solid fa-check"></i> යාවත්කාලීන කරන්න';
+  document.getElementById("curriculumCancelEditBtn").classList.remove("hidden");
+}
+
+function cancelCurriculumEdit() {
+  document.getElementById("curriculumEditId").value = "";
+  document.getElementById("curriculumSubjectName").value = "";
+  document.getElementById("curriculumMaxPeriods").value = "5";
+
+  const pTypeSelect = document.getElementById("curriculumPeriodTypeSelect");
+  if (pTypeSelect) pTypeSelect.value = "SINGLE";
+
+  document.querySelectorAll(".curriculum-grade-chk").forEach(chk => chk.checked = false);
+  const selectAll = document.getElementById("curriculumSelectAllGrades");
+  if (selectAll) selectAll.checked = false;
+
+  const wrapper = document.getElementById("curriculumApplicableClassesWrapper");
+  if (wrapper) wrapper.classList.add("hidden");
+
+  document.getElementById("curriculumSubmitBtn").innerHTML = '<i class="fa-solid fa-plus"></i> විෂය එක් කරන්න';
+  document.getElementById("curriculumCancelEditBtn").classList.add("hidden");
+}
 
 
     // =========================================================================
@@ -7596,18 +7716,73 @@ function toggleSelectAllCurriculumGrades(masterChk) {
 
     // 2. ශ්‍රේණි අංකය නිවැරදිව ලබාගැනීම (උදා: "Grade 10", 10, "10" -> 10)
 // ආරක්ෂිත cleanGradeNum ශ්‍රිතය
-function cleanGradeNum(g) {
-  if (g === undefined || g === null) return 0;
-  const digits = String(g).replace(/[^0-9]/g, "");
-  return digits ? parseInt(digits, 10) : 0;
+function cleanGradeNum(grade) {
+  if (typeof grade === "number") return grade;
+  if (!grade) return 0;
+  const match = String(grade).match(/\d+/);
+  return match ? parseInt(match[0], 10) : 0;
 }
 
     // ආරක්ෂිත cleanSubjectKey ශ්‍රිතය
-function cleanSubjectKey(str) {
-  if (!str) return "";
-  return String(str).trim().toLowerCase();
+function cleanSubjectKey(subject) {
+  return String(subject || "").trim().toLowerCase();
 }
 
+    function onGradeSelectionChanged() {
+  const checked = Array.from(document.querySelectorAll(".curriculum-grade-chk:checked")).map(c => parseInt(c.value));
+  const wrapper = document.getElementById("curriculumApplicableClassesWrapper");
+  if (checked.length === 1) {
+    if (wrapper) wrapper.classList.remove("hidden");
+    renderApplicableClassesCheckboxes(checked[0], []);
+  } else {
+    if (wrapper) wrapper.classList.add("hidden");
+  }
+}
+
+    function toggleSelectAllGrades(masterChk) {
+  document.querySelectorAll(".curriculum-grade-chk").forEach(c => c.checked = masterChk.checked);
+  onGradeSelectionChanged();
+}
+
+// =========================================================================
+// 2. APPLICABLE CLASSES (CHECKBOX CONTROLLER)
+// =========================================================================
+
+function renderApplicableClassesCheckboxes(grade, selectedClassIds = []) {
+  const container = document.getElementById("curriculumApplicableClassesContainer");
+  const allChk = document.getElementById("curriculumAllClassesChk");
+  if (!container) return;
+
+  const cleanG = cleanGradeNum(grade);
+  const classesOfGrade = (window.schoolClasses || []).filter(c => cleanGradeNum(c.grade) === cleanG);
+
+  if (classesOfGrade.length === 0) {
+    container.innerHTML = `<span class="text-[11px] text-slate-400">Grade ${cleanG} සඳහා පන්ති හමු නොවීය.</span>`;
+    return;
+  }
+
+  const isAll = !selectedClassIds || selectedClassIds.length === 0 || selectedClassIds.length === classesOfGrade.length;
+  if (allChk) allChk.checked = isAll;
+
+  container.innerHTML = classesOfGrade.map(cls => {
+    const isChecked = isAll || selectedClassIds.includes(String(cls.id)) || selectedClassIds.includes(String(cls.name));
+    return `
+      <label class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-slate-200 rounded-md text-xs font-bold text-slate-700 cursor-pointer hover:bg-indigo-50 transition">
+        <input type="checkbox" value="${cls.id}" ${isChecked ? 'checked' : ''} onchange="onSingleApplicableClassChanged()" class="applicable-class-chk accent-indigo-600 rounded">
+        ${cls.name}
+      </label>
+    `;
+  }).join("");
+}
+function toggleAllApplicableClasses(masterChk) {
+  document.querySelectorAll(".applicable-class-chk").forEach(c => c.checked = masterChk.checked);
+}
+function onSingleApplicableClassChanged() {
+  const chks = document.querySelectorAll(".applicable-class-chk");
+  const allChk = document.getElementById("curriculumAllClassesChk");
+  if (allChk) allChk.checked = Array.from(chks).every(c => c.checked);
+}
+    
     // 3. පන්තියකට අදාළ විෂය ගුරුවරයාගේ ID එක ස්ථිරව සොයාගැනීම (Multi-layer Fallback)
     function getAssignedTeacherIdForClass(cls, subjectName) {
       if (!cls || !subjectName) return null;
@@ -8097,102 +8272,182 @@ function makeAllocKey(classId, subject) {
 
 
 
+function openActiveClassesModal(subjectId) {
+  const cs = (window.curriculumSubjects || []).find(c => String(c.id) === String(subjectId));
+  if (!cs) return;
 
+  document.getElementById("activeClassesTargetSubjectId").value = cs.id;
+  document.getElementById("activeClassesSubjectTitle").innerText = `${cs.subject} (Grade ${cs.grade})`;
 
-    
+  const gradeNum = cleanGradeNum(cs.grade);
+  const classesOfGrade = (window.schoolClasses || []).filter(c => cleanGradeNum(c.grade) === gradeNum);
+  const container = document.getElementById("activeClassesListContainer");
+  const masterChk = document.getElementById("activeClassesSelectAllChk");
+
+  if (!container) return;
+
+  if (classesOfGrade.length === 0) {
+    container.innerHTML = `<span class="col-span-2 text-xs text-slate-400 p-2">Grade ${gradeNum} සඳහා පන්ති ලියාපදිංචි කර නොමැත.</span>`;
+    return;
+  }
+
+  const savedIds = Array.isArray(cs.applicableClassIds) ? cs.applicableClassIds.map(String) : [];
+  const isAll = savedIds.length === 0 || savedIds.length === classesOfGrade.length;
+  if (masterChk) masterChk.checked = isAll;
+
+  container.innerHTML = classesOfGrade.map(cls => {
+    const isChecked = isAll || savedIds.includes(String(cls.id)) || savedIds.includes(String(cls.name));
+    return `
+      <label class="flex items-center gap-2 p-2 bg-white border border-slate-200 hover:border-indigo-400 rounded-lg text-xs font-bold text-slate-700 cursor-pointer select-none transition shadow-2xs">
+        <input type="checkbox" value="${cls.id}" ${isChecked ? 'checked' : ''} onchange="onSingleActiveClassChanged()" class="active-class-single-chk w-4 h-4 accent-indigo-600 rounded">
+        <span>${cls.name}</span>
+      </label>
+    `;
+  }).join("");
+
+  const modal = document.getElementById("activeClassesModal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+    function closeActiveClassesModal() {
+  const modal = document.getElementById("activeClassesModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function toggleAllActiveClasses(masterChk) {
+  document.querySelectorAll(".active-class-single-chk").forEach(c => c.checked = masterChk.checked);
+}
+
+    function onSingleActiveClassChanged() {
+  const chks = document.querySelectorAll(".active-class-single-chk");
+  const masterChk = document.getElementById("activeClassesSelectAllChk");
+  if (masterChk) masterChk.checked = Array.from(chks).every(c => c.checked);
+}
+    function saveActiveClassesSelection() {
+  const subjectId = document.getElementById("activeClassesTargetSubjectId").value;
+  const cs = (window.curriculumSubjects || []).find(c => String(c.id) === String(subjectId));
+  if (!cs) return;
+
+  const masterChk = document.getElementById("activeClassesSelectAllChk");
+  const checkedBoxes = document.querySelectorAll(".active-class-single-chk:checked");
+
+  if (checkedBoxes.length === 0) {
+    alert("අවම වශයෙන් එක් පන්තියක් වත් තෝරන්න.");
+    return;
+  }
+
+  const gradeNum = cleanGradeNum(cs.grade);
+  const totalClassesOfGrade = (window.schoolClasses || []).filter(c => cleanGradeNum(c.grade) === gradeNum).length;
+
+  if (masterChk && masterChk.checked && checkedBoxes.length === totalClassesOfGrade) {
+    cs.applicableClassIds = [];
+  } else {
+    cs.applicableClassIds = Array.from(checkedBoxes).map(cb => cb.value);
+  }
+
+  if (typeof saveAllToStorage === "function") saveAllToStorage();
+  if (typeof renderCurriculumTable === "function") renderCurriculumTable();
+
+  const activeClassSelect = document.getElementById("activeClassSelect") || document.getElementById("classTimetableSelectClass");
+  if (activeClassSelect && activeClassSelect.value && typeof renderSubjectQuotaTray === "function") {
+    renderSubjectQuotaTray(activeClassSelect.value);
+  }
+
+  closeActiveClassesModal();
+}
     // 8. විෂය නිර්දේශ වගුව Render කිරීම (ගුරුවරුන් නැති පන්ති නිවැරදිව පෙන්වයි)
    
-   function renderCurriculumTable() {
-      if (typeof populateCurriculumGradesDropdown === "function") populateCurriculumGradesDropdown();
+function renderCurriculumTable() {
+  if (typeof populateCurriculumGradesDropdown === "function") populateCurriculumGradesDropdown();
 
-      const filterGradeEl = document.getElementById("curriculumFilterGradeSelect");
-      const filterGrade = filterGradeEl ? filterGradeEl.value : "All";
-      const tbody = document.getElementById("curriculumTableBody");
-      if (!tbody) return;
-      tbody.innerHTML = "";
+  const filterGradeEl = document.getElementById("curriculumFilterGradeSelect");
+  const filterGrade = filterGradeEl ? filterGradeEl.value : "All";
+  const tbody = document.getElementById("curriculumTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
 
-      let list = filterGrade !== "All"
-        ? (curriculumSubjects || []).filter(c => cleanGradeNum(c.grade) === cleanGradeNum(filterGrade))
-        : (curriculumSubjects || []);
+  let list = filterGrade !== "All"
+    ? (curriculumSubjects || []).filter(c => cleanGradeNum(c.grade) === cleanGradeNum(filterGrade))
+    : (curriculumSubjects || []);
 
-      // 🔴 වෙනස්කම 1: colspan එක 7 කිරීම
-      if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="p-5 text-center text-slate-400 font-bold">විෂයන් කිසිවක් හමු නොවීය.</td></tr>';
-        return;
-      }
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="p-5 text-center text-slate-400 font-bold">විෂයන් කිසිවක් හමු නොවීය.</td></tr>';
+    return;
+  }
 
-      list.forEach((cs, idx) => {
-        if (!cs.id) cs.id = `cs_${cs.grade}_${idx}`;
+  list.forEach((cs, idx) => {
+    if (!cs.id) cs.id = `cs_${cs.grade}_${idx}`;
 
-        const grade = cleanGradeNum(cs.grade);
-        const secName = typeof getSectionOfGrade === "function" ? getSectionOfGrade(grade) : "-";
-        const safeSubName = encodeURIComponent(cs.subject);
+    const grade = cleanGradeNum(cs.grade);
+    const secName = typeof getSectionOfGrade === "function" ? getSectionOfGrade(grade) : "-";
+    const safeSubName = encodeURIComponent(cs.subject);
 
-        const classesOfGrade = (schoolClasses || []).filter(c => cleanGradeNum(c.grade) === grade);
-        const unassignedClasses = getUnassignedClassesForSubject(grade, cs.subject);
+    const classesOfGrade = (schoolClasses || []).filter(c => cleanGradeNum(c.grade) === grade);
+    const unassignedClasses = typeof getUnassignedClassesForSubject === "function" 
+      ? getUnassignedClassesForSubject(grade, cs.subject) 
+      : [];
 
-        // 🔴 වෙනස්කම 2: Period Type Badge එක සකස් කිරීම
-        const pType = cs.periodType || "SINGLE";
-        let typeBadge = "";
-        if (pType === "DOUBLE") {
-          typeBadge = `<span class="bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-md text-[10px] font-extrabold inline-flex items-center gap-1 shadow-2xs">
-            <i class="fa-solid fa-clone text-[9px]"></i> Double (x2)
-          </span>`;
-        } else if (pType === "TRIPLE") {
-          typeBadge = `<span class="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md text-[10px] font-extrabold inline-flex items-center gap-1 shadow-2xs">
-            <i class="fa-solid fa-layer-group text-[9px]"></i> Triple (x3)
-          </span>`;
-        } else {
-          typeBadge = `<span class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-md text-[10px] font-bold">
-            Single (x1)
-          </span>`;
-        }
-
-        let statusColumnHtml = "";
-
-        if (classesOfGrade.length === 0) {
-          statusColumnHtml = `<span class="text-slate-400 text-[11px] font-semibold italic">පන්ති ලියාපදිංචි කර නැත</span>`;
-        } else if (unassignedClasses.length === 0) {
-          statusColumnHtml = `
-            <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg text-[11px] font-bold">
-              <i class="fa-solid fa-circle-check text-emerald-600"></i> සියලු පන්ති සම්පූර්ණයි (${classesOfGrade.length}/${classesOfGrade.length})
-            </span>
-          `;
-        } else {
-          statusColumnHtml = `
-            <div class="flex flex-wrap items-center gap-1.5">
-              ${unassignedClasses.map(cls => `
-                <span class="inline-flex items-center gap-1 bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-md text-[11px] font-bold shadow-sm">
-                  <i class="fa-solid fa-triangle-exclamation text-rose-500 text-[9px]"></i> ${cls.name}
-                </span>
-              `).join("")}
-              <span class="text-[10px] text-rose-600 font-bold ml-1">(${unassignedClasses.length} කට නැත)</span>
-            </div>
-          `;
-        }
-
-        // 🔴 වෙනස්කම 3: <td class="p-2.5 text-center whitespace-nowrap">${typeBadge}</td> තීරුව එක් කිරීම
-        tbody.innerHTML += `
-          <tr class="border-b hover:bg-slate-50/80 transition">
-            <td class="p-2.5 font-bold text-indigo-700 text-xs whitespace-nowrap">Grade ${cs.grade}</td>
-            <td class="p-2.5 font-bold text-slate-500 text-xs whitespace-nowrap">${secName}</td>
-            <td class="p-2.5 font-bold text-slate-800 text-xs">${cs.subject}</td>
-            <td class="p-2.5 font-bold text-slate-600 text-xs whitespace-nowrap">${cs.maxWeekly} Periods</td>
-            <td class="p-2.5 text-center whitespace-nowrap">${typeBadge}</td>
-            <td class="p-2.5">
-              ${statusColumnHtml}
-            </td>
-            <td class="p-2.5 text-center flex flex-wrap justify-center items-center gap-1.5 whitespace-nowrap">
-              <button type="button" onclick="openSubjectTeachersModal(${cs.grade}, '${safeSubName}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shadow-sm">
-                <i class="fa-solid fa-user-pen"></i> ගුරුවරුන්
-              </button>
-              <button type="button" onclick="editCurriculumSubject('${cs.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-[11px] px-1.5 py-1">Edit</button>
-              <button type="button" onclick="handleDeleteCurriculum('${cs.id}')" class="text-red-600 hover:text-red-800 font-bold text-[11px] px-1.5 py-1">Delete</button>
-            </td>
-          </tr>
-        `;
-      });
+    // Period Type Badge සැකසීම
+    const pType = cs.periodType || "SINGLE";
+    let typeBadge = "";
+    if (pType === "DOUBLE") {
+      typeBadge = `<span class="bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-md text-[10px] font-extrabold inline-flex items-center gap-1 shadow-2xs">
+        <i class="fa-solid fa-clone text-[9px]"></i> Double (x2)
+      </span>`;
+    } else if (pType === "TRIPLE") {
+      typeBadge = `<span class="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md text-[10px] font-extrabold inline-flex items-center gap-1 shadow-2xs">
+        <i class="fa-solid fa-layer-group text-[9px]"></i> Triple (x3)
+      </span>`;
+    } else {
+      typeBadge = `<span class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-md text-[10px] font-bold">
+        Single (x1)
+      </span>`;
     }
+
+    let statusColumnHtml = "";
+    if (classesOfGrade.length === 0) {
+      statusColumnHtml = `<span class="text-slate-400 text-[11px] font-semibold italic">පන්ති ලියාපදිංචි කර නැත</span>`;
+    } else if (unassignedClasses.length === 0) {
+      statusColumnHtml = `
+        <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg text-[11px] font-bold">
+          <i class="fa-solid fa-circle-check text-emerald-600"></i> සියලු පන්ති සම්පූර්ණයි (${classesOfGrade.length}/${classesOfGrade.length})
+        </span>
+      `;
+    } else {
+      statusColumnHtml = `
+        <div class="flex flex-wrap items-center gap-1.5">
+          ${unassignedClasses.map(cls => `
+            <span class="inline-flex items-center gap-1 bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-md text-[11px] font-bold shadow-sm">
+              <i class="fa-solid fa-triangle-exclamation text-rose-500 text-[9px]"></i> ${cls.name}
+            </span>
+          `).join("")}
+          <span class="text-[10px] text-rose-600 font-bold ml-1">(${unassignedClasses.length} කට නැත)</span>
+        </div>
+      `;
+    }
+
+    tbody.innerHTML += `
+      <tr class="border-b hover:bg-slate-50/80 transition text-xs">
+        <td class="p-2.5 font-bold text-indigo-700 whitespace-nowrap">Grade ${cs.grade}</td>
+        <td class="p-2.5 font-bold text-slate-500 whitespace-nowrap">${secName}</td>
+        <td class="p-2.5 font-bold text-slate-800">${cs.subject}</td>
+        <td class="p-2.5 font-bold text-slate-600 whitespace-nowrap">${cs.maxWeekly} Periods</td>
+        <td class="p-2.5 text-center whitespace-nowrap">${typeBadge}</td>
+        <td class="p-2.5">${statusColumnHtml}</td>
+        <td class="p-2.5 text-center flex flex-wrap justify-center items-center gap-1.5 whitespace-nowrap">
+          <button type="button" onclick="openActiveClassesModal('${cs.id}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shadow-xs" title="සක්‍රීය පන්ති තෝරන්න">
+            <i class="fa-solid fa-chalkboard-user text-[10px]"></i> Active Classes
+          </button>
+          <button type="button" onclick="openSubjectTeachersModal(${cs.grade}, '${safeSubName}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shadow-sm">
+            <i class="fa-solid fa-user-pen"></i> ගුරුවරුන්
+          </button>
+          <button type="button" onclick="editCurriculumSubject('${cs.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-[11px] px-1.5 py-1">Edit</button>
+          <button type="button" onclick="handleDeleteCurriculum('${cs.id}')" class="text-red-600 hover:text-red-800 font-bold text-[11px] px-1.5 py-1">Delete</button>
+        </td>
+      </tr>
+    `;
+  });
+}
 
     // Global Window Functions
     window.cleanSubjectKey = cleanSubjectKey;
@@ -8665,70 +8920,51 @@ function renderCombinedSubjectsTable() {
 // =========================================================================
 
 function saveAllToStorage() {
-      const cleanCurriculum = (Array.isArray(curriculumSubjects) ? curriculumSubjects : Object.values(curriculumSubjects || {})).map((cs, idx) => ({
-        id: cs.id || (typeof getSubjectUniqueId === "function" ? getSubjectUniqueId(cs, idx) : `cs_${cs.grade}_${idx}`),
-        grade: cs.grade,
-        subject: cs.subject,
-        maxWeekly: cs.maxWeekly,
-        periodType: cs.periodType || "SINGLE",
-        teacherIds: getNormalizedTeacherIds(cs.teacherIds)
-      }));
+  const cleanCurriculum = (Array.isArray(curriculumSubjects) ? curriculumSubjects : []).map((cs, idx) => ({
+    id: cs.id || `cs_${cs.grade}_${idx}`,
+    grade: cs.grade,
+    subject: cs.subject,
+    maxWeekly: cs.maxWeekly,
+    periodType: cs.periodType || "SINGLE",
+    applicableClassIds: Array.isArray(cs.applicableClassIds) ? cs.applicableClassIds : [],
+    teacherIds: cs.teacherIds || []
+  }));
 
-      // 🔴 LocalStorage වලින් පවතින Combined Subjects සහ Groups කියවා ගැනීම
-      let currentCombined = window.combinedCurriculumSubjects;
-      if (!currentCombined || currentCombined.length === 0) {
-        try {
-          currentCombined = JSON.parse(localStorage.getItem("sch_combined_subjects_v1") || "[]");
-        } catch(e) { currentCombined = []; }
-      }
+  // LocalStorage වෙත සුරැකීම
+  localStorage.setItem("school_curriculum_subjects", JSON.stringify(cleanCurriculum));
+  if (typeof masterSchedule !== "undefined") {
+    localStorage.setItem("school_master_schedule", JSON.stringify(masterSchedule));
+  }
 
-      let currentClusters = {};
-      try {
-        currentClusters = JSON.parse(localStorage.getItem("sch_cluster_groups_v1") || "{}");
-      } catch(e) { currentClusters = {}; }
-
-      const rawPayload = {
-        grades: gradeSettings || [],
-        classes: schoolClasses || [],
-        curriculum: cleanCurriculum,
-        classSubjectAllocations: window.classSubjectAllocations || {},
-        gradeMaster: gradeMasterSchedule || [],
-        teachers: (teachers || []).map(t => ({
-          id: t.id,
-          schoolNo: t.schoolNo || "",
-          name: t.name || "",
-          phone: t.phone || "",
-          subject: t.subject || "",
-          sections: t.sections || ["All"],
-          leaveStatus: t.leaveStatus || "present",
-          isExempt: !!t.isExempt,
-          allowOver35: !!t.allowOver35
-        })),
-        schedule: masterSchedule || [],
-        // 🔴 අලුතින් එක් කළ අත්‍යවශ්‍ය පේළි 2 (Firebase වෙත Combined Subjects යැවීම සඳහා):
-        combinedCurriculumSubjects: currentCombined || [],
-        clusterGroups: currentClusters || {}
-      };
-
-      const cleanPayload = JSON.parse(JSON.stringify(rawPayload));
-
-      try {
-        localStorage.setItem("sch_app_data_v2026_final", JSON.stringify(cleanPayload));
-      } catch (err) {
-        console.error("LocalStorage Save Error:", err);
-      }
-
-      if (isFirebaseActive && firebaseDb) {
-        firebaseDb.ref("timetable_system").set(cleanPayload, (error) => {
-          if (error) {
-            console.error("❌ Firebase Sync Error:", error);
-          } else {
-            console.log("✅ Firebase Synchronized (Combined Subjects ඇතුළුව දත්ත සුරකින ලදි)!");
-          }
-        });
-      }
+  // Firebase Realtime Database වෙත Save කිරීම (පද්ධතියේ තිබේ නම්)
+  if (typeof firebase !== "undefined" && firebase.database) {
+    firebase.database().ref("timetableData/curriculumSubjects").set(cleanCurriculum);
+    if (typeof masterSchedule !== "undefined") {
+      firebase.database().ref("timetableData/masterSchedule").set(masterSchedule);
     }
+  }
+}
 
+// Global Window Objects වෙත සම්බන්ධ කිරීම
+window.cleanGradeNum = cleanGradeNum;
+window.cleanSubjectKey = cleanSubjectKey;
+window.onGradeSelectionChanged = onGradeSelectionChanged;
+window.toggleSelectAllGrades = toggleSelectAllGrades;
+window.renderApplicableClassesCheckboxes = renderApplicableClassesCheckboxes;
+window.toggleAllApplicableClasses = toggleAllApplicableClasses;
+window.onSingleApplicableClassChanged = onSingleApplicableClassChanged;
+window.editCurriculumSubject = editCurriculumSubject;
+window.cancelCurriculumEdit = cancelCurriculumEdit;
+window.handleSaveCurriculumSubject = handleSaveCurriculumSubject;
+window.renderCurriculumTable = renderCurriculumTable;
+window.openActiveClassesModal = openActiveClassesModal;
+window.closeActiveClassesModal = closeActiveClassesModal;
+window.toggleAllActiveClasses = toggleAllActiveClasses;
+window.onSingleActiveClassChanged = onSingleActiveClassChanged;
+window.saveActiveClassesSelection = saveActiveClassesSelection;
+window.renderSubjectQuotaTray = renderSubjectQuotaTray;
+window.executeAutoFillProcess = executeAutoFillProcess;
+window.saveAllToStorage = saveAllToStorage;
     
 
    // =========================================================================
