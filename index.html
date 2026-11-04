@@ -7409,6 +7409,11 @@ function toggleSelectAllCurriculumGrades(masterChk) {
       document.getElementById("curriculumSubjectName").value = cs.subject;
       document.getElementById("curriculumMaxPeriods").value = cs.maxWeekly;
 
+      // 🔴 අලුතින් එක් කළ කොටස: පවතින Period Type අගය Dropdown එකට ලබාදීම
+  const pTypeSelect = document.getElementById("curriculumPeriodTypeSelect");
+  if (pTypeSelect) {
+    pTypeSelect.value = cs.periodType || "SINGLE";
+  }
       // Uncheck all and check only this record's grade
       document.querySelectorAll(".curriculum-grade-chk").forEach(chk => {
         chk.checked = (parseInt(chk.value) === cs.grade);
