@@ -5541,7 +5541,7 @@ function executeAutoFillProcess() {
       const teacherId = cls.subjectTeachers ? cls.subjectTeachers[subKey] : null;
 if (teacherId === "EXCLUDED") return; // 🔴 මෙම පන්තියට අදාළ නැතිනම් Auto-fill නොකර මඟහරින්න
       
-      const teacherId = cls.subjectTeachers ? cls.subjectTeachers[subKey] : null;
+     // const teacherId = cls.subjectTeachers ? cls.subjectTeachers[subKey] : null;
 
       const currentAllocated = schedule.filter(s => 
         String(s.classId).trim().toLowerCase() === cleanCid && 
