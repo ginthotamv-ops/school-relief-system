@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V666666
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V10
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -752,12 +752,14 @@
         <button type="button" onclick="closeSubjectTeachersModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs transition">
           අවලංගු කරන්න
         </button>
-        <button type="button" 
-                id="btnSaveSubjectTeachers" 
-                onclick="saveSubjectTeachersAssignment()" 
-                class="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold py-2.5 px-6 rounded-xl text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer">
-          <i class="fa-solid fa-floppy-disk"></i> සුරකින්න (Save & Update)
-        </button>
+ 
+<button type="button" 
+        id="btnSaveSubjectTeachersV2" 
+        onclick="saveSubjectTeachersAssignmentV2()" 
+        class="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold py-2.5 px-6 rounded-xl text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer">
+  <i class="fa-solid fa-floppy-disk"></i> සුරකින්න (Save & Update)
+</button>
+        
       </div>
 
     </div>
@@ -1599,88 +1601,6 @@ window.saveSubjectTeachersAssignment = function() {
       if (modal) modal.classList.add("hidden");
     };
     
-/*
-// සෘජුවම ක්‍රියාත්මක වන Save ශ්‍රිතය
-    window.saveSubjectTeachersAssignment = function() {
-      // 1. පරීක්ෂාව සඳහා Alert එක
-      alert("සුරැකීමේ ක්‍රියාවලිය ආරම්භ විය!");
-
-      const cs = window.currentEditingSubject;
-      if (!cs) {
-        alert("දෝෂයකි: විෂය දත්ත හඳුනාගත නොහැක. කරුණාකර නැවත 'ගුරුවරුන්' බොත්තම ඔබන්න.");
-        return;
-      }
-
-      const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(cs.subject) : cs.subject.trim().toLowerCase();
-      const selects = document.querySelectorAll(".sub-teacher-assign-select");
-      
-      let assignedCount = 0;
-      const assignedTeacherIdsSet = new Set();
-      window.classSubjectAllocations = window.classSubjectAllocations || {};
-
-      selects.forEach(sel => {
-        const classIdentifier = sel.getAttribute("data-class-identifier");
-        const teacherId = sel.value ? String(sel.value).trim() : null;
-
-// 🔴 අලුතින් එක් කළ කොටස: එම පන්තියේ Group Dropdown එක සෘජුවම සොයා ගැනීම
-        const parentRow = sel.closest("#subModalClassList > div") || sel.parentElement;
-        const groupSel = parentRow ? parentRow.querySelector(".sub-cluster-group-select") : null;
-        const groupVal = (groupSel && groupSel.value) ? groupSel.value.trim() : "none";
-        
-        const cls = (schoolClasses || []).find(c => 
-          String(c.id).trim() === String(classIdentifier).trim() || 
-          String(c.name).trim() === String(classIdentifier).trim()
-        );
-
-        if (cls) {
-          cls.subjectTeachers = cls.subjectTeachers || {};
-          cls.combinedSubjectGroups = cls.combinedSubjectGroups || {};
-          const key = `${String(cls.id || cls.name).trim()}___${subKey}`;
-
-          if (teacherId) {
-            cls.subjectTeachers[subKey] = teacherId;
-            window.classSubjectAllocations[key] = teacherId;
-            assignedTeacherIdsSet.add(teacherId);
-            assignedCount++;
-          } else {
-            delete cls.subjectTeachers[subKey];
-            delete window.classSubjectAllocations[key];
-          }
-        }
-      });
-
-      cs.teacherIds = Array.from(assignedTeacherIdsSet);
-
-      // LocalStorage Backup
-      try {
-        localStorage.setItem("sch_permanent_allocations_v1", JSON.stringify(window.classSubjectAllocations));
-      } catch (e) {}
-
-      // Main Storage Save
-      if (typeof saveAllToStorage === "function") {
-        saveAllToStorage();
-      }
-
-      // Refresh UI Tables
-      if (typeof renderCurriculumTable === "function") renderCurriculumTable();
-      if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
-
-      // Close Modal
-      const modal = document.getElementById("subjectTeachersModal");
-      if (modal) modal.classList.add("hidden");
-
-      alert(`සාර්ථකයි! '${cs.subject}' විෂය සඳහා පන්ති ${assignedCount} කට ගුරුවරුන් සුරකින ලදි.`);
-    };
-
-    window.closeSubjectTeachersModal = function() {
-      const modal = document.getElementById("subjectTeachersModal");
-      if (modal) modal.classList.add("hidden");
-    };
-
-    
-*/
-
-
 
     
     function buildDefaultGradeMaster() {
@@ -7838,7 +7758,14 @@ function makeAllocKey(classId, subject) {
   return (c + "___" + s).replace(/[^a-zA-Z0-9_\u0D80-\u0DFF]/g, "_");
 }
 
-function saveSubjectTeachersAssignment() {
+// =========================================================================
+    // new version
+    // =========================================================================
+
+
+function saveSubjectTeachersAssignmentV2() {
+  console.log("🚀 saveSubjectTeachersAssignmentV2 ක්‍රියාත්මක විය!");
+
   const cs = window.currentEditingSubject;
   if (!cs) {
     alert("විෂය දත්ත හඳුනාගත නොහැකි විය. කරුණාකර පිටුව Refresh කරන්න.");
@@ -7856,7 +7783,6 @@ function saveSubjectTeachersAssignment() {
   window.classSubjectAllocations = window.classSubjectAllocations || {};
   const assignedTeacherIdsSet = new Set();
 
-  // පේළි සියල්ල ලබාගැනීම
   const rows = document.querySelectorAll("#subModalClassList > div");
   if (rows.length === 0) {
     alert("දෝෂයකි: පන්ති ලැයිස්තුව හමු නොවීය.");
@@ -7865,20 +7791,16 @@ function saveSubjectTeachersAssignment() {
 
   const groupedMap = {};
   const standaloneList = [];
-  const excludedList = []; // 🔴 අදාළ නොවන පන්ති ලැයිස්තුව
+  const excludedList = [];
 
   rows.forEach(row => {
     const groupSel = row.querySelector(".sub-cluster-group-select");
     const teacherSel = row.querySelector(".sub-teacher-assign-select");
-    
-    // 🔴 1. බුලට්පෲෆ් ක්‍රමයට Checkbox එක සොයා ගැනීම (පේළියේ ඇති එකම Checkbox එක මෙයයි)
-    const excludeChk = row.querySelector("input[type='checkbox']") || 
-                       row.querySelector(".sub-exclude-class-chk") || 
-                       row.querySelector("[id^='exclude_chk_']");
+    // පේළියේ ඇති Checkbox එක කෙලින්ම හඳුනාගැනීම
+    const excludeChk = row.querySelector("input[type='checkbox']");
 
     if (!groupSel || !teacherSel) return;
 
-    // පන්තියේ Identifier එක ලබාගැනීම
     let classIdentifier = (excludeChk && excludeChk.getAttribute("data-class-identifier"))
                        || groupSel.getAttribute("data-class-identifier") 
                        || groupSel.getAttribute("data-class-id")
@@ -7891,11 +7813,8 @@ function saveSubjectTeachersAssignment() {
 
     const groupVal = (groupSel.value || "none").trim();
     const teacherId = (teacherSel.value || "").trim() || null;
-    
-    // 🔴 2. Excluded Checkbox එක සලකුණු කර ඇත්දැයි නිවැරදිව තහවුරු කිරීම
     const isExcluded = excludeChk ? Boolean(excludeChk.checked) : false;
 
-    // schoolClasses තුළින් පන්තිය සොයා ගැනීම
     const cls = (schoolClasses || []).find(c => 
       String(c.id).trim().toLowerCase() === String(classIdentifier).trim().toLowerCase() || 
       String(c.name).trim().toLowerCase() === String(classIdentifier).trim().toLowerCase()
@@ -7905,7 +7824,6 @@ function saveSubjectTeachersAssignment() {
 
     const rowItem = { cls, classIdentifier: String(cls.id || cls.name).trim(), teacherId, groupVal };
 
-    // 🔴 3. නිවැරදි වර්ගීකරණය
     if (isExcluded) {
       excludedList.push(rowItem);
     } else if (groupVal && groupVal !== "none") {
@@ -7920,7 +7838,7 @@ function saveSubjectTeachersAssignment() {
   let debugSingleLog = [];
   let debugExcludedLog = [];
 
-  // PASS 1: EXCLUDED පන්ති ස්ථිරව සුරැකීම
+  // 1. EXCLUDED පන්ති සටහන් කිරීම
   excludedList.forEach(it => {
     const cls = it.cls;
     cls.subjectTeachers = cls.subjectTeachers || {};
@@ -7931,14 +7849,12 @@ function saveSubjectTeachersAssignment() {
     const keyId = typeof makeAllocKey === "function" ? makeAllocKey(cls.id, subKey) : `${cls.id}___${subKey}`;
     const keyName = typeof makeAllocKey === "function" ? makeAllocKey(cls.name, subKey) : `${cls.name}___${subKey}`;
 
-    // 🔴 පන්තියේ Object එකට EXCLUDED ලිවීම
     cls.subjectTeachers[subKey] = "EXCLUDED";
     
     delete cls.combinedSubjectGroups[subKey];
     delete clusterStorage[rawKey];
     delete clusterStorage[safeKey];
 
-    // Local Storage සහ මතකයට EXCLUDED ලිවීම
     window.classSubjectAllocations[rawKey] = "EXCLUDED";
     window.classSubjectAllocations[safeKey] = "EXCLUDED";
     window.classSubjectAllocations[keyId] = "EXCLUDED";
@@ -7947,7 +7863,7 @@ function saveSubjectTeachersAssignment() {
     debugExcludedLog.push(cls.name || it.classIdentifier);
   });
 
-  // PASS 2: කණ්ඩායම් (Groups) සුරැකීම
+  // 2. Groups සුරැකීම
   Object.keys(groupedMap).forEach(grpKey => {
     const groupItems = groupedMap[grpKey];
     let commonTeacherId = null;
@@ -7986,7 +7902,7 @@ function saveSubjectTeachersAssignment() {
     debugGroupLog.push(`${grpKey.replace("group_", "Grp ")}: [${groupNames.join(" + ")}]`);
   });
 
-  // PASS 3: තනි පන්ති (Single Classes) සුරැකීම
+  // 3. තනි පන්ති සුරැකීම
   standaloneList.forEach(it => {
     const cls = it.cls;
     cls.subjectTeachers = cls.subjectTeachers || {};
@@ -8012,7 +7928,6 @@ function saveSubjectTeachersAssignment() {
     }
   });
 
-  // Backup සුරැකීම
   try {
     localStorage.setItem("sch_cluster_groups_v1", JSON.stringify(clusterStorage));
     localStorage.setItem("sch_permanent_allocations_v1", JSON.stringify(window.classSubjectAllocations));
@@ -8032,7 +7947,7 @@ function saveSubjectTeachersAssignment() {
     cs.applicableClassIds = [];
   }
 
-  // Master Array එක Update කිරීම
+  // Master Array Update
   const targetCsInArray = (window.curriculumSubjects || []).find(c => 
     String(c.id) === String(cs.id) || 
     (cleanGradeNum(c.grade) === grade && cleanSubjectKey(c.subject) === subKey)
@@ -8056,7 +7971,7 @@ function saveSubjectTeachersAssignment() {
   const modal = document.getElementById("subjectTeachersModal");
   if (modal) modal.classList.add("hidden");
 
-  // 🔴 4. නිවැරදි Alert පණිවිඩය පෙන්වීම
+  // නව විස්තරාත්මක Alert පණිවිඩය
   let msg = `සාර්ථකයි! '${cs.subject}' විෂය සැකසුම් සුරකින ලදි.\n\n`;
   if (debugExcludedLog.length > 0) {
     msg += `🚫 අදාළ නොවන ලෙස ඉවත් කළ පන්ති (${debugExcludedLog.length}):\n• ${debugExcludedLog.join(", ")}\n\n`;
@@ -8074,20 +7989,22 @@ function saveSubjectTeachersAssignment() {
   alert(msg);
 }
 
-window.saveSubjectTeachersAssignment = saveSubjectTeachersAssignment;
+// Window එකට සම්බන්ධ කිරීම
+window.saveSubjectTeachersAssignmentV2 = saveSubjectTeachersAssignmentV2;
+
     
-/*
 function saveSubjectTeachersAssignment() {
+  console.log("🔴 NEW saveSubjectTeachersAssignment FUNCTION TRIGGERED!");
+
   const cs = window.currentEditingSubject;
   if (!cs) {
     alert("විෂය දත්ත හඳුනාගත නොහැකි විය. කරුණාකර පිටුව Refresh කරන්න.");
     return;
   }
 
-  const subKey = cleanSubjectKey(cs.subject);
-  const grade = cleanGradeNum(cs.grade);
+  const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(cs.subject) : String(cs.subject).trim().toLowerCase();
+  const grade = typeof cleanGradeNum === "function" ? cleanGradeNum(cs.grade) : Number(cs.grade);
 
-  // 1. තනි ස්ථාවර LocalStorage යතුරකින් Backup කියවීම
   let clusterStorage = {};
   try {
     clusterStorage = JSON.parse(localStorage.getItem("sch_cluster_groups_v1") || "{}");
@@ -8104,21 +8021,21 @@ function saveSubjectTeachersAssignment() {
 
   const groupedMap = {};
   const standaloneList = [];
-  const excludedList = []; // 🔴 අදාළ නොවන (Excluded) පන්ති ලැයිස්තුව
+  const excludedList = [];
 
-  // 2. පේළි කියවා වර්ගීකරණය කිරීම
+  // පේළි කියවීම
   rows.forEach(row => {
     const groupSel = row.querySelector(".sub-cluster-group-select");
     const teacherSel = row.querySelector(".sub-teacher-assign-select");
-    const excludeChk = row.querySelector(".sub-exclude-class-chk");
+    // පේළියේ ඇති ඕනෑම Checkbox එකක් නිවැරදිව හඳුනාගැනීම
+    const excludeChk = row.querySelector("input[type='checkbox']");
+
     if (!groupSel || !teacherSel) return;
 
-    // පන්තියේ Identifier එක ක්‍රම කිහිපයකින්ම නිවැරදිව ලබාගැනීම
     let classIdentifier = (excludeChk && excludeChk.getAttribute("data-class-identifier"))
                        || groupSel.getAttribute("data-class-identifier") 
                        || groupSel.getAttribute("data-class-id")
-                       || teacherSel.getAttribute("data-class-identifier")
-                       || teacherSel.getAttribute("data-class-id");
+                       || teacherSel.getAttribute("data-class-identifier");
 
     if (!classIdentifier) {
       const nameSpan = row.querySelector("span");
@@ -8127,9 +8044,8 @@ function saveSubjectTeachersAssignment() {
 
     const groupVal = (groupSel.value || "none").trim();
     const teacherId = (teacherSel.value || "").trim() || null;
-    const isExcluded = excludeChk ? excludeChk.checked : false;
+    const isExcluded = excludeChk ? Boolean(excludeChk.checked) : false;
 
-    // schoolClasses තුළින් පන්තිය සොයා ගැනීම
     const cls = (schoolClasses || []).find(c => 
       String(c.id).trim().toLowerCase() === String(classIdentifier).trim().toLowerCase() || 
       String(c.name).trim().toLowerCase() === String(classIdentifier).trim().toLowerCase()
@@ -8153,7 +8069,7 @@ function saveSubjectTeachersAssignment() {
   let debugSingleLog = [];
   let debugExcludedLog = [];
 
-  // 3. PASS 1: අදාළ නොවන පන්ති සුරැකීම (EXCLUDED Classes First)
+  // 1. EXCLUDED පන්ති සටහන් කිරීම
   excludedList.forEach(it => {
     const cls = it.cls;
     cls.subjectTeachers = cls.subjectTeachers || {};
@@ -8164,15 +8080,12 @@ function saveSubjectTeachersAssignment() {
     const keyId = typeof makeAllocKey === "function" ? makeAllocKey(cls.id, subKey) : `${cls.id}___${subKey}`;
     const keyName = typeof makeAllocKey === "function" ? makeAllocKey(cls.name, subKey) : `${cls.name}___${subKey}`;
 
-    // පන්තියට විෂය අදාළ නොවන බව සටහන් කිරීම
     cls.subjectTeachers[subKey] = "EXCLUDED";
     
-    // Group දත්ත ඉවත් කිරීම
     delete cls.combinedSubjectGroups[subKey];
     delete clusterStorage[rawKey];
     delete clusterStorage[safeKey];
 
-    // 🔴 වෙනස 1: delete කරනවා වෙනුවට 'EXCLUDED' ලෙස ස්ථිරව සටහන් කිරීම
     window.classSubjectAllocations[rawKey] = "EXCLUDED";
     window.classSubjectAllocations[safeKey] = "EXCLUDED";
     window.classSubjectAllocations[keyId] = "EXCLUDED";
@@ -8181,10 +8094,9 @@ function saveSubjectTeachersAssignment() {
     debugExcludedLog.push(cls.name || it.classIdentifier);
   });
 
-  // 4. PASS 2: කණ්ඩායම් සුරැකීම (Groups Second)
+  // 2. Groups සුරැකීම
   Object.keys(groupedMap).forEach(grpKey => {
     const groupItems = groupedMap[grpKey];
-
     let commonTeacherId = null;
     for (let i = groupItems.length - 1; i >= 0; i--) {
       if (groupItems[i].teacherId) {
@@ -8194,7 +8106,6 @@ function saveSubjectTeachersAssignment() {
     }
 
     const groupNames = [];
-
     groupItems.forEach(it => {
       const cls = it.cls;
       cls.subjectTeachers = cls.subjectTeachers || {};
@@ -8217,14 +8128,12 @@ function saveSubjectTeachersAssignment() {
         delete window.classSubjectAllocations[rawKey];
         delete window.classSubjectAllocations[safeKey];
       }
-
       groupNames.push(cls.name || it.classIdentifier);
     });
-
     debugGroupLog.push(`${grpKey.replace("group_", "Grp ")}: [${groupNames.join(" + ")}]`);
   });
 
-  // 5. PASS 3: තනි පන්ති සුරැකීම (Single Classes Third)
+  // 3. තනි පන්ති සුරැකීම
   standaloneList.forEach(it => {
     const cls = it.cls;
     cls.subjectTeachers = cls.subjectTeachers || {};
@@ -8250,18 +8159,14 @@ function saveSubjectTeachersAssignment() {
     }
   });
 
-  // 6. LocalStorage Backup ලිවීම
   try {
     localStorage.setItem("sch_cluster_groups_v1", JSON.stringify(clusterStorage));
     localStorage.setItem("sch_permanent_allocations_v1", JSON.stringify(window.classSubjectAllocations));
-  } catch (e) {
-    console.error("Storage error:", e);
-  }
+  } catch (e) { console.error(e); }
 
-  // ගුරු හැඳුනුම්පත් ලැයිස්තුව යාවත්කාලීන කිරීම
   cs.teacherIds = Array.from(assignedTeacherIdsSet);
 
-  // 🔴 වෙනස 2: applicableClassIds වඩාත් ආරක්ෂිතව සැකසීම සහ Master Array එක Sync කිරීම
+  // applicableClassIds Sync කිරීම
   const allClassesOfGrade = (schoolClasses || []).filter(c => cleanGradeNum(c.grade) === grade);
   if (excludedList.length > 0) {
     cs.applicableClassIds = allClassesOfGrade
@@ -8273,7 +8178,7 @@ function saveSubjectTeachersAssignment() {
     cs.applicableClassIds = [];
   }
 
-  // 🔴 වෙනස 3: curriculumSubjects අරාව තුළ ඇති මුල් Object එක සෘජුවම යාවත්කාලීන කිරීම
+  // Master Array Update
   const targetCsInArray = (window.curriculumSubjects || []).find(c => 
     String(c.id) === String(cs.id) || 
     (cleanGradeNum(c.grade) === grade && cleanSubjectKey(c.subject) === subKey)
@@ -8283,7 +8188,7 @@ function saveSubjectTeachersAssignment() {
     targetCsInArray.teacherIds = cs.teacherIds;
   }
 
-  // පද්ධතියේ ප්‍රධාන Storage සහ UI යාවත්කාලීන කිරීම
+  // Storage & UI Refresh
   if (typeof saveAllToStorage === "function") saveAllToStorage();
   if (typeof renderCurriculumTable === "function") renderCurriculumTable();
   if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
@@ -8297,16 +8202,16 @@ function saveSubjectTeachersAssignment() {
   const modal = document.getElementById("subjectTeachersModal");
   if (modal) modal.classList.add("hidden");
 
-  // තහවුරු කිරීමේ Alert පණිවිඩය
+  // නිවැරදි Alert පණිවිඩය
   let msg = `සාර්ථකයි! '${cs.subject}' විෂය සැකසුම් සුරකින ලදි.\n\n`;
+  if (debugExcludedLog.length > 0) {
+    msg += `🚫 අදාළ නොවන ලෙස ඉවත් කළ පන්ති (${debugExcludedLog.length}):\n• ${debugExcludedLog.join(", ")}\n\n`;
+  }
   if (debugGroupLog.length > 0) {
     msg += `🔗 ඒකාබද්ධ කාණ්ඩ (Groups):\n• ${debugGroupLog.join("\n• ")}\n\n`;
   }
   if (debugSingleLog.length > 0) {
-    msg += `⚪ තනි පන්ති:\n• ${debugSingleLog.join(", ")}\n\n`;
-  }
-  if (debugExcludedLog.length > 0) {
-    msg += `🚫 ඉවත් කළ පන්ති (අදාළ නොවේ):\n• ${debugExcludedLog.join(", ")}\n\n`;
+    msg += `⚪ ගුරුවරුන් පැවරූ තනි පන්ති (${debugSingleLog.length}):\n• ${debugSingleLog.join(", ")}\n\n`;
   }
   if (debugGroupLog.length === 0 && debugSingleLog.length === 0 && debugExcludedLog.length === 0) {
     msg += `කිසිදු පන්තියකට ගුරුවරයෙකු හෝ කාණ්ඩයක් තෝරා නැත.`;
@@ -8315,10 +8220,8 @@ function saveSubjectTeachersAssignment() {
   alert(msg);
 }
 
-window.makeAllocKey = makeAllocKey;
+// Window එකට සෘජුවම අනුයුක්ත කිරීම
 window.saveSubjectTeachersAssignment = saveSubjectTeachersAssignment;
-    */
-
     // =========================================================================
     // BULK ALLOCATION REMOVAL CONTROLLER (GRADE / SUBJECT / ALL)
     // =========================================================================
