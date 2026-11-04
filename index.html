@@ -1457,23 +1457,26 @@
       { id: "10-B", grade: 10, name: "10-B", classTeacherId: "T05", allowSecondClass: false }
     ];
 
-    var DEFAULT_CURRICULUM = [
-      { id: "CS01", grade: 6, subject: "Science", maxWeekly: 6 },
-      { id: "CS02", grade: 6, subject: "Mathematics", maxWeekly: 6 },
-      { id: "CS03", grade: 6, subject: "Sinhala", maxWeekly: 6 },
-      { id: "CS04", grade: 6, subject: "English", maxWeekly: 5 },
-      { id: "CS05", grade: 6, subject: "History", maxWeekly: 3 },
-      { id: "CS06", grade: 6, subject: "Music", maxWeekly: 3 },
-      { id: "CS10", grade: 10, subject: "Mathematics", maxWeekly: 6 },
-      { id: "CS11", grade: 10, subject: "Science", maxWeekly: 6 },
-      { id: "CS12", grade: 10, subject: "Sinhala", maxWeekly: 6 },
-      { id: "CS13", grade: 10, subject: "English", maxWeekly: 5 },
-      { id: "CS14", grade: 10, subject: "ICT", maxWeekly: 5 },
-      { id: "CS15", grade: 10, subject: "History", maxWeekly: 3 },
-      { id: "CS16", grade: 10, subject: "Music", maxWeekly: 3 },
-      { id: "CS17", grade: 10, subject: "Dancing", maxWeekly: 3 }
-    ];
+var DEFAULT_CURRICULUM = [
+  // Grade 6
+  { id: "CS01", grade: 6, subject: "Science", maxWeekly: 6, periodType: "DOUBLE", teacherIds: [] },
+  { id: "CS02", grade: 6, subject: "Mathematics", maxWeekly: 6, periodType: "SINGLE", teacherIds: [] },
+  { id: "CS03", grade: 6, subject: "Sinhala", maxWeekly: 6, periodType: "SINGLE", teacherIds: [] },
+  { id: "CS04", grade: 6, subject: "English", maxWeekly: 5, periodType: "SINGLE", teacherIds: [] },
+  { id: "CS05", grade: 6, subject: "History", maxWeekly: 3, periodType: "SINGLE", teacherIds: [] },
+  { id: "CS06", grade: 6, subject: "Music", maxWeekly: 3, periodType: "SINGLE", teacherIds: [] },
 
+  // Grade 10
+  { id: "CS10", grade: 10, subject: "Mathematics", maxWeekly: 6, periodType: "SINGLE", teacherIds: [] },
+  { id: "CS11", grade: 10, subject: "Science", maxWeekly: 6, periodType: "DOUBLE", teacherIds: [] },
+  { id: "CS12", grade: 10, subject: "Sinhala", maxWeekly: 6, periodType: "SINGLE", teacherIds: [] },
+  { id: "CS13", grade: 10, subject: "English", maxWeekly: 5, periodType: "SINGLE", teacherIds: [] },
+  { id: "CS14", grade: 10, subject: "ICT", maxWeekly: 5, periodType: "DOUBLE", teacherIds: [] },
+  { id: "CS15", grade: 10, subject: "History", maxWeekly: 3, periodType: "SINGLE", teacherIds: [] },
+  { id: "CS16", grade: 10, subject: "Music", maxWeekly: 3, periodType: "SINGLE", teacherIds: [] },
+  { id: "CS17", grade: 10, subject: "Dancing", maxWeekly: 3, periodType: "SINGLE", teacherIds: [] }
+];
+    
     var DEFAULT_TEACHERS = [
       { id: "T01", name: "කමල් පෙරේරා", phone: "0712345671", subject: "ICT", sections: ["8-11"], leaveStatus: "present", isExempt: false, allowOver35: false },
       { id: "T02", name: "සුනිල් ශාන්ත", phone: "0712345672", subject: "Music", sections: ["6-7", "8-11"], leaveStatus: "absent", isExempt: false, allowOver35: false },
@@ -7346,15 +7349,28 @@ function toggleSelectAllCurriculumGrades(masterChk) {
 
         checkedGrades.forEach(grade => {
           const alreadyExists = curriculumSubjects.some(cs => cs.grade === grade && cs.subject.trim().toLowerCase() === subject.toLowerCase());
-          if (!alreadyExists) {
+ if (!alreadyExists) {
+            // Dropdown එකෙන් periodType අගය ලබා ගැනීම (නැතහොත් 'SINGLE' ලෙස තැබීම)
+            const periodTypeSelect = document.getElementById("curriculumPeriodTypeSelect");
+            const selectedPeriodType = periodTypeSelect ? periodTypeSelect.value : "SINGLE";
+
             curriculumSubjects.push({
               id: "CS" + Date.now().toString().slice(-4) + Math.floor(Math.random() * 1000),
               grade: grade,
               subject: subject,
-              maxWeekly: maxWeekly
+              maxWeekly: maxWeekly,
+              periodType: selectedPeriodType, // 🔴 මෙම පේළිය අලුතින් එක් කරන්න
+              teacherIds: [] // ගුරු හැඳුනුම්පත් අරාව හිස්ව ආරම්භ කිරීම
             });
             addedCount++;
           } else {
+            // දැනටමත් විෂය පවතී නම්, එහි periodType එක පමණක් Update කිරීමට අවශ්‍ය නම් මෙතැනටද යෙදිය හැක:
+            const existingItem = curriculumSubjects.find(cs => cs.grade === grade && cs.subject === subject);
+            if (existingItem) {
+              const periodTypeSelect = document.getElementById("curriculumPeriodTypeSelect");
+              if (periodTypeSelect) existingItem.periodType = periodTypeSelect.value;
+            }
+
             skippedGrades.push("Grade " + grade);
           }
         });
@@ -8613,6 +8629,7 @@ function saveAllToStorage() {
         grade: cs.grade,
         subject: cs.subject,
         maxWeekly: cs.maxWeekly,
+        periodType: cs.periodType || "SINGLE",
         teacherIds: getNormalizedTeacherIds(cs.teacherIds)
       }));
 
