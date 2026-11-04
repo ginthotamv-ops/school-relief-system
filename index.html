@@ -7338,6 +7338,10 @@ function toggleSelectAllCurriculumGrades(masterChk) {
         return;
       }
 
+      // 🔴 1. selectedPeriodType මෙතැනදී නිර්වචනය කරන්න
+  const pTypeSelect = document.getElementById("curriculumPeriodTypeSelect");
+  const selectedPeriodType = pTypeSelect ? pTypeSelect.value : "SINGLE";
+      
       if (editId) {
         // Edit mode - updates the specific subject record
         const existing = curriculumSubjects.find(cs => cs.id === editId);
