@@ -521,6 +521,8 @@
                 <th class="p-2.5 w-24">අංශය</th>
                 <th class="p-2.5">විෂය නම</th>
                 <th class="p-2.5 w-28">සතියට වාර</th>
+                <!-- 🔴 මෙම තීරුව අලුතින් එක් කරන්න -->
+                <th class="p-2.5 text-center">වර්ගය</th>
                 <th class="p-2.5 text-left">ගුරුවරයෙකු නොමැති පන්ති</th>
                 <th class="p-2.5 text-center w-48">ක්‍රියාකාරකම්</th>
               </tr>
@@ -8088,7 +8090,8 @@ function makeAllocKey(classId, subject) {
 
     
     // 8. විෂය නිර්දේශ වගුව Render කිරීම (ගුරුවරුන් නැති පන්ති නිවැරදිව පෙන්වයි)
-    function renderCurriculumTable() {
+   
+   function renderCurriculumTable() {
       if (typeof populateCurriculumGradesDropdown === "function") populateCurriculumGradesDropdown();
 
       const filterGradeEl = document.getElementById("curriculumFilterGradeSelect");
@@ -8101,8 +8104,9 @@ function makeAllocKey(classId, subject) {
         ? (curriculumSubjects || []).filter(c => cleanGradeNum(c.grade) === cleanGradeNum(filterGrade))
         : (curriculumSubjects || []);
 
+      // 🔴 වෙනස්කම 1: colspan එක 7 කිරීම
       if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="p-5 text-center text-slate-400 font-bold">විෂයන් කිසිවක් හමු නොවීය.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="p-5 text-center text-slate-400 font-bold">විෂයන් කිසිවක් හමු නොවීය.</td></tr>';
         return;
       }
 
@@ -8115,6 +8119,23 @@ function makeAllocKey(classId, subject) {
 
         const classesOfGrade = (schoolClasses || []).filter(c => cleanGradeNum(c.grade) === grade);
         const unassignedClasses = getUnassignedClassesForSubject(grade, cs.subject);
+
+        // 🔴 වෙනස්කම 2: Period Type Badge එක සකස් කිරීම
+        const pType = cs.periodType || "SINGLE";
+        let typeBadge = "";
+        if (pType === "DOUBLE") {
+          typeBadge = `<span class="bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-md text-[10px] font-extrabold inline-flex items-center gap-1 shadow-2xs">
+            <i class="fa-solid fa-clone text-[9px]"></i> Double (x2)
+          </span>`;
+        } else if (pType === "TRIPLE") {
+          typeBadge = `<span class="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md text-[10px] font-extrabold inline-flex items-center gap-1 shadow-2xs">
+            <i class="fa-solid fa-layer-group text-[9px]"></i> Triple (x3)
+          </span>`;
+        } else {
+          typeBadge = `<span class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-md text-[10px] font-bold">
+            Single (x1)
+          </span>`;
+        }
 
         let statusColumnHtml = "";
 
@@ -8139,12 +8160,14 @@ function makeAllocKey(classId, subject) {
           `;
         }
 
+        // 🔴 වෙනස්කම 3: <td class="p-2.5 text-center whitespace-nowrap">${typeBadge}</td> තීරුව එක් කිරීම
         tbody.innerHTML += `
           <tr class="border-b hover:bg-slate-50/80 transition">
             <td class="p-2.5 font-bold text-indigo-700 text-xs whitespace-nowrap">Grade ${cs.grade}</td>
             <td class="p-2.5 font-bold text-slate-500 text-xs whitespace-nowrap">${secName}</td>
             <td class="p-2.5 font-bold text-slate-800 text-xs">${cs.subject}</td>
             <td class="p-2.5 font-bold text-slate-600 text-xs whitespace-nowrap">${cs.maxWeekly} Periods</td>
+            <td class="p-2.5 text-center whitespace-nowrap">${typeBadge}</td>
             <td class="p-2.5">
               ${statusColumnHtml}
             </td>
@@ -8169,8 +8192,6 @@ function makeAllocKey(classId, subject) {
     window.openSubjectTeachersModal = openSubjectTeachersModal;
     window.saveSubjectTeachersAssignment = saveSubjectTeachersAssignment;
     window.renderCurriculumTable = renderCurriculumTable;
-
-   
     
 // 1. කාලච්ඡේද Modal එකේ Dropdown එකට එම ශ්‍රේණියේ විෂයන් පමණක් පිරවීම
     function populateSlotSubjectOptions(classId, currentSubject) {
