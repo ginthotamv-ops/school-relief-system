@@ -4228,7 +4228,7 @@ function openSubjectTeachersModal(arg1, arg2) {
     }
 
     const row = document.createElement("div");
-    row.className = "p-2.5 flex items-center justify-between gap-3 hover:bg-white rounded-xl transition border-b border-slate-100 last:border-b-0";
+    row.className = "sub-teacher-row p-2.5 flex items-center justify-between gap-3 hover:bg-white rounded-xl transition border-b border-slate-100 last:border-b-0";
     row.innerHTML = `
       <div class="w-28 shrink-0">
         <span class="font-extrabold text-xs text-slate-800 block">${cls.name}</span>
@@ -4276,8 +4276,11 @@ function openSubjectTeachersModal(arg1, arg2) {
 // =========================================================================
 // 2. "අදාළ නොවේ" CHECKBOX එක වෙනස් වන විට ක්‍රියාත්මක වන HANDLER එක
 // =========================================================================
+
+    // 🔴 නිවැරදි කළ onSubjectTeacherExcludeToggle ශ්‍රිතය:
 function onSubjectTeacherExcludeToggle(chk) {
-  const row = chk.closest(".p-2.5");
+  // .p-2.5 වෙනුවට වලංගු CSS Attribute Selector එකක් භාවිත කිරීම
+  const row = chk.closest("[class*='p-2.5']") || chk.closest(".border-b") || chk.closest(".sub-teacher-row");
   if (!row) return;
 
   const teacherSelect = row.querySelector(".sub-teacher-assign-select");
@@ -4302,7 +4305,6 @@ function onSubjectTeacherExcludeToggle(chk) {
   }
 }
 
-window.openSubjectTeachersModal = openSubjectTeachersModal;
 window.onSubjectTeacherExcludeToggle = onSubjectTeacherExcludeToggle;
     
 
