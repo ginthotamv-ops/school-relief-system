@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V8995
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V5005
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -3799,10 +3799,18 @@ function renderClassTimetableGrid() {
         }
 
         // Clash අනතුරු ඇඟවීමේ ලාංඡනය
+// 🔴 ගුරු ගැටුම පෙන්වන Badge එක (Tooltip එක සහ පන්ති නම් සහිතව)
         if (hasClash) {
+          const classListStr = clashingClassNames.join(" සහ ");
           slotContentHtml += `
-            <div class="mt-1 bg-rose-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded flex items-center justify-center gap-1 animate-pulse shadow-xs">
-              <i class="fa-solid fa-triangle-exclamation"></i> ගුරු ගැටුමකි!
+            <div title="${clashTipText}" 
+                 class="mt-1 bg-rose-600 hover:bg-rose-700 text-white text-[8px] font-black px-1.5 py-0.5 rounded flex flex-col items-center justify-center gap-0.5 animate-pulse shadow-xs cursor-help transition">
+              <div class="flex items-center gap-1">
+                <i class="fa-solid fa-triangle-exclamation"></i> ගුරු ගැටුමකි!
+              </div>
+              <span class="text-[7.5px] font-semibold text-rose-100 truncate max-w-full">
+                (${classListStr})
+              </span>
             </div>
           `;
         }
