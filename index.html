@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V3765
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V37652
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -3726,59 +3726,55 @@ function renderClassTimetableGrid() {
 
         const cleanSub = String(slot.subject || '').replace(/'/g, "\\'");
         const cleanCombId = String(slot.combinedSubjectId || '').replace(/'/g, "\\'");
+        
 
-        rowHtml += `
-          <td ondragover="handleSlotDragOver(event)"
-              ondragleave="handleSlotDragLeave(event)"
-              ondrop="handleSlotDrop(event, '${selectedClassId}', ${d.id}, ${p})"
-              onclick="openTimetableSlotModal('${selectedClassId}', ${d.id}, ${p})" 
-              class="p-2 cursor-pointer transition relative group select-none min-w-[105px] ${bgClass}">
+// 🔴 බොත්තම් පෙන්වන කොටසට මෙය ආදේශ කරන්න:
+rowHtml += `
+  <td ondragover="handleSlotDragOver(event)"
+      ondragleave="handleSlotDragLeave(event)"
+      ondrop="handleSlotDrop(event, '${selectedClassId}', ${d.id}, ${p})"
+      onclick="openTimetableSlotModal('${selectedClassId}', ${d.id}, ${p})" 
+      class="p-2 cursor-pointer transition relative group select-none min-w-[105px] ${bgClass}">
+    
+    <!-- 1. LOCK කර ඇති විට වම් පස කෙළවරින් (TOP-LEFT) ස්ථිරව පෙනෙන කහ පැහැති LOCK ICON එක -->
+    ${isLocked ? `
+      <button type="button"
+              onclick="event.stopPropagation(); toggleSlotLock('${selectedClassId}', ${d.id}, ${p})"
+              title="අගුළු ලා ඇත (Unlock කිරීමට ඔබන්න)"
+              class="absolute top-1 left-1 w-5 h-5 rounded bg-amber-500 text-white flex items-center justify-center shadow-xs hover:bg-amber-600 transition cursor-pointer z-20">
+        <i class="fa-solid fa-lock text-[9px]"></i>
+      </button>
+    ` : ''}
+
+    <!-- 2. MOUSE OVER කළ විට දකුණු පස කෙළවරින් (TOP-RIGHT) එක පෙළට මතුවන බොත්තම් දෙක -->
+    <div class="absolute top-1 right-1 flex items-center gap-1 z-10 opacity-0 group-hover:opacity-100 transition">
+      
+      <!-- Lock / Unlock බොත්තම -->
+      <button type="button"
+              onclick="event.stopPropagation(); toggleSlotLock('${selectedClassId}', ${d.id}, ${p})"
+              title="${isLocked ? 'Unlock කරන්න' : 'අගුළු ලෑම සඳහා ඔබන්න'}"
+              class="bg-white hover:bg-amber-500 text-amber-600 hover:text-white border border-slate-300 hover:border-amber-500 rounded w-5 h-5 flex items-center justify-center transition shadow-xs cursor-pointer">
+        <i class="fa-solid ${isLocked ? 'fa-lock' : 'fa-unlock'} text-[10px]"></i>
+      </button>
+
+      <!-- Delete / Close බොත්තම (Locked නම් නොපෙනේ) -->
+      ${!isLocked ? `
+        <button type="button"
+                onclick="event.stopPropagation(); removeScheduleSlot('${selectedClassId}', ${d.id}, ${p}, '${cleanCombId}', '${cleanSub}')"
+                class="bg-white hover:bg-rose-600 text-slate-400 hover:text-white border border-slate-300 hover:border-rose-600 rounded w-5 h-5 flex items-center justify-center transition shadow-xs cursor-pointer"
+                title="මෙම කාලච්ඡේදය ඉවත් කරන්න">
+          <i class="fa-solid fa-xmark text-[11px]"></i>
+        </button>
+      ` : ''}
+
+    </div>
+
+    ${slotContentHtml}
+  </td>
+`;
             
-            <!-- 🔴 1. LOCK කර ඇති විට පමණක් වම් පස කෙළවරින් (TOP-LEFT) ස්ථිරවම පෙනෙන LOCK ICON එක -->
-            ${isLocked ? `
-         
-              <table><tr><tr><td><button type="button"
-                      onclick="event.stopPropagation(); toggleSlotLock('${selectedClassId}', ${d.id}, ${p})"
-                      title="අගුළු ලා ඇත (Unlock කිරීමට ඔබන්න)"
-                      class="absolute top-1 left-1 w-4 h-4 rounded bg-amber-500 text-white flex items-center justify-center shadow-xs hover:bg-amber-600 hover:scale-110 transition cursor-pointer z-10">
-                <i class="fa-solid fa-lock text-[8px]"></i>
-              </button>
-            ` : ''}
 
-            <!-- 🔴 2. LOCK කර නොමැති විට: MOUSE OVER කළ විට පමණක් දකුණු පසින් (TOP-RIGHT) මතුවන LOCK සහ CLOSE බොත්තම් -->
-            ${!isLocked ? `
-              <div class="absolute top-1 right-1 flex items-center gap-1 z-10 opacity-0 group-hover:opacity-100 transition">
-                <!-- Lock බොත්තම (Hover කළ විට පමණක් දිස්වේ) -->
-                <button type="button"
-                        onclick="event.stopPropagation(); toggleSlotLock('${selectedClassId}', ${d.id}, ${p})"
-                        title="අගුළු ලෑම සඳහා ඔබන්න"
-                        class="bg-white/95 hover:bg-amber-500 text-slate-400 hover:text-white border border-slate-200 hover:border-amber-500 rounded-md w-5 h-5 flex items-center justify-center transition shadow-xs cursor-pointer">
-                  <i class="fa-solid fa-lock-open text-[10px]"></i>
-                </button>
-</td><td>
-                <!-- Delete (Close) බොත්තම (Hover කළ විට පමණක් දිස්වේ) -->
-                <button type="button"
-                        onclick="event.stopPropagation(); removeScheduleSlot('${selectedClassId}', ${d.id}, ${p}, '${cleanCombId}', '${cleanSub}')"
-                        class="bg-white/95 hover:bg-rose-600 text-slate-400 hover:text-white border border-slate-200 hover:border-rose-600 rounded-md w-5 h-5 flex items-center justify-center transition shadow-xs cursor-pointer"
-                        title="මෙම කාලච්ඡේදය ඉවත් කරන්න">
-                  <i class="fa-solid fa-xmark text-[11px]"></i>
-                </button> </td></tr></table>
-              </div>
-            ` : `
-              <!-- Locked අවස්ථාවේදීත් Mouse Over කළ විට Unlock කරගත හැකි කුඩා Button එකක් දකුණු පසින්ද ලබාදීම (විකල්ප පහසුව සඳහා) -->
-              <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition z-10">
-                <button type="button"
-                        onclick="event.stopPropagation(); toggleSlotLock('${selectedClassId}', ${d.id}, ${p})"
-                        title="Unlock කරන්න"
-                        class="bg-amber-100 hover:bg-amber-500 text-amber-700 hover:text-white border border-amber-300 rounded-md w-5 h-5 flex items-center justify-center transition shadow-xs cursor-pointer">
-                  <i class="fa-solid fa-lock-open text-[9px]"></i>
-                </button>
-              </div>
-            `}
 
-            ${slotContentHtml}
-          </td>
-        `;
       } else {
         // හිස් කොටුව (Empty Slot)
         rowHtml += `
