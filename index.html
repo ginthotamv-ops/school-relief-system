@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V1020
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V8995
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -3664,8 +3664,49 @@ function renderClassTimetableGrid() {
           }
         }
 
-        // 🔴 2. ගුරු ගැටුම් (Clash Detection) - ගුරුවරයෙකු සිටින විට පමණක් පරීක්ෂා කෙරේ
+        // 🔴 2. ගුරු ගැටුම් (Clash Detection) - ගුරුවරයෙකු සිටින විට පමණක් පරීක්ෂා කෙර
+    
+        // 🔴 2. ගුරු ගැටුම් (Clash Detection) සහ අදාළ පන්ති ලැයිස්තුව ලබා ගැනීම
         let hasClash = false;
+        let clashingClassNames = [];
+        let clashTipText = "";
+
+        const validTeacherId = slot.teacherId && String(slot.teacherId).trim() !== "" && slot.teacherId !== "NONE" && slot.teacherId !== "EXCLUDED";
+
+        if (!isCombinedOrBasket && validTeacherId) {
+          const clashes = (masterSchedule || []).filter(s => 
+            s.teacherId && String(s.teacherId).trim().toLowerCase() === String(slot.teacherId).trim().toLowerCase() &&
+            (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, d.id) : Number(s.day) === Number(d.id)) &&
+            Number(s.period) === Number(p)
+          );
+
+          if (clashes.length > 1) {
+            hasClash = true;
+
+            // ගැටුමට අදාළ සියලුම පන්තිවල නම් (Name) නිවැරදිව සොයා ගැනීම
+            const classNames = clashes.map(cs => {
+              const matchedCls = (schoolClasses || []).find(c => 
+                String(c.id).trim().toLowerCase() === String(cs.classId).trim().toLowerCase() ||
+                String(c.name).trim().toLowerCase() === String(cs.classId).trim().toLowerCase()
+              );
+              return matchedCls ? (matchedCls.name || matchedCls.id) : cs.classId;
+            });
+
+            // එකම පන්තියේ නම දෙවරක් නොපෙනෙන සේ Unique කරගැනීම
+            clashingClassNames = [...new Set(classNames)];
+
+            // ගුරුවරයාගේ නම ලබා ගැනීම
+            const clashingTeacher = (teachers || []).find(t => String(t.id).trim().toLowerCase() === String(slot.teacherId).trim().toLowerCase());
+            const tName = clashingTeacher ? clashingTeacher.name : "මෙම ගුරුභවතා";
+
+            // Tooltip (Tip) එකෙහි දිස්වන සම්පූර්ණ විස්තරය
+            clashTipText = `⚠️ අවවාදයයි: ගුරු ගැටුමකි!\n` +
+                           `• ගුරුභවතා: ${tName}\n` +
+                           `• ගැටුම පවතින පන්ති: ${clashingClassNames.join(" සහ ")} අතර ගැටුමක් ඇති වී තිබේ.\n` +
+                           `• කාලය: ${d.short} - ${p} වන කාලච්ඡේදය`;
+          }
+        }
+        /*     let hasClash = false;
         const validTeacherId = slot.teacherId && String(slot.teacherId).trim() !== "" && slot.teacherId !== "NONE" && slot.teacherId !== "EXCLUDED";
 
         if (!isCombinedOrBasket && validTeacherId) {
@@ -3678,7 +3719,7 @@ function renderClassTimetableGrid() {
             hasClash = true;
           }
         }
-
+*/
         // පසුබිම් වර්ණ තීරණය කිරීම
         let bgClass = "bg-indigo-50/40 hover:bg-indigo-100/60 border-r border-slate-200";
         if (hasClash) {
