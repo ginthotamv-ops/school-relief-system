@@ -301,6 +301,14 @@
             <button type="button" onclick="clearAllMasterSchedule()" class="bg-slate-700 hover:bg-slate-800 text-rose-300 font-bold text-xs py-2 px-3 rounded-xl shadow transition flex items-center gap-1.5" title="පාසලේ සියලුම පන්තිවල කාලසටහන Reset කරන්න">
               <i class="fa-solid fa-trash-can"></i> All Reset
             </button>
+            <!-- කාලසටහන් පාලක පුවරුවට (Toolbar) එක් කළ හැකි බොත්තම -->
+<button type="button" 
+        onclick="autoResolveScheduleClashes()" 
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow transition transform active:scale-95 cursor-pointer"
+        title="ගුරු ගැටුම් ස්වයංක්‍රීයව නිරාකරණය කරන්න">
+  <i class="fa-solid fa-wand-magic-sparkles text-[11px]"></i>
+  <span>AI ගැටුම් නිරාකරණය</span>
+</button>
             
           </div>
         </div>
@@ -4195,6 +4203,153 @@ function handleSlotDragLeave(e) {
       addBasketSubjectRow();
     }
 */
+
+// ⚡ ස්වයංක්‍රීයව ගුරු ගැටුම් නිරාකරණය කරන AI ඇල්ගොරිතමය
+function autoResolveScheduleClashes() {
+  let scheduleList = (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) 
+    ? masterSchedule 
+    : (window.masterSchedule || []);
+
+  if (!scheduleList || scheduleList.length === 0) {
+    alert("කාලසටහනේ කිසිදු දත්තයක් හමු නොවීය.");
+    return;
+  }
+
+  const days = [0, 1, 2, 3, 4]; // සඳුදා සිට සිකුරාදා
+  const periods = [1, 2, 3, 4, 5, 6, 7, 8]; // කාලච්ඡේද 1 සිට 8
+  let resolvedCount = 0;
+  let unresolvedCount = 0;
+  let skippedLockedCount = 0;
+
+  // 🔴 සහායක ශ්‍රිතය: යම් ගුරුවරයෙකු අදාළ දිනයේ සහ වේලාවේ වෙනත් පන්තියක උගන්වන්නේදැයි පරීක්ෂාව
+  function isTeacherFree(teacherId, day, period, excludeSlot) {
+    if (!teacherId || teacherId === "NONE" || teacherId === "EXCLUDED") return true;
+    return !scheduleList.some(s => 
+      s !== excludeSlot &&
+      s.teacherId && String(s.teacherId).trim().toLowerCase() === String(teacherId).trim().toLowerCase() &&
+      (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, day) : Number(s.day) === Number(day)) &&
+      Number(s.period) === Number(period)
+    );
+  }
+
+  // 🔴 සහායක ශ්‍රිතය: යම් පන්තියක අදාළ වේලාව හිස්දැයි (Empty) පරීක්ෂාව
+  function isClassSlotFree(classId, day, period) {
+    const cleanCid = String(classId).trim().toLowerCase();
+    return !scheduleList.some(s => 
+      String(s.classId).trim().toLowerCase() === cleanCid &&
+      (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, day) : Number(s.day) === Number(day)) &&
+      Number(s.period) === Number(period)
+    );
+  }
+
+  // 1. පවතින සියලුම ගැටුම් (Clashes) හඳුනාගැනීම
+  let clashesFound = true;
+  let iteration = 0;
+  const maxIterations = 20; // Infinite loops වැළැක්වීමට
+
+  while (clashesFound && iteration < maxIterations) {
+    iteration++;
+    clashesFound = false;
+
+    for (let day of days) {
+      for (let period of periods) {
+        // එකම දින සහ වේලාවේ එකම ගුරුවරයා සිටින slots සෙවීම
+        const slotsAtTime = scheduleList.filter(s => 
+          s.teacherId && String(s.teacherId).trim() !== "" && s.teacherId !== "NONE" && s.teacherId !== "EXCLUDED" &&
+          (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, day) : Number(s.day) === Number(day)) &&
+          Number(s.period) === Number(period)
+        );
+
+        // ගුරුවරුන් අනුව කාණ්ඩ කිරීම
+        const teacherMap = {};
+        slotsAtTime.forEach(s => {
+          const tid = String(s.teacherId).trim().toLowerCase();
+          if (!teacherMap[tid]) teacherMap[tid] = [];
+          teacherMap[tid].push(s);
+        });
+
+        // ගැටුමක් ඇති ගුරුවරුන් විසඳීම
+        for (let tid in teacherMap) {
+          const conflictingSlots = teacherMap[tid];
+          if (conflictingSlots.length > 1) {
+            clashesFound = true;
+
+            // චලනය කළ හැකි (Unlocked) slot එකක් තෝරාගැනීම
+            // (Locked ඒවා මුලින් තබා Unlocked ඒවා පසුවට ගනී)
+            conflictingSlots.sort((a, b) => (b.isLocked ? 1 : 0) - (a.isLocked ? 1 : 0));
+
+            // දෙවැනි slot එකේ සිට විසඳීමට උත්සාහ කිරීම
+            let slotToMove = null;
+            for (let i = 1; i < conflictingSlots.length; i++) {
+              if (!conflictingSlots[i].isLocked) {
+                slotToMove = conflictingSlots[i];
+                break;
+              }
+            }
+
+            // දෙවැන්නත් Locked නම්, පළමු වැන්න Unlocked දැයි බැලීම
+            if (!slotToMove && !conflictingSlots[0].isLocked) {
+              slotToMove = conflictingSlots[0];
+            }
+
+            if (!slotToMove) {
+              // සියලුම ගැටුණු slots locked නම් චලනය කළ නොහැක
+              skippedLockedCount++;
+              continue;
+            }
+
+            // 🔴 2. Slot එක ගෙන යා හැකි සුදුසුම හිස් වේලාව (Alternative Slot) සෙවීම
+            let targetDay = null;
+            let targetPeriod = null;
+
+            for (let candDay of days) {
+              for (let candPeriod of periods) {
+                // Interval (විවේකය) මඟහැරීම අවශ්‍ය නම් මෙතැනින් පරීක්ෂා කළ හැක
+                if (isClassSlotFree(slotToMove.classId, candDay, candPeriod) &&
+                    isTeacherFree(slotToMove.teacherId, candDay, candPeriod, slotToMove)) {
+                  targetDay = candDay;
+                  targetPeriod = candPeriod;
+                  break;
+                }
+              }
+              if (targetDay !== null) break;
+            }
+
+            // 🔴 3. සුදුසු වේලාවක් හමු වූයේ නම් මාරු කිරීම
+            if (targetDay !== null && targetPeriod !== null) {
+              slotToMove.day = targetDay;
+              slotToMove.period = targetPeriod;
+              resolvedCount++;
+            } else {
+              unresolvedCount++;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 4. සුරැකීම සහ අතුරුමුහුණත යාවත්කාලීන කිරීම
+  if (typeof masterSchedule !== "undefined") masterSchedule = scheduleList;
+  window.masterSchedule = scheduleList;
+
+  if (typeof saveAllToStorage === "function") saveAllToStorage();
+  if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+
+  // 5. අවසන් ප්‍රතිඵලය දැනුම් දීම
+  if (resolvedCount > 0 && unresolvedCount === 0) {
+    alert(` සාර්ථකයි! ගුරු ගැටුම් ${resolvedCount} ක් ස්වයංක්‍රීයව නිරාකරණය කර කාලසටහන සකස් කරන ලදී.`);
+  } else if (resolvedCount > 0 && unresolvedCount > 0) {
+    alert(`️ ගැටුම් ${resolvedCount} ක් සාර්ථකව විසඳන ලදී. තවත් ගැටුම් ${unresolvedCount} ක් සඳහා සුදුසු විවේක කාලච්ඡේද නොමැති බැවින් අතින් සකස් කිරීමට සිදුවේ.`);
+  } else if (skippedLockedCount > 0) {
+    alert(`⛔ ගැටුම් ඇති කාලච්ඡේද සියල්ලම අගුළු ලා (Locked) ඇති බැවින් චලනය කළ නොහැකි විය. කරුණාකර අදාළ කොටුව Unlock කර නැවත උත්සාහ කරන්න.`);
+  } else {
+    alert(" කාලසටහන තුළ කිසිදු ගුරු ගැටුමක් හමු නොවීය!");
+  }
+}
+
+window.autoResolveScheduleClashes = autoResolveScheduleClashes;
+    
     // 4. විෂය පේළියක් එක් කිරීම (එම ශ්‍රේණියේ විෂයන් පමණක් Dropdown එකේ ඇත, ගුරු තේරීමක් නැත)
     function addBasketSubjectRow(selectedSubjectName = "") {
       const container = document.getElementById("basketSubjectsContainer");
