@@ -4430,6 +4430,7 @@ function handleSlotDrop(event, targetClassId, day, period) {
   const dragData = window.draggedSubjectData;
   if (!dragData) return;
 
+  
   day = Number(day);
   period = Number(period);
   const cleanCurrentClassId = String(targetClassId).trim();
@@ -4439,6 +4440,20 @@ function handleSlotDrop(event, targetClassId, day, period) {
     : (window.masterSchedule || []);
 
   const newSubjectName = dragData.subject || "නව විෂය";
+
+// =========================================================================
+  // 🔴 පරීක්ෂාව 1: මෙම කොටුව දැනටමත් LOCK කර ඇත්දැයි බැලීම (සියල්ලටම පෙර)
+  // =========================================================================
+  const existingSlot = scheduleList.find(s => 
+    String(s.classId).trim().toLowerCase() === cleanCurrentClassId.toLowerCase() &&
+    Number(s.day) === day &&
+    Number(s.period) === period
+  );
+
+  if (existingSlot && existingSlot.isLocked) {
+    alert("⛔ මෙම කාලච්ඡේදය අගුළු ලා (Locked) ඇත! වෙනස් කිරීමට පෙර Lock එක ඉවත් කරන්න.");
+    return; // මෙතැනින් නවතී
+  }
 
   // =========================================================================
   // 1. අලුතින් දමන්නේ COMBINED SUBJECT එකක් නම් (Drop Combined Subject)
@@ -4466,6 +4481,49 @@ function handleSlotDrop(event, targetClassId, day, period) {
       }
     });
 
+    if (conflictingSlots.length > 0) {
+      alert(`⛔ මෙම වේලාවේ කාණ්ඩයේ අනෙක් පන්තිවල විෂයන් පවතී:\n• ${conflictingSlots.join("\n• ")}`);
+      return;
+    }
+
+    // --- මෙතැන් සිට Combined Subject එක කාලසටහනට ඇතුළත් කිරීමේ කේතය ක්‍රියාත්මක වේ ---
+
+  } else {
+    // =========================================================================
+    // 2. සාමාන්‍ය තනි විෂයක් නම් (Regular Single Subject)
+    // =========================================================================
+    const isSameSubjectInSlot = existingSlot && existingSlot.subject === newSubjectName;
+
+    // 🔴 පරීක්ෂාව 2: සතිපතා සීමාව (QUOTA) ඉක්මවා ඇත්දැයි බැලීම
+    if (!isSameSubjectInSlot && typeof canAssignSubjectToSlot === "function") {
+      const check = canAssignSubjectToSlot(cleanCurrentClassId, newSubjectName);
+      if (!check.allowed) {
+        alert("⛔ " + check.reason);
+        return; // සීමාව ඉක්මවා ඇත්නම් මෙතැනින් නවතී
+      }
+    }
+
+    //
+  
+      
+    // කාණ්ඩයේ කිසියම් හෝ පන්තියක මෙම වේලාවේ දැනටමත් විෂයන් ඇත්දැයි සෙවීම
+    const conflictingSlots = [];
+    targetClasses.forEach(cId => {
+      const slotInPeer = scheduleList.find(s => 
+        String(s.classId).trim().toLowerCase() === cId.toLowerCase() &&
+        Number(s.day) === day &&
+        Number(s.period) === period
+      );
+      if (slotInPeer) {
+        const clsObj = (window.schoolClasses || []).find(c => 
+          String(c.id).trim().toLowerCase() === cId.toLowerCase() ||
+          String(c.name).trim().toLowerCase() === cId.toLowerCase()
+        );
+        conflictingSlots.push(`${clsObj ? clsObj.name : cId}: '${slotInPeer.subject}'`);
+      }
+    });
+      
+///
     // ගැටුම් පවතී නම් Confirmation Alert එකක් ලබාගැනීම
     if (conflictingSlots.length > 0) {
       const confirmMsg = `අවවාදයයි!\nමෙම කාලච්ඡේදයේ පහත පන්තිවල දැනටමත් විෂයන් පවතී:\n\n` +
@@ -7686,7 +7744,38 @@ function toggleSelectAllCurriculumGrades(masterChk) {
     // FULLY INDEPENDENT CLASS-SUBJECT TEACHER ASSIGNMENT CONTROLLER
     // =========================================================================
 
+// Drop කිරීමේදී හෝ විෂයක් එක් කිරීමේදී පරීක්ෂා කරන කොටස:
+function canAssignSubjectToSlot(classId, subjectName) {
+  const cls = (schoolClasses || []).find(c => String(c.id).trim() === String(classId).trim());
+  if (!cls) return { allowed: false, reason: "පන්තිය හමු නොවීය." };
 
+  const grade = typeof cleanGradeNum === "function" ? cleanGradeNum(cls.grade) : Number(cls.grade);
+  const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(subjectName) : subjectName.trim().toLowerCase();
+
+  // විෂය නිර්දේශයේ උපරිම සීමාව (maxWeekly) සොයා ගැනීම
+  const cs = (curriculumSubjects || []).find(c => 
+    (typeof cleanGradeNum === "function" ? cleanGradeNum(c.grade) : Number(c.grade)) === grade &&
+    (typeof cleanSubjectKey === "function" ? cleanSubjectKey(c.subject) : c.subject.trim().toLowerCase()) === subKey
+  );
+
+  const maxWeekly = cs ? (Number(cs.maxWeekly) || 0) : 0;
+
+  // දැනට කාලසටහනේ වෙන් කර ඇති ගණන
+  const currentCount = (masterSchedule || []).filter(s => 
+    String(s.classId).trim().toLowerCase() === String(classId).trim().toLowerCase() &&
+    (typeof cleanSubjectKey === "function" ? cleanSubjectKey(s.subject) : s.subject.trim().toLowerCase()) === subKey &&
+    !s.isCombined
+  ).length;
+
+  if (currentCount >= maxWeekly) {
+    return { 
+      allowed: false, 
+      reason: `'${subjectName}' විෂය සඳහා සතිපතා නියමිත උපරිම කාලච්ඡේද ප්‍රමාණය (${maxWeekly}) දැනටමත් සම්පූර්ණයි!` 
+    };
+  }
+
+  return { allowed: true };
+}
   
 // =========================================================================
     // UNASSIGNED CLASSES DETECTOR & CURRICULUM TABLE CONTROLLER
