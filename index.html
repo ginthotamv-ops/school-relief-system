@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V1010
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V3765
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -3736,7 +3736,8 @@ function renderClassTimetableGrid() {
             
             <!-- 🔴 1. LOCK කර ඇති විට පමණක් වම් පස කෙළවරින් (TOP-LEFT) ස්ථිරවම පෙනෙන LOCK ICON එක -->
             ${isLocked ? `
-              <button type="button"
+         
+              <table><tr><tr><td><button type="button"
                       onclick="event.stopPropagation(); toggleSlotLock('${selectedClassId}', ${d.id}, ${p})"
                       title="අගුළු ලා ඇත (Unlock කිරීමට ඔබන්න)"
                       class="absolute top-1 left-1 w-4 h-4 rounded bg-amber-500 text-white flex items-center justify-center shadow-xs hover:bg-amber-600 hover:scale-110 transition cursor-pointer z-10">
@@ -3754,14 +3755,14 @@ function renderClassTimetableGrid() {
                         class="bg-white/95 hover:bg-amber-500 text-slate-400 hover:text-white border border-slate-200 hover:border-amber-500 rounded-md w-5 h-5 flex items-center justify-center transition shadow-xs cursor-pointer">
                   <i class="fa-solid fa-lock-open text-[10px]"></i>
                 </button>
-
+</td><td>
                 <!-- Delete (Close) බොත්තම (Hover කළ විට පමණක් දිස්වේ) -->
                 <button type="button"
                         onclick="event.stopPropagation(); removeScheduleSlot('${selectedClassId}', ${d.id}, ${p}, '${cleanCombId}', '${cleanSub}')"
                         class="bg-white/95 hover:bg-rose-600 text-slate-400 hover:text-white border border-slate-200 hover:border-rose-600 rounded-md w-5 h-5 flex items-center justify-center transition shadow-xs cursor-pointer"
                         title="මෙම කාලච්ඡේදය ඉවත් කරන්න">
                   <i class="fa-solid fa-xmark text-[11px]"></i>
-                </button>
+                </button> </td></tr></table>
               </div>
             ` : `
               <!-- Locked අවස්ථාවේදීත් Mouse Over කළ විට Unlock කරගත හැකි කුඩා Button එකක් දකුණු පසින්ද ලබාදීම (විකල්ප පහසුව සඳහා) -->
