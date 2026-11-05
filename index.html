@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V5005
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V110
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -3928,6 +3928,7 @@ window.removeSingleClassSlot = removeSingleClassSlot;
 
     
 // 🔴 Lock / Unlock ක්‍රියාවලිය පාලනය කරන ශ්‍රිතය
+// 🔴 Basket සහ Combined විෂයන්හි සියලුම පන්ති එකවර Lock / Unlock කරන ශ්‍රිතය
 function toggleSlotLock(classId, day, period) {
   const cleanCid = String(classId).trim().toLowerCase();
   day = Number(day);
@@ -3942,6 +3943,7 @@ function toggleSlotLock(classId, day, period) {
     String(c.name).trim().toLowerCase() === cleanCid
   );
 
+  // 1. ක්ලික් කළ පන්තියේ අදාළ Slot එක සොයා ගැනීම
   const targetSlot = scheduleList.find(s => 
     (String(s.classId).trim().toLowerCase() === cleanCid || (cls && String(s.classId).trim().toLowerCase() === String(cls.name).trim().toLowerCase())) &&
     (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, day) : Number(s.day) === day) &&
@@ -3950,18 +3952,55 @@ function toggleSlotLock(classId, day, period) {
 
   if (!targetSlot) return;
 
-  // Toggle Lock State
-  targetSlot.isLocked = !Boolean(targetSlot.isLocked);
+  // නව Lock තත්ත්වය (True <-> False)
+  const newLockState = !Boolean(targetSlot.isLocked);
+  
+  // Basket හෝ Combined විෂයක්දැයි හඳුනාගැනීම
+  const isCombinedOrBasket = !!(targetSlot.isCombined || targetSlot.isBasket || targetSlot.combinedSubjectId);
 
+  if (isCombinedOrBasket) {
+    // 🔴 2. Basket / Combined නම්: එකම වේලාවේ ඇති සියලුම පන්ති (6A, 6B, 6C...) එකවර Lock/Unlock කිරීම
+    const combId = targetSlot.combinedSubjectId ? String(targetSlot.combinedSubjectId).trim() : null;
+    const targetSubKey = typeof cleanSubjectKey === "function" 
+      ? cleanSubjectKey(targetSlot.subject) 
+      : String(targetSlot.subject || '').trim().toLowerCase();
+
+    scheduleList.forEach(s => {
+      const sMatchesDay = (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, day) : Number(s.day) === day);
+      const sMatchesPeriod = Number(s.period) === period;
+
+      if (sMatchesDay && sMatchesPeriod) {
+        // ක්‍රමය A: combinedSubjectId එක සමාන නම්
+        const sameCombId = combId && s.combinedSubjectId && String(s.combinedSubjectId).trim() === combId;
+        
+        // ක්‍රමය B: Basket/Combined වී එකම විෂය නම හෝ Basket Group එක ඇත්නම්
+        const sSubKey = typeof cleanSubjectKey === "function" 
+          ? cleanSubjectKey(s.subject) 
+          : String(s.subject || '').trim().toLowerCase();
+        const sameBasketSub = (s.isCombined || s.isBasket) && (sSubKey === targetSubKey);
+
+        if (sameCombId || sameBasketSub) {
+          s.isLocked = newLockState;
+        }
+      }
+    });
+  } else {
+    // 🔴 3. සාමාන්‍ය තනි විෂයක් නම් අදාළ පන්තිය පමණක් Lock කිරීම
+    targetSlot.isLocked = newLockState;
+  }
+
+  // මතකය (Memory) යාවත්කාලීන කිරීම
   if (typeof masterSchedule !== "undefined") masterSchedule = scheduleList;
   window.masterSchedule = scheduleList;
 
-  // Storage සුරැකීම සහ Grid Refresh කිරීම
+  // ස්ථිරව සුරැකීම සහ Grid එක Refresh කිරීම
   if (typeof saveAllToStorage === "function") saveAllToStorage();
-  renderClassTimetableGrid();
+  if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
 }
 
 window.toggleSlotLock = toggleSlotLock;
+
+
 window.renderClassTimetableGrid = renderClassTimetableGrid;
     
     // 4. Drag & Drop Event Handlers
