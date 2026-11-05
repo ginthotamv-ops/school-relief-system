@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V5689
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V100
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -5084,176 +5084,220 @@ window.saveClassSpecificCombinedSubject = saveClassSpecificCombinedSubject;
     // =========================================================================
 
 function renderSubjectQuotaTray(classId) {
-      const tray = document.getElementById("classSubjectQuotaTray") || document.getElementById("classSubjectQuotaStatus");
-      if (!tray) return;
-      tray.innerHTML = "";
+  const tray = document.getElementById("classSubjectQuotaTray") || document.getElementById("classSubjectQuotaStatus");
+  if (!tray) return;
+  tray.innerHTML = "";
 
-      if (!classId) {
-        tray.innerHTML = '<span class="text-xs text-slate-400 font-bold p-2">කරුණාකර පන්තියක් තෝරන්න.</span>';
-        return;
+  if (!classId) {
+    tray.innerHTML = '<span class="text-xs text-slate-400 font-bold p-2">කරුණාකර පන්තියක් තෝරන්න.</span>';
+    return;
+  }
+
+  const cleanClassId = String(classId).trim();
+
+  const currentCls = (schoolClasses || []).find(c => 
+    String(c.id).trim().toLowerCase() === cleanClassId.toLowerCase() || 
+    String(c.name).trim().toLowerCase() === cleanClassId.toLowerCase()
+  );
+  const currentGrade = currentCls ? (typeof cleanGradeNum === "function" ? cleanGradeNum(currentCls.grade) : currentCls.grade) : 0;
+  const currentClassName = currentCls ? currentCls.name : cleanClassId;
+
+  // =========================================================================
+  // 1. මෙම පන්තිය අයත් COMBINED SUBJECTS හඳුනාගැනීම
+  // =========================================================================
+  const relevantCombined = (window.combinedCurriculumSubjects || []).filter(comb => {
+    if ((typeof cleanGradeNum === "function" ? cleanGradeNum(comb.grade) : comb.grade) !== currentGrade) return false;
+    return (comb.targetClassIds || []).some(cid => 
+      String(cid).trim().toLowerCase() === cleanClassId.toLowerCase() ||
+      String(cid).trim().toLowerCase() === currentClassName.toLowerCase()
+    );
+  });
+
+  // 🔴 මෙම පන්තිය සඳහා Quota Tray එකෙන් ඉවත් කළ යුතු (Suppressed) තනි විෂයන් ලැයිස්තුව
+  const suppressedSubjects = new Set();
+  relevantCombined.forEach(comb => {
+    (comb.subjects || []).forEach(sub => suppressedSubjects.add(typeof cleanSubjectKey === "function" ? cleanSubjectKey(sub) : sub.trim().toLowerCase()));
+  });
+
+  // =========================================================================
+  // 2. COMBINED SUBJECT CARDS (ඉහළින්ම දිස්වීම)
+  // =========================================================================
+  relevantCombined.forEach(comb => {
+    let allocatedCount = 0;
+    (masterSchedule || []).forEach(s => {
+      if (String(s.classId).trim().toLowerCase() === cleanClassId.toLowerCase() && (s.subject === comb.name || s.combinedSubjectId === comb.id)) {
+        allocatedCount++;
       }
+    });
 
-      const cleanClassId = String(classId).trim();
+    const max = Number(comb.maxWeekly) || 2;
+    const remaining = Math.max(0, max - allocatedCount);
+    const isCompleted = allocatedCount >= max;
 
-      const currentCls = (schoolClasses || []).find(c => 
-        String(c.id).trim() === cleanClassId || String(c.name).trim() === cleanClassId
-      );
-      const currentGrade = currentCls ? (typeof cleanGradeNum === "function" ? cleanGradeNum(currentCls.grade) : currentCls.grade) : 0;
-      const currentClassName = currentCls ? currentCls.name : cleanClassId;
+    const card = document.createElement("div");
+    card.className = `p-2.5 rounded-xl border-2 shadow-sm transition flex items-center justify-between gap-3 select-none ${
+      isCompleted 
+        ? "bg-indigo-50/60 border-indigo-200 text-indigo-900 opacity-75" 
+        : "bg-gradient-to-r from-indigo-50 to-emerald-50 border-indigo-400 text-indigo-950 hover:shadow-md cursor-grab active:cursor-grabbing"
+    }`;
 
-      // =========================================================================
-      // 1. මෙම පන්තිය අයත් COMBINED SUBJECTS හඳුනාගැනීම
-      // =========================================================================
-      const relevantCombined = (window.combinedCurriculumSubjects || []).filter(comb => {
-        if ((typeof cleanGradeNum === "function" ? cleanGradeNum(comb.grade) : comb.grade) !== currentGrade) return false;
-        return (comb.targetClassIds || []).some(cid => 
-          String(cid).trim().toLowerCase() === cleanClassId.toLowerCase() ||
-          String(cid).trim().toLowerCase() === currentClassName.toLowerCase()
-        );
-      });
-
-      // 🔴 මෙම පන්තිය සඳහා Quota Tray එකෙන් ඉවත් කළ යුතු (Suppressed) තනි විෂයන් ලැයිස්තුව
-      const suppressedSubjects = new Set();
-      relevantCombined.forEach(comb => {
-        (comb.subjects || []).forEach(sub => suppressedSubjects.add(cleanSubjectKey(sub)));
-      });
-
-      // =========================================================================
-      // 2. COMBINED SUBJECT CARDS (ඉහළින්ම දිස්වීම)
-      // =========================================================================
-      relevantCombined.forEach(comb => {
-        let allocatedCount = 0;
-        (masterSchedule || []).forEach(s => {
-          if (String(s.classId).trim() === cleanClassId && (s.subject === comb.name || s.combinedSubjectId === comb.id)) {
-            allocatedCount++;
-          }
-        });
-
-        const max = Number(comb.maxWeekly) || 2;
-        const remaining = Math.max(0, max - allocatedCount);
-        const isCompleted = allocatedCount >= max;
-
-        const card = document.createElement("div");
-        card.className = `p-2.5 rounded-xl border-2 shadow-sm transition flex items-center justify-between gap-3 select-none ${
-          isCompleted 
-            ? "bg-indigo-50/60 border-indigo-200 text-indigo-900 opacity-75" 
-            : "bg-gradient-to-r from-indigo-50 to-emerald-50 border-indigo-400 text-indigo-950 hover:shadow-md cursor-grab active:cursor-grabbing"
-        }`;
-
-        if (remaining > 0) {
-          card.draggable = true;
-          card.title = `ඇදගෙන ගොස් කාලසටහනට දමන්න (ඉතිරි: ${remaining})`;
-          card.addEventListener("dragstart", (e) => {
-            window.draggedSubjectData = {
-              type: "COMBINED_SUBJECT",
-              isCombined: true,
-              combinedId: comb.id,
-              subject: comb.name,
-              subList: comb.subjects,
-              sourceClassId: cleanClassId
-            };
-            e.dataTransfer.setData("text/plain", comb.name);
-            e.dataTransfer.effectAllowed = "copy";
-          });
-        }
-
-        const subNames = (comb.subjects || []).join(", ");
-
-        card.innerHTML = `
-          <div>
-            <div class="font-extrabold text-xs flex items-center gap-1.5 text-indigo-950">
-              <i class="fa-solid fa-layer-group text-indigo-600"></i>
-              <span>${comb.name}</span>
-              <span class="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded font-black border border-indigo-200">${comb.groupCode}</span>
-            </div>
-            <div class="text-[10px] text-slate-500 font-semibold truncate max-w-[140px] mt-0.5" title="${subNames}">
-              ${subNames}
-            </div>
-          </div>
-          <div class="flex flex-col items-end gap-0.5">
-            <span class="text-[10px] font-black px-2 py-0.5 rounded-md border bg-indigo-100 text-indigo-800 border-indigo-300">
-              ${allocatedCount} / ${max}
-            </span>
-            <span class="text-[9px] font-bold ${remaining > 0 ? 'text-indigo-600' : 'text-slate-400'}">
-              ${remaining > 0 ? `ඉතිරි: ${remaining}` : 'අවසන්'}
-            </span>
-          </div>
-        `;
-
-        tray.appendChild(card);
-      });
-
-      // =========================================================================
-      // 3. සාමාන්‍ය තනි විෂයන් (REGULAR SUBJECTS)
-      // =========================================================================
-      const quotas = typeof calculateClassSubjectQuotas === "function" ? calculateClassSubjectQuotas(cleanClassId) : [];
-      
-      // 🔴 අදාළ පන්තිය සඳහා Group එකට අයත් තනි විෂයන් පමණක් ඉවත් කර ඉතිරි විෂයන් පෙන්වීම
-      const filteredQuotas = quotas.filter(q => !suppressedSubjects.has(cleanSubjectKey(q.subject)));
-// EXCLUDED කර ඇති විෂයන් Tray එකෙන් ඉවත් කිරීම
-const finalTrayQuotas = filteredQuotas.filter(q => !isSubjectExcludedForClass(cleanClassId, q.subject));
-  
-      filteredQuotas.forEach(q => {
-        const isCompleted = q.allocated === q.maxWeekly;
-
-        let teacherDisplayHtml = "";
-        if (q.assignedTeacher && q.assignedTeacher.name) {
-          const no = q.assignedTeacher.schoolNo ? `[${q.assignedTeacher.schoolNo}]` : "";
-          teacherDisplayHtml = `
-            <div class="text-[10px] text-indigo-900 font-bold truncate max-w-[130px]" title="${q.assignedTeacher.name}">
-              <i class="fa-solid fa-user-tie text-[9px] mr-1 text-indigo-600"></i>${q.assignedTeacher.name} ${no}
-            </div>
-          `;
-        } else {
-          teacherDisplayHtml = `
-            <div class="text-[10px] text-rose-600 font-bold truncate max-w-[130px]">
-              <i class="fa-solid fa-circle-exclamation text-[9px] mr-1 text-rose-500"></i>ගුරුවරයෙකු නැත
-            </div>
-          `;
-        }
-
-        const card = document.createElement("div");
-        card.className = `p-2.5 rounded-xl border shadow-sm transition flex items-center justify-between gap-3 select-none bg-white border-slate-200 text-slate-800 hover:border-indigo-400 ${
-          q.remaining > 0 ? "cursor-grab active:cursor-grabbing hover:shadow-md" : "opacity-75 cursor-not-allowed"
-        }`;
-
-        if (q.remaining > 0) {
-          card.draggable = true;
-          card.title = `ඇදගෙන ගොස් කාලසටහනට දමන්න (ඉතිරි: ${q.remaining})`;
-          card.addEventListener("dragstart", (e) => {
-            window.draggedSubjectData = {
-              type: "NEW_SUBJECT",
-              subject: q.subject,
-              sourceClassId: cleanClassId
-            };
-            e.dataTransfer.setData("text/plain", q.subject);
-            e.dataTransfer.effectAllowed = "copy";
-          });
-        }
-
-        card.innerHTML = `
-          <div>
-            <div class="font-bold text-xs flex items-center gap-1.5">
-              <span>${q.subject}</span>
-              ${isCompleted ? '<i class="fa-solid fa-circle-check text-emerald-600 text-[11px]"></i>' : ''}
-            </div>
-            <div class="mt-0.5">
-              ${teacherDisplayHtml}
-            </div>
-          </div>
-          <div class="flex flex-col items-end gap-0.5">
-            <span class="text-[10px] font-black px-2 py-0.5 rounded-md border bg-indigo-50 text-indigo-700 border-indigo-200">
-              ${q.allocated} / ${q.maxWeekly}
-            </span>
-            <span class="text-[9px] font-bold ${q.remaining > 0 ? 'text-indigo-600' : 'text-slate-400'}">
-              ${q.remaining > 0 ? `ඉතිරි: ${q.remaining}` : 'අවසන්'}
-            </span>
-          </div>
-        `;
-
-        tray.appendChild(card);
+    if (remaining > 0) {
+      card.draggable = true;
+      card.title = `ඇදගෙන ගොස් කාලසටහනට දමන්න (ඉතිරි: ${remaining})`;
+      card.addEventListener("dragstart", (e) => {
+        window.draggedSubjectData = {
+          type: "COMBINED_SUBJECT",
+          isCombined: true,
+          combinedId: comb.id,
+          subject: comb.name,
+          subList: comb.subjects,
+          sourceClassId: cleanClassId
+        };
+        e.dataTransfer.setData("text/plain", comb.name);
+        e.dataTransfer.effectAllowed = "copy";
       });
     }
+
+    const subNames = (comb.subjects || []).join(", ");
+
+    card.innerHTML = `
+      <div>
+        <div class="font-extrabold text-xs flex items-center gap-1.5 text-indigo-950">
+          <i class="fa-solid fa-layer-group text-indigo-600"></i>
+          <span>${comb.name}</span>
+          <span class="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded font-black border border-indigo-200">${comb.groupCode}</span>
+        </div>
+        <div class="text-[10px] text-slate-500 font-semibold truncate max-w-[140px] mt-0.5" title="${subNames}">
+          ${subNames}
+        </div>
+      </div>
+      <div class="flex flex-col items-end gap-0.5">
+        <span class="text-[10px] font-black px-2 py-0.5 rounded-md border bg-indigo-100 text-indigo-800 border-indigo-300">
+          ${allocatedCount} / ${max}
+        </span>
+        <span class="text-[9px] font-bold ${remaining > 0 ? 'text-indigo-600' : 'text-slate-400'}">
+          ${remaining > 0 ? `ඉතිරි: ${remaining}` : 'අවසන්'}
+        </span>
+      </div>
+    `;
+
+    tray.appendChild(card);
+  });
+
+  // =========================================================================
+  // 3. සාමාන්‍ය තනි විෂයන් (REGULAR SUBJECTS)
+  // =========================================================================
+  const quotas = typeof calculateClassSubjectQuotas === "function" ? calculateClassSubjectQuotas(cleanClassId) : [];
+
+  // 🔴 1. Group එකට අයත් විෂයන් ඉවත් කිරීම
+  const filteredQuotas = quotas.filter(q => {
+    const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(q.subject) : q.subject.trim().toLowerCase();
+    return !suppressedSubjects.has(sKey);
+  });
+
+  // 🔴 2. EXCLUDED කර ඇති විෂයන් ආරක්ෂිතව පෙරීම (Bulletproof Exclude Filter)
+  const finalTrayQuotas = filteredQuotas.filter(q => {
+    const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(q.subject) : q.subject.trim().toLowerCase();
+
+    // (A) Helper ශ්‍රිතයක් තිබේ නම්
+    if (typeof isSubjectExcludedForClass === "function" && isSubjectExcludedForClass(cleanClassId, q.subject)) {
+      return false;
+    }
+
+    // (B) getAssignedTeacherIdForClass මඟින් ලැබෙන අගය පරීක්ෂාව
+    const assignedTid = typeof getAssignedTeacherIdForClass === "function"
+      ? getAssignedTeacherIdForClass(currentCls, q.subject)
+      : (currentCls && currentCls.subjectTeachers ? currentCls.subjectTeachers[sKey] : null);
+
+    if (String(assignedTid).trim().toUpperCase() === "EXCLUDED") {
+      return false; // Tray එකෙන් ඉවත් කරයි
+    }
+
+    // (C) currentCls.subjectTeachers සෘජු පරීක්ෂාව
+    if (currentCls && currentCls.subjectTeachers && String(currentCls.subjectTeachers[sKey]).trim().toUpperCase() === "EXCLUDED") {
+      return false; // Tray එකෙන් ඉවත් කරයි
+    }
+
+    // (D) curriculumSubjects හි applicableClassIds පරීක්ෂාව
+    const cs = (curriculumSubjects || []).find(c => 
+      (typeof cleanGradeNum === "function" ? cleanGradeNum(c.grade) : Number(c.grade)) === currentGrade &&
+      (typeof cleanSubjectKey === "function" ? cleanSubjectKey(c.subject) : c.subject.trim().toLowerCase()) === sKey
+    );
+    if (cs && Array.isArray(cs.applicableClassIds) && cs.applicableClassIds.length > 0) {
+      const isApplicable = cs.applicableClassIds.some(cid => 
+        String(cid).trim().toLowerCase() === cleanClassId.toLowerCase() ||
+        String(cid).trim().toLowerCase() === currentClassName.toLowerCase()
+      );
+      if (!isApplicable) return false; // අදාළ පන්ති අතර නැතිනම් ඉවත් කරයි
+    }
+
+    return true;
+  });
+
+  // 🔴 3. මෙන්න මෙතැන finalTrayQuotas ලැයිස්තුව Loop කළ යුතුය (පැරණි filteredQuotas වෙනුවට):
+  finalTrayQuotas.forEach(q => {
+    const isCompleted = q.allocated === q.maxWeekly;
+
+    let teacherDisplayHtml = "";
+    if (q.assignedTeacher && q.assignedTeacher.name) {
+      const no = q.assignedTeacher.schoolNo ? `[${q.assignedTeacher.schoolNo}]` : "";
+      teacherDisplayHtml = `
+        <div class="text-[10px] text-indigo-900 font-bold truncate max-w-[130px]" title="${q.assignedTeacher.name}">
+          <i class="fa-solid fa-user-tie text-[9px] mr-1 text-indigo-600"></i>${q.assignedTeacher.name} ${no}
+        </div>
+      `;
+    } else {
+      teacherDisplayHtml = `
+        <div class="text-[10px] text-rose-600 font-bold truncate max-w-[130px]">
+          <i class="fa-solid fa-circle-exclamation text-[9px] mr-1 text-rose-500"></i>ගුරුවරයෙකු නැත
+        </div>
+      `;
+    }
+
+    const card = document.createElement("div");
+    card.className = `p-2.5 rounded-xl border shadow-sm transition flex items-center justify-between gap-3 select-none bg-white border-slate-200 text-slate-800 hover:border-indigo-400 ${
+      q.remaining > 0 ? "cursor-grab active:cursor-grabbing hover:shadow-md" : "opacity-75 cursor-not-allowed"
+    }`;
+
+    if (q.remaining > 0) {
+      card.draggable = true;
+      card.title = `ඇදගෙන ගොස් කාලසටහනට දමන්න (ඉතිරි: ${q.remaining})`;
+      card.addEventListener("dragstart", (e) => {
+        window.draggedSubjectData = {
+          type: "NEW_SUBJECT",
+          subject: q.subject,
+          sourceClassId: cleanClassId
+        };
+        e.dataTransfer.setData("text/plain", q.subject);
+        e.dataTransfer.effectAllowed = "copy";
+      });
+    }
+
+    card.innerHTML = `
+      <div>
+        <div class="font-bold text-xs flex items-center gap-1.5">
+          <span>${q.subject}</span>
+          ${isCompleted ? '<i class="fa-solid fa-circle-check text-emerald-600 text-[11px]"></i>' : ''}
+        </div>
+        <div class="mt-0.5">
+          ${teacherDisplayHtml}
+        </div>
+      </div>
+      <div class="flex flex-col items-end gap-0.5">
+        <span class="text-[10px] font-black px-2 py-0.5 rounded-md border bg-indigo-50 text-indigo-700 border-indigo-200">
+          ${q.allocated} / ${q.maxWeekly}
+        </span>
+        <span class="text-[9px] font-bold ${q.remaining > 0 ? 'text-indigo-600' : 'text-slate-400'}">
+          ${q.remaining > 0 ? `ඉතිරි: ${q.remaining}` : 'අවසන්'}
+        </span>
+      </div>
+    `;
+
+    tray.appendChild(card);
+  });
+}
+
+window.renderSubjectQuotaTray = renderSubjectQuotaTray;
 
 // =========================================================================
 // INTELLIGENT AUTO-FILL ENGINE WITH PRIORITY & CONSTRAINTS
