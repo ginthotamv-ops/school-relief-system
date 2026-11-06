@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V 1000001
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V 55
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -4152,10 +4152,10 @@ async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassI
   }
 }
 
-// Global Aliases
-window.buildTimetableTaskQueue = buildTimetableTaskQueue;
+// ✅ අවශ්‍ය Global Exports පමණි:
 window.runAutomatedTimetableGenerator = runAutomatedTimetableGenerator;
-
+window.triggerClassAutoFill = triggerClassAutoFill;
+window.triggerWholeSchoolAutoFill = triggerWholeSchoolAutoFill;
 
     
     
