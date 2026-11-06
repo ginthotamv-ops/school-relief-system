@@ -303,6 +303,12 @@
 
     <!-- Dropdown Menu -->
     <div id="classAutoFillDropdown" class="hidden absolute left-0 mt-1 w-52 bg-white rounded-lg shadow-lg border border-slate-200 z-50 py-1 text-xs">
+     <button type="button" onclick="openAutoFillConfigModal(document.getElementById('activeClassSelect')?.value)">
+  පන්තිය Auto-Fill
+</button>
+      <button type="button" onclick="openAutoFillConfigModal(null)">
+  මුළු පාසලම Auto-Fill
+</button>
       <button type="button" 
               onclick="triggerClassAutoFill('PEDAGOGICAL'); document.getElementById('classAutoFillDropdown').classList.add('hidden');" 
               class="w-full text-left px-3 py-2 hover:bg-indigo-50 text-indigo-950 font-semibold flex items-center gap-2">
@@ -1470,6 +1476,98 @@
   </div>
 </div>
 
+
+<!-- -------- 🔴🔴🔴🔴🔴🔴 Auto-Fill Configuration Modal -->
+<div id="autoFillConfigModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
+    
+    <!-- Modal Header -->
+    <div class="px-5 py-4 bg-gradient-to-r from-indigo-900 to-indigo-800 text-white flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <i class="fa-solid fa-sliders text-indigo-300"></i>
+        <h3 class="font-bold text-sm">ස්වයංක්‍රීය කාලසටහන් උත්පාදන සැකසුම්</h3>
+      </div>
+      <button type="button" onclick="closeAutoFillConfigModal()" class="text-indigo-200 hover:text-white text-base cursor-pointer">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Modal Body (Scrollable) -->
+    <div class="p-5 overflow-y-auto space-y-4 text-xs">
+      
+      <!-- 1. උත්පාදන ක්‍රමය (Mode) -->
+      <div>
+        <label class="font-bold text-slate-700 block mb-1">උත්පාදන ක්‍රමය (Generation Mode):</label>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 hover:bg-indigo-50/50 cursor-pointer">
+            <input type="radio" name="autoGenMode" value="PEDAGOGICAL" checked class="accent-indigo-600">
+            <div>
+              <div class="font-bold text-slate-800">AI මනෝවිද්‍යාත්මක ක්‍රමය</div>
+              <div class="text-[10px] text-slate-500">උදෑසනට බර විෂයන් සහ සවසට සැහැල්ලු විෂයන්</div>
+            </div>
+          </label>
+          <label class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+            <input type="radio" name="autoGenMode" value="SHUFFLE" class="accent-indigo-600">
+            <div>
+              <div class="font-bold text-slate-800">ස්මාර්ට් ශෆල් (Shuffle)</div>
+              <div class="text-[10px] text-slate-500">වේගවත් සසම්භාවී පිරවීම</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- 2. පන්තිභාර ගුරු ප්‍රමුඛතාව -->
+      <div class="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 flex items-start gap-2.5">
+        <input type="checkbox" id="cfgPrioritizeClassTeacher" checked class="mt-0.5 accent-indigo-600 rounded cursor-pointer">
+        <div>
+          <label for="cfgPrioritizeClassTeacher" class="font-bold text-indigo-950 cursor-pointer">පන්තිභාර ගුරුතුමාට සඳුදා 1 වන කාලච්ඡේදය ලබාදීම</label>
+          <p class="text-[11px] text-slate-600 mt-0.5">පැමිණීම ලකුණු කිරීම, විනය සහ සතියේ පන්ති කටයුතු සැලසුම් කිරීම සඳහා පන්තිභාර ගුරුතුමාගේ විෂය සඳුදා 1 වන කාලච්ඡේදයට ස්වයංක්‍රීයව ප්‍රමුඛ වේ.</p>
+        </div>
+      </div>
+
+      <!-- 3. විද්‍යාගාර ධාරිතාව (Lab Capacities) -->
+      <div>
+        <label class="font-bold text-slate-700 block mb-1.5">පාසලේ ඇති විද්‍යාගාර ධාරිතාව (එකවර භාවිත කළ හැකි උපරිම පන්ති ගණන):</label>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-2.5 border rounded-lg border-slate-200 bg-slate-50/50">
+            <label class="text-[11px] font-bold text-slate-700 block mb-1">
+              <i class="fa-solid fa-desktop text-indigo-600 mr-1"></i>පරිගණක විද්‍යාගාර (Computer Labs):
+            </label>
+            <input type="number" id="cfgComputerLabs" min="1" max="10" value="1" class="w-full bg-white border border-slate-300 rounded px-2 py-1 font-bold text-slate-800">
+          </div>
+          <div class="p-2.5 border rounded-lg border-slate-200 bg-slate-50/50">
+            <label class="text-[11px] font-bold text-slate-700 block mb-1">
+              <i class="fa-solid fa-flask text-emerald-600 mr-1"></i>විද්‍යා විද්‍යාගාර (Science Labs):
+            </label>
+            <input type="number" id="cfgScienceLabs" min="1" max="10" value="1" class="w-full bg-white border border-slate-300 rounded px-2 py-1 font-bold text-slate-800">
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. විශේෂ ප්‍රමුඛතා ගුරුවරුන් තේරීම (Teacher Checklist) -->
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="font-bold text-slate-700">විශේෂ ප්‍රමුඛතාව ලබාදිය යුතු ගුරුවරුන් (High Priority Teachers):</label>
+          <span class="text-[10px] text-indigo-600 font-semibold">තනිව සිටින සෞන්දර්ය / විශේෂ ගුරුවරුන් Tick කරන්න</span>
+        </div>
+        <div id="cfgTeachersList" class="max-h-36 overflow-y-auto border border-slate-200 rounded-lg p-2 space-y-1.5 bg-slate-50/30">
+          <!-- JS මඟින් ගුරුවරුන්ගේ Checkbox මෙතැනට Render වේ -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+      <button type="button" onclick="closeAutoFillConfigModal()" class="px-3.5 py-1.5 text-slate-600 hover:bg-slate-200 rounded-lg font-bold cursor-pointer">අවලංගු කරන්න</button>
+      <button type="button" onclick="applyAndExecuteAutoFill()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-sm flex items-center gap-1.5 cursor-pointer">
+        <i class="fa-solid fa-play text-xs"></i>
+        <span>කාලසටහන සකස් කිරීම ආරම්භ කරන්න</span>
+      </button>
+    </div>
+
+  </div>
+</div>
   
 <!-- Modal: Annual School Numbers Manager -->
   <div id="schoolNoManagerModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
@@ -1481,7 +1579,7 @@
         <button type="button" onclick="closeSchoolNoManagerModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
       </div>
 
-
+    <!-- ------------------------------------------------- -->
       
       <!-- Quick Action Buttons -->
       <div class="my-3 p-3 bg-amber-50 rounded-xl border border-amber-200 flex flex-wrap items-center justify-between gap-2">
@@ -3561,16 +3659,105 @@ window.resetAllTimetables = resetAllTimetables;
 // =========================================================================
 // 1. ගෝලීය නීති සහ සීමාවන් (GLOBAL CONFIGURATION)
 // =========================================================================
+// 🔴 පද්ධතියේ ගෝලීය සීමාවන් (Global Config)
 var timetableConfig = window.timetableConfig || {
   priorityTeacherIds: [],
-  teacherBlackouts: {},
-  subjectBlackouts: {},
-  fixedSchoolEvents: [],    // කාලච්ඡේද 40ම විවෘතව තැබීමට පෙරනිමියෙන් හිස්ව තබයි
-  maxConsecutivePeriods: 4, // විවේකයට පෙර කාලච්ඡේද 4ට අනුකූලව උපරිම අඛණ්ඩ කාලච්ඡේද 4කි
+  prioritizeClassTeacher: true,
+  labCapacities: {
+    computer: 1,
+    science: 1
+  },
+  fixedSchoolEvents: [],
+  maxConsecutivePeriods: 4,
   breakAfterPeriod: 4
 };
 window.timetableConfig = timetableConfig;
 
+let pendingAutoFillTargetClassId = null;
+
+// 1. Modal එක විවෘත කිරීමේ ශ්‍රිතය
+function openAutoFillConfigModal(targetClassId = null) {
+  pendingAutoFillTargetClassId = targetClassId;
+  const modal = document.getElementById("autoFillConfigModal");
+  if (!modal) {
+    // Modal එක නැතිනම් Default ලෙස ධාවනය කරයි
+    runAutomatedTimetableGenerator('PEDAGOGICAL', targetClassId);
+    return;
+  }
+
+  // ගුරුවරුන්ගේ Checklist එක සැකසීම
+  const container = document.getElementById("cfgTeachersList");
+  if (container) {
+    container.innerHTML = "";
+    const teachers = window.teachers || [];
+    if (teachers.length === 0) {
+      container.innerHTML = '<span class="text-slate-400">ගුරුවරුන් ඇතුළත් කර නැත.</span>';
+    } else {
+      teachers.forEach(t => {
+        const isChecked = (timetableConfig.priorityTeacherIds || []).includes(t.id);
+        const div = document.createElement("label");
+        div.className = "flex items-center gap-2 p-1.5 rounded hover:bg-white cursor-pointer transition";
+        div.innerHTML = `
+          <input type="checkbox" value="${t.id}" class="cfg-teacher-chk accent-indigo-600 rounded cursor-pointer" ${isChecked ? 'checked' : ''}>
+          <span class="font-bold text-slate-800">${t.name}</span>
+          <span class="text-[10px] text-slate-500">${t.schoolNo ? `[${t.schoolNo}]` : ''} - ${(t.subjects || []).join(', ')}</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+  }
+
+  // පවතින අගයන් Form එකට පැවරීම
+  const chkCT = document.getElementById("cfgPrioritizeClassTeacher");
+  if (chkCT) chkCT.checked = timetableConfig.prioritizeClassTeacher !== false;
+
+  const txtComp = document.getElementById("cfgComputerLabs");
+  if (txtComp) txtComp.value = timetableConfig.labCapacities?.computer || 1;
+
+  const txtSci = document.getElementById("cfgScienceLabs");
+  if (txtSci) txtSci.value = timetableConfig.labCapacities?.science || 1;
+
+  modal.classList.remove("hidden");
+}
+
+function closeAutoFillConfigModal() {
+  const modal = document.getElementById("autoFillConfigModal");
+  if (modal) modal.classList.add("hidden");
+  pendingAutoFillTargetClassId = null;
+}
+
+// 2. පරිශීලකයා තෝරාගත් දත්ත ලබාගෙන Auto-Fill ධාවනය කිරීම
+function applyAndExecuteAutoFill() {
+  // A. Priority Teachers ලබා ගැනීම
+  const checkedBoxes = document.querySelectorAll(".cfg-teacher-chk:checked");
+  const selectedTeacherIds = Array.from(checkedBoxes).map(cb => cb.value);
+  timetableConfig.priorityTeacherIds = selectedTeacherIds;
+
+  // B. Class Teacher Priority
+  const chkCT = document.getElementById("cfgPrioritizeClassTeacher");
+  timetableConfig.prioritizeClassTeacher = chkCT ? chkCT.checked : true;
+
+  // C. Lab Capacities
+  const compCount = parseInt(document.getElementById("cfgComputerLabs")?.value) || 1;
+  const sciCount = parseInt(document.getElementById("cfgScienceLabs")?.value) || 1;
+  timetableConfig.labCapacities = {
+    computer: compCount,
+    science: sciCount
+  };
+
+  // D. Mode
+  const modeRadio = document.querySelector('input[name="autoGenMode"]:checked');
+  const selectedMode = modeRadio ? modeRadio.value : "PEDAGOGICAL";
+
+  const targetCid = pendingAutoFillTargetClassId;
+  closeAutoFillConfigModal();
+
+  // එන්ජිම ධාවනය කිරීම
+  runAutomatedTimetableGenerator(selectedMode, targetCid);
+}
+    
+/////////////////////////////////////////////////////////////////////
+    
 // =========================================================================
 // 2. ආගමික විෂයන් හඳුනාගැනීමේ ශ්‍රිතය (RELIGIOUS SUBJECT DETECTOR)
 // =========================================================================
@@ -3584,6 +3771,16 @@ function isReligiousSubject(subjectName) {
          s.includes("religion");
 }
 
+
+// 🔴 විෂයයකට අදාළ Lab වර්ගය හඳුනාගැනීම
+function getRequiredLabType(subject) {
+  const s = String(subject || '').toLowerCase();
+  if (s.includes("ict") || s.includes("පරිගණක") || s.includes("තොරතුරු")) return "computer";
+  if (s.includes("science") || s.includes("විද්‍යා")) return "science";
+  return null; // සාමාන්‍ය පන්ති කාමර
+}
+
+    
 // =========================================================================
 // 2. කාලච්ඡේද කොටස් වෙන් කිරීමේ ශ්‍රිතය (SMART CHUNKING)
 // =========================================================================
@@ -3619,45 +3816,133 @@ function calculateSubjectChunks(totalPeriods, type = "single") {
 // =========================================================================
 // 4. මනෝවිද්‍යාත්මක ඇගයීම් ලකුණු (PEDAGOGICAL SCORER)
 // =========================================================================
-function getPedagogicalScore(subject, day, startPeriod, existingSlotsForClass) {
-  const sub = String(subject || '').toLowerCase();
+// 🔴 නව මනෝවිද්‍යාත්මක හා පන්තිභාර ගුරු ප්‍රමුඛතා ඇතුළත් කළ getPedagogicalScore ශ්‍රිතය
+function getPedagogicalScore(subjectOrTask, day, startPeriod, existingSlotsForClass = [], clsObj = null) {
+  // 1. පරාමිතිය String හෝ Task Object වුවද ආරක්ෂිතව කියවීම
+  let subject = "";
+  let teacherId = null;
+  let classId = null;
+
+  if (typeof subjectOrTask === "object" && subjectOrTask !== null) {
+    subject = subjectOrTask.subject || "";
+    teacherId = subjectOrTask.teacherId || null;
+    classId = subjectOrTask.classId || null;
+  } else {
+    subject = String(subjectOrTask || "");
+  }
+
+  const sub = subject.toLowerCase();
   let score = 100;
 
+  // 2. පන්ති වස්තුව (clsObj) හඳුනාගැනීම
+  if (!clsObj && classId && Array.isArray(window.schoolClasses)) {
+    clsObj = window.schoolClasses.find(c => 
+      String(c.id).trim().toLowerCase() === String(classId).trim().toLowerCase() ||
+      String(c.name).trim().toLowerCase() === String(classId).trim().toLowerCase()
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // 🔴 3. පන්තිභාර ගුරු ප්‍රමුඛතාව (Class Teacher - Monday Period 1 Bonus)
+  // -------------------------------------------------------------------------
+  const shouldPrioritizeCT = typeof timetableConfig !== "undefined" 
+    ? timetableConfig.prioritizeClassTeacher !== false 
+    : true;
+
+  if (shouldPrioritizeCT && clsObj && clsObj.classTeacherId && teacherId) {
+    const isClassTeacher = String(clsObj.classTeacherId).trim().toLowerCase() === String(teacherId).trim().toLowerCase();
+    
+    // සඳුදා (day 0) පළමු කාලච්ඡේදය (period 1) සඳහා ඉහළම ප්‍රමුඛතාව (+250)
+    if (isClassTeacher && Number(day) === 0 && Number(startPeriod) === 1) {
+      score += 250;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // 4. බර විෂයන් (Heavy Subjects: ගණිතය, විද්‍යාව, ඉංග්‍රීසි, සිංහල)
+  // -------------------------------------------------------------------------
   const isHeavy = sub.includes("math") || sub.includes("ගණිත") || 
                   sub.includes("science") || sub.includes("විද්‍යා") || 
-                  sub.includes("english") || sub.includes("ඉංග්‍රීසි");
+                  sub.includes("english") || sub.includes("ඉංග්‍රීසි") ||
+                  sub.includes("sinhala") || sub.includes("සිංහල");
 
+  if (isHeavy) {
+    // උදෑසන මනස ප්‍රබෝධමත්ව ඇති 1, 2, 3 කාලච්ඡේද සඳහා ප්‍රමුඛතාව
+    if (startPeriod <= 3) score += 50;
+    // විවේකයෙන් පසු 5 වන කාලච්ඡේදය මඟහැරීමට
+    if (startPeriod === 5) score -= 40;
+    // සිකුරාදා සවස 6, 7, 8 කාලච්ඡේද අවම කිරීමට
+    if (Number(day) === 4 && startPeriod >= 6) score -= 30;
+  }
+
+  // -------------------------------------------------------------------------
+  // 5. සැහැල්ලු / ප්‍රායෝගික විෂයන් (Light Subjects: සෞන්දර්ය, PTS, සෞඛ්‍ය)
+  // -------------------------------------------------------------------------
   const isLight = sub.includes("art") || sub.includes("චිත්‍ර") || 
                   sub.includes("music") || sub.includes("සංගීත") || 
                   sub.includes("dance") || sub.includes("නැටුම්") || 
                   sub.includes("health") || sub.includes("සෞඛ්‍ය") || 
-                  sub.includes("pts") || sub.includes("නාට්‍ය");
-
-  if (isHeavy) {
-    if (startPeriod <= 3) score += 50;
-    if (startPeriod === 5) score -= 40;
-    if (day === 4 && startPeriod >= 6) score -= 30;
-  }
+                  sub.includes("pts") || sub.includes("නාට්‍ය") ||
+                  sub.includes("drama") || sub.includes("physical");
 
   if (isLight) {
+    // විවේකයෙන් පසු (5 වන කාලච්ඡේදය) සහ සවස කාලච්ඡේද සඳහා ප්‍රමුඛතාව
     if (startPeriod === 5) score += 60;
     if (startPeriod >= 6) score += 30;
+    // උදෑසන 1 වන කාලච්ඡේදයට වැටීම අවම කිරීමට
     if (startPeriod === 1) score -= 20;
   }
 
-  // 1 වන කාලච්ඡේදයේ ඒකාකාරී බව වැළැක්වීම
-  if (startPeriod === 1 && Array.isArray(existingSlotsForClass)) {
-    const alreadyP1 = existingSlotsForClass.some(s => Number(s.period) === 1 && s.subject === subject);
-    if (alreadyP1) score -= 70;
+  // -------------------------------------------------------------------------
+  // 🔴 6. විෂයන් දින 5 පුරා විහිදී යාම (Spacing Heuristic)
+  // -------------------------------------------------------------------------
+  // මෙම දිනය තුළ දැනටමත් මෙම විෂය යොදා ඇත්නම්, අනෙක් දිනවලට ප්‍රමුඛතාව දීමට ලකුණු අඩු කරයි
+  if (Array.isArray(existingSlotsForClass) && existingSlotsForClass.length > 0) {
+    const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(subject) : sub.trim();
+    
+    const countToday = existingSlotsForClass.filter(s => {
+      const existingKey = typeof cleanSubjectKey === "function" 
+        ? cleanSubjectKey(s.subject) 
+        : String(s.subject || '').trim().toLowerCase();
+      return existingKey === sKey && Number(s.day) === Number(day);
+    }).length;
+
+    if (countToday > 0) {
+      score -= 80; // අත්‍යවශ්‍යම අවස්ථාවකදී හැර එකම දිනට නැවත වැටීම වළකයි
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // 7. පළමු කාලච්ඡේදයේ ඒකාකාරී බව වැළැක්වීම (Period 1 Variety)
+  // -------------------------------------------------------------------------
+  // වෙනත් දිනයක 1 වන කාලච්ඡේදයට මෙම විෂය ලබා දී ඇත්නම්, නැවත 1 වන කාලච්ඡේදයට වැටීමේ ලකුණු අඩු කරයි
+  if (Number(startPeriod) === 1 && Array.isArray(existingSlotsForClass)) {
+    const alreadyP1 = existingSlotsForClass.some(s => {
+      const existingKey = typeof cleanSubjectKey === "function" 
+        ? cleanSubjectKey(s.subject) 
+        : String(s.subject || '').trim().toLowerCase();
+      const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(subject) : sub.trim();
+      return Number(s.period) === 1 && existingKey === sKey;
+    });
+
+    if (alreadyP1) {
+      score -= 70;
+    }
   }
 
   return score;
 }
+
+    
 // =========================================================================
 // 5. වලංගුතා පරීක්ෂාව (INTERVAL, CLASH, RELIGIOUS & CONSECUTIVE VALIDATION)
 // =========================================================================
+// 🔴 නව Lab නීති ඇතුළත් කර යාවත්කාලීන කළ isPlacementValid ශ්‍රිතය
 function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = false) {
   const chunkSize = task.chunkSize;
+  const cleanCid = String(task.classId || '').trim().toLowerCase();
+  const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(task.subject) : String(task.subject || '').trim().toLowerCase();
+  const validTid = (task.teacherId && task.teacherId !== "NONE" && task.teacherId !== "EXCLUDED") ? String(task.teacherId).trim().toLowerCase() : null;
 
   // 1. විවේකයේ නීතිය (4 සහ 5 යා වීම වැළැක්වීම)
   if (chunkSize === 2) {
@@ -3675,25 +3960,60 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
   }
 
   // 3. ආගමික විෂයන් සඳහා පමණක් වන සීමාව
-  if (isReligiousSubject(task.subject)) {
+  if (typeof isReligiousSubject === "function" && isReligiousSubject(task.subject)) {
     for (let p of targetPeriods) {
-      if (p === 6) return false;
-      if (Number(day) === 4 && (p === 7 || p === 8)) return false;
+      if (p === 6) return false; // සෑම දිනකම 6 වන කාලච්ඡේදය තහනම්
+      if (Number(day) === 4 && (p === 7 || p === 8)) return false; // සිකුරාදා 7 සහ 8 තහනම්
     }
   }
 
   // -----------------------------------------------------------------------
-  // BASKET / COMBINED පරීක්ෂාව (සමමුහුර්තකරණය)
+  // 🔴 4. විද්‍යාගාර (LAB) ධාරිතාව සහ ගැටුම් පරීක්ෂාව (නව කොටස)
+  // -----------------------------------------------------------------------
+  const targetLab = (typeof getRequiredLabForClassSubject === "function")
+    ? getRequiredLabForClassSubject(task.subject, task.grade)
+    : null;
+
+  if (targetLab) {
+    const maxCapacity = Number(targetLab.capacity) || 1;
+    for (let p of targetPeriods) {
+      const occupyingClasses = new Set();
+
+      scheduleList.forEach(s => {
+        if (Number(s.day) === Number(day) && Number(s.period) === Number(p) && s.labId === targetLab.id) {
+          const sCid = String(s.classId).trim().toLowerCase();
+          
+          // එකම Basket එකට අයත් පන්ති එකම Lab එකේ සිටීම ගැටුමක් නොවේ
+          const isSameBasketSession = task.isBasket && s.isCombined && (
+            (s.combinedSubjectId && s.combinedSubjectId === task.combinedSubjectId) ||
+            (s.subject === task.subject)
+          );
+
+          if (sCid !== cleanCid && !isSameBasketSession) {
+            occupyingClasses.add(sCid);
+          }
+        }
+      });
+
+      // Lab එකේ උපරිම පන්ති ධාරිතාව ඉක්මවා ඇත්නම් මෙම Slot එක වලංගු නොවේ
+      if (occupyingClasses.size >= maxCapacity) {
+        return false;
+      }
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // 5. BASKET / COMBINED පරීක්ෂාව (සමමුහුර්තකරණය)
   // -----------------------------------------------------------------------
   if (task.isBasket) {
     const linkedClasses = isSingleClass ? [task.classId] : (task.linkedClassIds || [task.classId]);
 
     for (let cid of linkedClasses) {
-      const cleanCid = String(cid).trim().toLowerCase();
+      const cleanLinkedCid = String(cid).trim().toLowerCase();
 
       for (let p of targetPeriods) {
         const existingSlot = scheduleList.find(s => 
-          String(s.classId).trim().toLowerCase() === cleanCid &&
+          String(s.classId).trim().toLowerCase() === cleanLinkedCid &&
           Number(s.day) === Number(day) &&
           Number(s.period) === Number(p)
         );
@@ -3706,7 +4026,7 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
       }
 
       // Basket ගුරුවරුන් පරීක්ෂාව (එම Basket එකටම අයත් වෙනත් පන්ති ගැටුමක් නොවේ)
-      const clsObj = (window.schoolClasses || []).find(c => String(c.id).trim().toLowerCase() === cleanCid);
+      const clsObj = (window.schoolClasses || []).find(c => String(c.id).trim().toLowerCase() === cleanLinkedCid);
       if (clsObj && clsObj.subjectTeachers) {
         for (let sub of (task.basketSubjects || [])) {
           const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(sub) : sub.trim().toLowerCase();
@@ -3717,7 +4037,7 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
               const teacherBusyInOtherSubject = scheduleList.some(s => {
                 if (!s.teacherId || String(s.teacherId).trim().toLowerCase() !== cleanTid) return false;
                 if (Number(s.day) !== Number(day) || Number(s.period) !== Number(p)) return false;
-                // එම Basket එකේම වෙනත් පන්තියක් නම් ගැටුමක් නොවේ!
+                
                 const isSameBasketEvent = s.isCombined && (
                   (s.combinedSubjectId && s.combinedSubjectId === task.combinedSubjectId) ||
                   (s.subject === task.subject)
@@ -3734,12 +4054,8 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
   }
 
   // -----------------------------------------------------------------------
-  // සාමාන්‍ය තනි විෂයන් පරීක්ෂාව
+  // 6. සාමාන්‍ය තනි විෂයන් පරීක්ෂාව
   // -----------------------------------------------------------------------
-  const cleanCid = String(task.classId).trim().toLowerCase();
-  const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(task.subject) : String(task.subject || '').trim().toLowerCase();
-  const validTid = (task.teacherId && task.teacherId !== "NONE" && task.teacherId !== "EXCLUDED") ? String(task.teacherId).trim().toLowerCase() : null;
-
   for (let p of targetPeriods) {
     const isOccupied = scheduleList.some(s => 
       String(s.classId).trim().toLowerCase() === cleanCid &&
@@ -3768,7 +4084,7 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
     }
   }
 
-  // දිනකට උපරිම කාලච්ඡේද 2 සීමාව (දිනකට 1 බැගින් බෙදී යාමට ප්‍රමුඛතාව දෙන අතර deadlock වළකයි)
+  // දිනකට උපරිම කාලච්ඡේද 2 සීමාව
   const existingTodayCount = scheduleList.filter(s => {
     const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(s.subject) : (s.subject || '').trim().toLowerCase();
     return String(s.classId).trim().toLowerCase() === cleanCid &&
@@ -3777,7 +4093,7 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
   }).length;
 
   if (existingTodayCount + chunkSize > 2) {
-    return false; // එකම දිනකට උපරිම 2කට වඩා නොයොදයි
+    return false;
   }
 
   // ගුරු විඩාව පාලනය (උපරිම අඛණ්ඩ කාලච්ඡේද 4)
