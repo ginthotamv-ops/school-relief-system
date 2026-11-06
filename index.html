@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V 45892
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V 1145
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -3926,6 +3926,9 @@ function buildTimetableTaskQueue(targetClasses, workingSchedule) {
 // =========================================================================
 // 6. ප්‍රධාන AUTO-FILL එන්ජිම (SOLVER)
 // =========================================================================
+// =========================================================================
+// 6. ආරක්ෂිත AUTO-FILL එන්ජිම (BOUNDED BACKTRACKING - NO FREEZE)
+// =========================================================================
 async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassId = null) {
   let scheduleList = (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) 
     ? masterSchedule 
@@ -3938,6 +3941,7 @@ async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassI
   const isSingleClass = Boolean(targetClassId);
   const cleanTargetCid = isSingleClass ? String(targetClassId).trim().toLowerCase() : null;
 
+  // 1. පදනම සකස් කිරීම: Locked Slots ආරක්ෂා කර ගැනීම
   let workingSchedule = scheduleList.filter(s => {
     if (isSingleClass) {
       const isThisClass = String(s.classId).trim().toLowerCase() === cleanTargetCid;
@@ -3947,6 +3951,7 @@ async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassI
     }
   });
 
+  // 2. අදාළ පන්ති වෙන් කරගැනීම
   let targetClasses = [...allClasses];
   if (isSingleClass) {
     targetClasses = targetClasses.filter(c => 
@@ -3965,6 +3970,7 @@ async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassI
     });
   }
 
+  // 3. Task Queue එක සකස් කිරීම
   const taskQueue = buildTimetableTaskQueue(targetClasses, workingSchedule);
 
   if (taskQueue.length === 0) {
@@ -3972,13 +3978,27 @@ async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassI
     return;
   }
 
+  // ප්‍රමුඛතාව අනුව පෙළගැස්වීම
   taskQueue.sort((a, b) => b.priority - a.priority);
 
   const days = [0, 1, 2, 3, 4];
   const periods = [1, 2, 3, 4, 5, 6, 7, 8];
 
+  // 🔴 බ්‍රවුසරය Freeze වීම 100% වළක්වන ආරක්ෂක පාලක (Safety Guards)
+  let iterationCount = 0;
+  const MAX_ITERATIONS = 2500; // උපරිම සෙවුම් වාර ගණන
+  let timeoutHit = false;
+
   function solve(taskIndex) {
-    if (taskIndex >= taskQueue.length) return true;
+    iterationCount++;
+    if (iterationCount > MAX_ITERATIONS) {
+      timeoutHit = true;
+      return false; // Freeze නොවී වහාම නවතී
+    }
+
+    if (taskIndex >= taskQueue.length) {
+      return true; // සාර්ථකයි
+    }
 
     const task = taskQueue[taskIndex];
     let candidateSlots = [];
@@ -3997,6 +4017,9 @@ async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassI
         }
       }
     }
+
+    // මෙම විෂය සඳහා කිසිදු සුදුසු Slot එකක් නැතිනම් Backtrack කරයි
+    if (candidateSlots.length === 0) return false;
 
     candidateSlots.sort((a, b) => b.score - a.score);
 
@@ -4050,15 +4073,19 @@ async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassI
 
       if (solve(taskIndex + 1)) return true;
 
+      // ආපසු ගැනීම (Backtrack)
       for (let placed of newPlacedSlots) {
         const idx = workingSchedule.indexOf(placed);
         if (idx > -1) workingSchedule.splice(idx, 1);
       }
+
+      if (timeoutHit) return false;
     }
 
     return false;
   }
 
+  // ඇල්ගොරිතමය ධාවනය කිරීම
   const success = solve(0);
 
   if (success) {
@@ -4075,11 +4102,17 @@ async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassI
 
     const scopeTitle = isSingleClass ? `තෝරාගත් පන්තිය` : `මුළු පාසලේම සියලු පන්ති`;
     const modeTitle = mode === "PEDAGOGICAL" ? "AI මනෝවිද්‍යාත්මක ක්‍රමය" : "ස්මාර්ට් ශෆල් ක්‍රමය";
-    alert(`🎉 සාර්ථකයි! [${scopeTitle}] සඳහා [${modeTitle}] මඟින් කාලච්ඡේද ${taskQueue.length} ක් කිසිදු ගැටුමකින් තොරව (Zero Clash) සාර්ථකව පිරවන ලදී.`);
+    alert(`🎉 සාර්ථකයි! [${scopeTitle}] සඳහා [${modeTitle}] මඟින් කාලච්ඡේද ${taskQueue.length} ක් කිසිදු ගැටුමකින් තොරව සාර්ථකව පිරවන ලදී.`);
   } else {
-    alert("⚠️ පවතින ගුරු සීමාවන් හෝ කාලසටහන් තදබදය නිසා සියලු කාලච්ඡේද සම්පූර්ණ කිරීමට නොහැකි විය. කරුණාකර Locked විෂයන් හෝ ගුරු සීමාවන් පරීක්ෂා කරන්න.");
+    if (timeoutHit) {
+      alert("⚠️ කාලසටහනේ පවතින සීමාවන් (ගුරු විවේක, දානමය වේලාවන්, හෝ Double කාලච්ඡේද සීමා) අධික ලෙස තදබද වී ඇති බැවින් සම්පූර්ණ විසඳුමක් සොයා ගැනීමට නොහැකි විය.\n\nකරුණාකර අගුළු ලූ (Locked) විෂයන් හෝ ගුරු සීමාවන් කිහිපයක් ලිහිල් කර නැවත උත්සාහ කරන්න.");
+    } else {
+      alert("⚠️ පවතින ගුරු සීමාවන් හෝ කාලසටහන් තදබදය නිසා සියලු කාලච්ඡේද සම්පූර්ණ කිරීමට නොහැකි විය.");
+    }
   }
 }
+
+window.runAutomatedTimetableGenerator = runAutomatedTimetableGenerator;
 
 // =========================================================================
 // 7. බොත්තම් සඳහා WRAPPERS & GLOBAL EXPORTS
