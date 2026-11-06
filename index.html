@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V 8
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V 222222
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -1593,30 +1593,7 @@ var DEFAULT_CURRICULUM = [
     ];
 
 
-// 🔴 පද්ධතියේ ප්‍රධාන සීමාවන් සහ නීති (Global Constraints State)
-const timetableConfig = {
-  // 1. Admin විසින් තෝරන ලද විශේෂ ප්‍රමුඛතා ගුරු ලැයිස්තුව (Priority Teachers)
-  priorityTeacherIds: [], 
 
-  // 2. ගුරුවරුන් නොයෙදිය යුතු කාලච්ඡේද (උදා: ස්වාමීන් වහන්සේලාගේ දාවල් දාන වේලාව)
-  // Format: { "TEACHER_ID": [ { day: 0, period: 4 }, { day: 0, period: 5 } ] }
-  teacherBlackouts: {},
-
-  // 3. විෂයන් නොයෙදිය යුතු කාලච්ඡේද (උදා: සිකුරාදා 12න් පසු ඉස්ලාම් ධර්මය)
-  // Format: { "islam": [ { day: 4, period: 6 }, { day: 4, period: 7 }, { day: 4, period: 8 } ] }
-  subjectBlackouts: {},
-
-  // 4. පාසලේ ස්ථිර පොදු ඉසව් (Fixed School Events - මුළු පාසලටම Lock වන)
-  fixedSchoolEvents: [
-    { day: 0, period: 1, title: "පාසල් රැස්වීම (Assembly)" }
-  ],
-
-  // 5. ගුරු විඩාව පාලනය: එක දිගට ලබාදිය හැකි උපරිම කාලච්ඡේද ගණන
-  maxConsecutivePeriods: 3,
-
-  // 6. විවේකය පවතින කාලච්ඡේදය (4 වන කාලච්ඡේදයට පසු)
-  breakAfterPeriod: 4
-};
 
     
 window.saveSubjectTeachersAssignment = function() {
@@ -3577,6 +3554,30 @@ window.resetAllTimetables = resetAllTimetables;
     // =========================================================================
 
 
+   // 🔴 පද්ධතියේ ප්‍රධාන සීමාවන් සහ නීති (Global Constraints State)
+const timetableConfig = {
+  // 1. Admin විසින් තෝරන ලද විශේෂ ප්‍රමුඛතා ගුරු ලැයිස්තුව (Priority Teachers)
+  priorityTeacherIds: [], 
+
+  // 2. ගුරුවරුන් නොයෙදිය යුතු කාලච්ඡේද (උදා: ස්වාමීන් වහන්සේලාගේ දාවල් දාන වේලාව)
+  // Format: { "TEACHER_ID": [ { day: 0, period: 4 }, { day: 0, period: 5 } ] }
+  teacherBlackouts: {},
+
+  // 3. විෂයන් නොයෙදිය යුතු කාලච්ඡේද (උදා: සිකුරාදා 12න් පසු ඉස්ලාම් ධර්මය)
+  // Format: { "islam": [ { day: 4, period: 6 }, { day: 4, period: 7 }, { day: 4, period: 8 } ] }
+  subjectBlackouts: {},
+
+  // 4. පාසලේ ස්ථිර පොදු ඉසව් (Fixed School Events - මුළු පාසලටම Lock වන)
+  fixedSchoolEvents: [
+    { day: 0, period: 1, title: "පාසල් රැස්වීම (Assembly)" }
+  ],
+
+  // 5. ගුරු විඩාව පාලනය: එක දිගට ලබාදිය හැකි උපරිම කාලච්ඡේද ගණන
+  maxConsecutivePeriods: 3,
+
+  // 6. විවේකය පවතින කාලච්ඡේදය (4 වන කාලච්ඡේදයට පසු)
+  breakAfterPeriod: 4
+}; 
 
 // 🔴 සතිපතා කාලච්ඡේද ප්‍රමාණය Blocks (Single / Double) වලට ස්වයංක්‍රීයව වෙන් කිරීම
 function calculateSubjectChunks(totalPeriods, type = "single") {
