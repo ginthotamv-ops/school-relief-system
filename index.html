@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V 1212
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V 1320
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -282,6 +282,78 @@
               <!-- JavaScript මඟින් පන්ති ලැයිස්තුව පිරවේ -->
             </select>
 
+<div class="flex flex-wrap items-center gap-2">
+
+  <!-- 🔴 1. පන්තිය Auto-Fill බොත්තම (Dropdown Option සමග) -->
+  <div class="relative inline-block text-left group">
+    <button type="button" 
+            onclick="triggerClassAutoFill('PEDAGOGICAL')"
+            title="මෙම පන්තියේ හිස් කාලච්ඡේද AI මනෝවිද්‍යාත්මක ක්‍රමයට පිරවීම සඳහා ඔබන්න (හෝ ඊතලය ඔබා Shuffle තෝරන්න)"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-bold rounded-l-lg shadow-2xs hover:shadow transition cursor-pointer">
+      <i class="fa-solid fa-wand-magic-sparkles text-[11px] text-indigo-200"></i>
+      <span>පන්තිය Auto-Fill</span>
+    </button>
+    
+    <!-- ක්‍රමය තේරීමේ Dropdown ඊතලය -->
+    <button type="button" 
+            onclick="document.getElementById('classAutoFillDropdown').classList.toggle('hidden')"
+            class="inline-flex items-center px-2 py-1.5 bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-bold rounded-r-lg border-l border-indigo-500 shadow-2xs cursor-pointer">
+      <i class="fa-solid fa-chevron-down text-[10px]"></i>
+    </button>
+
+    <!-- Dropdown Menu -->
+    <div id="classAutoFillDropdown" class="hidden absolute left-0 mt-1 w-52 bg-white rounded-lg shadow-lg border border-slate-200 z-50 py-1 text-xs">
+      <button type="button" 
+              onclick="triggerClassAutoFill('PEDAGOGICAL'); document.getElementById('classAutoFillDropdown').classList.add('hidden');" 
+              class="w-full text-left px-3 py-2 hover:bg-indigo-50 text-indigo-950 font-semibold flex items-center gap-2">
+        <i class="fa-solid fa-brain text-indigo-600"></i>
+        <span>AI මනෝවිද්‍යාත්මක ක්‍රමය</span>
+      </button>
+      <button type="button" 
+              onclick="triggerClassAutoFill('SHUFFLE'); document.getElementById('classAutoFillDropdown').classList.add('hidden');" 
+              class="w-full text-left px-3 py-2 hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-2">
+        <i class="fa-solid fa-shuffle text-slate-500"></i>
+        <span>ස්මාර්ට් ශෆල් (Shuffle) ක්‍රමය</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 🔴 2. මුළු පාසලම Auto-Fill බොත්තම (Dropdown Option සමග) -->
+  <div class="relative inline-block text-left group">
+    <button type="button" 
+            onclick="triggerWholeSchoolAutoFill('PEDAGOGICAL')"
+            title="මුළු පාසලේම සියලු පන්ති සඳහා එකවර AI මනෝවිද්‍යාත්මක ක්‍රමයට කාලසටහන සකස් කිරීමට ඔබන්න"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white text-xs font-bold rounded-l-lg shadow-2xs hover:shadow transition cursor-pointer">
+      <i class="fa-solid fa-school text-[11px] text-violet-200"></i>
+      <span>මුළු පාසලම Auto-Fill</span>
+    </button>
+
+    <!-- ක්‍රමය තේරීමේ Dropdown ඊතලය -->
+    <button type="button" 
+            onclick="document.getElementById('schoolAutoFillDropdown').classList.toggle('hidden')"
+            class="inline-flex items-center px-2 py-1.5 bg-purple-800 hover:bg-purple-900 text-white text-xs font-bold rounded-r-lg border-l border-purple-500 shadow-2xs cursor-pointer">
+      <i class="fa-solid fa-chevron-down text-[10px]"></i>
+    </button>
+
+    <!-- Dropdown Menu -->
+    <div id="schoolAutoFillDropdown" class="hidden absolute left-0 mt-1 w-52 bg-white rounded-lg shadow-lg border border-slate-200 z-50 py-1 text-xs">
+      <button type="button" 
+              onclick="triggerWholeSchoolAutoFill('PEDAGOGICAL'); document.getElementById('schoolAutoFillDropdown').classList.add('hidden');" 
+              class="w-full text-left px-3 py-2 hover:bg-violet-50 text-violet-950 font-semibold flex items-center gap-2">
+        <i class="fa-solid fa-brain text-violet-600"></i>
+        <span>AI මනෝවිද්‍යාත්මක ක්‍රමය</span>
+      </button>
+      <button type="button" 
+              onclick="triggerWholeSchoolAutoFill('SHUFFLE'); document.getElementById('schoolAutoFillDropdown').classList.add('hidden');" 
+              class="w-full text-left px-3 py-2 hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-2">
+        <i class="fa-solid fa-shuffle text-slate-500"></i>
+        <span>ස්මාර්ට් ශෆල් (Shuffle) ක්‍රමය</span>
+      </button>
+    </div>
+  </div>
+
+</div>
+            
             <!-- Re-shuffle & Print බොත්තම් -->
             <button type="button" onclick="openReshuffleModal()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow transition flex items-center gap-1.5">
               <i class="fa-solid fa-shuffle"></i> Periods Re-shuffle
@@ -1521,6 +1593,32 @@ var DEFAULT_CURRICULUM = [
     ];
 
 
+// 🔴 පද්ධතියේ ප්‍රධාන සීමාවන් සහ නීති (Global Constraints State)
+const timetableConfig = {
+  // 1. Admin විසින් තෝරන ලද විශේෂ ප්‍රමුඛතා ගුරු ලැයිස්තුව (Priority Teachers)
+  priorityTeacherIds: [], 
+
+  // 2. ගුරුවරුන් නොයෙදිය යුතු කාලච්ඡේද (උදා: ස්වාමීන් වහන්සේලාගේ දාවල් දාන වේලාව)
+  // Format: { "TEACHER_ID": [ { day: 0, period: 4 }, { day: 0, period: 5 } ] }
+  teacherBlackouts: {},
+
+  // 3. විෂයන් නොයෙදිය යුතු කාලච්ඡේද (උදා: සිකුරාදා 12න් පසු ඉස්ලාම් ධර්මය)
+  // Format: { "islam": [ { day: 4, period: 6 }, { day: 4, period: 7 }, { day: 4, period: 8 } ] }
+  subjectBlackouts: {},
+
+  // 4. පාසලේ ස්ථිර පොදු ඉසව් (Fixed School Events - මුළු පාසලටම Lock වන)
+  fixedSchoolEvents: [
+    { day: 0, period: 1, title: "පාසල් රැස්වීම (Assembly)" }
+  ],
+
+  // 5. ගුරු විඩාව පාලනය: එක දිගට ලබාදිය හැකි උපරිම කාලච්ඡේද ගණන
+  maxConsecutivePeriods: 3,
+
+  // 6. විවේකය පවතින කාලච්ඡේදය (4 වන කාලච්ඡේදයට පසු)
+  breakAfterPeriod: 4
+};
+
+    
 window.saveSubjectTeachersAssignment = function() {
   const cs = window.currentEditingSubject;
   if (!cs) {
@@ -3475,12 +3573,536 @@ window.resetAllTimetables = resetAllTimetables;
     }
 
 // =========================================================================
-    // 5-DAY UNIFIED CLASS TIMETABLE GRID CONTROLLER
+    // AUTO FILL
     // =========================================================================
 
+
+
+// 🔴 සතිපතා කාලච්ඡේද ප්‍රමාණය Blocks (Single / Double) වලට ස්වයංක්‍රීයව වෙන් කිරීම
+function calculateSubjectChunks(totalPeriods, type = "single") {
+  totalPeriods = Number(totalPeriods);
+  const chunks = [];
+  const cleanType = String(type).trim().toLowerCase();
+
+  if (cleanType === "double") {
+    // Double වර්ගය නම්: හැකිතාක් Double ලෙස සකසයි
+    let remaining = totalPeriods;
+    while (remaining >= 2) {
+      chunks.push(2);
+      remaining -= 2;
+    }
+    if (remaining === 1) {
+      chunks.push(1);
+    }
+  } else {
+    // Single වර්ගය නම්:
+    // දින 5ක් පමණක් ඇති බැවින් 5ට වැඩි නම් දිනකට 2ක් වැටීම වැළැක්වීමට Doubles මිශ්‍ර කරයි
+    if (totalPeriods <= 5) {
+      for (let i = 0; i < totalPeriods; i++) chunks.push(1);
+    } else if (totalPeriods === 6) {
+      // දින 5 ට ගැලපීමට: Single 4 + Double 1
+      chunks.push(2, 1, 1, 1, 1);
+    } else if (totalPeriods === 7) {
+      // Single 3 + Double 2
+      chunks.push(2, 2, 1, 1, 1);
+    } else if (totalPeriods >= 8) {
+      chunks.push(2, 2, 2, 1, 1);
+    }
+  }
+
+  return chunks;
+}
+
+    
+// 🔴 නීති උල්ලංඝනය නොවන්නේදැයි පරීක්ෂා කරන ප්‍රධාන Validation ශ්‍රිතය
+function isPlacementValid(scheduleList, classId, subject, teacherId, day, startPeriod, chunkSize) {
+  const cleanCid = String(classId).trim().toLowerCase();
+  const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(subject) : String(subject || '').trim().toLowerCase();
+  const validTid = (teacherId && teacherId !== "NONE" && teacherId !== "EXCLUDED") ? String(teacherId).trim().toLowerCase() : null;
+
+  // 1. විවේකයේ නීතිය (Interval Constraint) පරීක්ෂාව
+  // chunkSize = 2 නම්, period 4 සහ 5 යා කරමින් (Double) නොයෙදිය හැක.
+  if (chunkSize === 2) {
+    if (startPeriod === 4) return false; // 4 සහ 5 යා වීම වළකයි
+    if (startPeriod > 7) return false;  // 8 වන කාලච්ඡේදයෙන් Double එකක් පටන් ගත නොහැක
+  }
+
+  // අදාළ Chunk එකට අයත් වන සියලු කාලච්ඡේද (Single නම් 1යි, Double නම් 2යි)
+  const targetPeriods = chunkSize === 2 ? [startPeriod, startPeriod + 1] : [startPeriod];
+
+  for (let p of targetPeriods) {
+    // 2. පාසලේ ස්ථිර පොදු ඉසව් (Fixed Events) ඇත්දැයි බැලීම
+    if (timetableConfig.fixedSchoolEvents.some(e => Number(e.day) === Number(day) && Number(e.period) === Number(p))) {
+      return false;
+    }
+
+    // 3. පන්තියේ මෙම කොටුව දැනටමත් පිරී ඇත්දැයි බැලීම (Locked හෝ Manual Slots)
+    const isClassOccupied = scheduleList.some(s => 
+      String(s.classId).trim().toLowerCase() === cleanCid &&
+      Number(s.day) === Number(day) &&
+      Number(s.period) === Number(p)
+    );
+    if (isClassOccupied) return false;
+
+    // 4. ගුරුවරයාට අදාළ පරීක්ෂාවන් (ගුරුවරයෙකු සිටී නම් පමණි)
+    if (validTid) {
+      // A. ගුරු ගැටුම් (Teacher Clash) - වෙනත් පන්තියක උගන්වයිද?
+      const isTeacherBusy = scheduleList.some(s => 
+        s.teacherId && String(s.teacherId).trim().toLowerCase() === validTid &&
+        Number(s.day) === Number(day) &&
+        Number(s.period) === Number(p)
+      );
+      if (isTeacherBusy) return false;
+
+      // B. ගුරු නොපැමිණෙන වේලාවන් (Teacher Blackouts - උදා: ස්වාමීන් වහන්සේලාගේ දාන වේලාව)
+      if (timetableConfig.teacherBlackouts[validTid]) {
+        const isBlocked = timetableConfig.teacherBlackouts[validTid].some(b => Number(b.day) === Number(day) && Number(b.period) === Number(p));
+        if (isBlocked) return false;
+      }
+    }
+
+    // 5. විෂයට අදාළ සීමා (Subject Blackouts - උදා: සිකුරාදා 12න් පසු ඉස්ලාම් දරුවන්)
+    if (timetableConfig.subjectBlackouts[subKey]) {
+      const isSubBlocked = timetableConfig.subjectBlackouts[subKey].some(b => Number(b.day) === Number(day) && Number(b.period) === Number(p));
+      if (isSubBlocked) return false;
+    }
+  }
+
+  // 6. එකම පන්තියට එකම දිනයේ එකම විෂය දෙවරක් වැටීම වැළැක්වීම (Double block හැර)
+  const subjectAlreadyToday = scheduleList.some(s => {
+    const sSubKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(s.subject) : String(s.subject || '').trim().toLowerCase();
+    return String(s.classId).trim().toLowerCase() === cleanCid &&
+           Number(s.day) === Number(day) &&
+           sSubKey === subKey;
+  });
+  if (subjectAlreadyToday) return false;
+
+  // 7. ගුරු විඩාව පාලනය (Consecutive Periods Limit - උපරිම 3)
+  if (validTid) {
+    const teacherPeriodsToday = scheduleList
+      .filter(s => s.teacherId && String(s.teacherId).trim().toLowerCase() === validTid && Number(s.day) === Number(day))
+      .map(s => Number(s.period));
+    
+    teacherPeriodsToday.push(...targetPeriods);
+    teacherPeriodsToday.sort((a, b) => a - b);
+
+    let streak = 1;
+    let maxStreak = 1;
+    for (let i = 1; i < teacherPeriodsToday.length; i++) {
+      if (teacherPeriodsToday[i] === teacherPeriodsToday[i - 1] + 1) {
+        streak++;
+        if (streak > maxStreak) maxStreak = streak;
+      } else if (teacherPeriodsToday[i] !== teacherPeriodsToday[i - 1]) {
+        streak = 1;
+      }
+    }
+    if (maxStreak > timetableConfig.maxConsecutivePeriods) {
+      return false; // එක දිගට 3කට වඩා වැඩි වේ නම් නොයොදයි
+    }
+  }
+
+  return true; // සියලු කොන්දේසි තෘප්තයි
+}
+
+
+    // 🔴 මනෝවිද්‍යාත්මක බර අනුව Slot එකකට ලකුණු ලබා දීම
+function getPedagogicalScore(subject, day, startPeriod, existingSlotsForClass) {
+  const sub = String(subject || '').toLowerCase();
+  let score = 100;
+
+  // 1. ඉහළ මානසික ශ්‍රමයක් අවශ්‍ය විෂයන් (Heavy: ගණිතය, විද්‍යාව, ඉංග්‍රීසි, සිංහල)
+  const isHeavy = sub.includes("math") || sub.includes("ගණිත") || 
+                  sub.includes("science") || sub.includes("විද්‍යා") || 
+                  sub.includes("english") || sub.includes("ඉංග්‍රීසි");
+
+  // 2. සැහැල්ලු / ප්‍රායෝගික විෂයන් (Light / Practical: සෞන්දර්ය, PTS, සෞඛ්‍ය, ක්‍රීඩා)
+  const isLight = sub.includes("art") || sub.includes("චිත්‍ර") || 
+                  sub.includes("music") || sub.includes("සංගීත") || 
+                  sub.includes("dance") || sub.includes("නැටුම්") || 
+                  sub.includes("health") || sub.includes("සෞඛ්‍ය") || 
+                  sub.includes("pts") || sub.includes("නාට්‍ය");
+
+  if (isHeavy) {
+    // උදෑසන 1, 2, 3 කාලච්ඡේද සඳහා ඉහළම ලකුණු
+    if (startPeriod <= 3) score += 50;
+    // විවේකයෙන් පසු (period 5) සඳහා අඩු ලකුණු
+    if (startPeriod === 5) score -= 40;
+    // සිකුරාදා සවස සඳහා අඩු ලකුණු
+    if (day === 4 && startPeriod >= 6) score -= 30;
+  }
+
+  if (isLight) {
+    // විවේකයෙන් පසු 5 වන කාලච්ඡේදයට සහ සවස කාලච්ඡේද සඳහා ඉහළම ලකුණු
+    if (startPeriod === 5) score += 60;
+    if (startPeriod >= 6) score += 30;
+    // උදෑසන 1 වන කාලච්ඡේදයට වැටීම අවම කිරීමට
+    if (startPeriod === 1) score -= 20;
+  }
+
+  // 3. පළමු කාලච්ඡේදයේ ඒකාකාරී බව වැළැක්වීම (Period 1 Variety)
+  // මෙම විෂය දැනටමත් වෙනත් දිනයක 1 වන කාලච්ඡේදයට දමා ඇත්නම් නැවත 1ට වැටීමේ ලකුණු අඩු කරයි
+  if (startPeriod === 1) {
+    const alreadyP1 = existingSlotsForClass.some(s => Number(s.period) === 1 && s.subject === subject);
+    if (alreadyP1) score -= 70;
+  }
+
+  return score;
+}
+
+    // 🔴 ප්‍රධාන ස්වයංක්‍රීය කාලසටහන් උත්පාදන ශ්‍රිතය (Auto-Fill Engine)
+async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL") {
+  // 1. දැනට පවතින Master Schedule එක ලබා ගැනීම
+  let scheduleList = (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) 
+    ? [...masterSchedule] 
+    : [...(window.masterSchedule || [])];
+
+  // අගුළු නොදැමූ (Unlocked) සහ Manual නොවන Auto slots පමණක් ඉවත් කර පදනම සකස් කිරීම
+  // (දැනටමත් පරිශීලකයා ඇතුළත් කළ Locked Slots නොවෙනස්ව තබා ගනී)
+  const lockedSlots = scheduleList.filter(s => Boolean(s.isLocked));
+  let workingSchedule = [...lockedSlots];
+
+  // 2. ඉහළ පන්තිවල සිට පහළ පන්ති දක්වා පෙළගැස්වීම (Grade 11 -> 6 Top-Down)
+  const sortedClasses = [...(window.schoolClasses || [])].sort((a, b) => {
+    const gradeA = parseInt(a.name) || parseInt(a.id) || 0;
+    const gradeB = parseInt(b.name) || parseInt(b.id) || 0;
+    return gradeB - gradeA; // 11, 10, 9, 8, 7, 6
+  });
+
+  // 3. පිරවීමට නියමිත Chunks ලැයිස්තුව (Queue) සකස් කිරීම
+  const taskQueue = [];
+
+  sortedClasses.forEach(cls => {
+    const classId = cls.id;
+    const quotaList = (cls.subjectQuotas || []); // පන්තියේ විෂය සහ කාලච්ඡේද සීමා
+
+    quotaList.forEach(q => {
+      const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(q.subject) : q.subject.toLowerCase();
+      const teacherId = (cls.subjectTeachers && cls.subjectTeachers[subKey]) ? cls.subjectTeachers[subKey] : null;
+
+      // මෙම විෂය දැනටමත් Locked slots තුළ පිරී ඇති ප්‍රමාණය අඩු කිරීම
+      const alreadyPlacedCount = lockedSlots.filter(s => 
+        String(s.classId).trim().toLowerCase() === String(classId).trim().toLowerCase() &&
+        (typeof cleanSubjectKey === "function" ? cleanSubjectKey(s.subject) : s.subject.toLowerCase()) === subKey
+      ).length;
+
+      const remainingPeriods = Math.max(0, Number(q.periods || 0) - alreadyPlacedCount);
+      if (remainingPeriods <= 0) return;
+
+      // Smart Chunking මඟින් Blocks වෙන් කිරීම
+      const chunks = calculateSubjectChunks(remainingPeriods, q.type || "single");
+
+      chunks.forEach(chunkSize => {
+        // ප්‍රමුඛතා අගය (Priority Weight) ගණනය කිරීම
+        let priorityWeight = 10;
+
+        // A. Admin තෝරාගත් Priority Teachers ලැයිස්තුවේ සිටී නම් ඉහළම ප්‍රමුඛතාව
+        if (teacherId && timetableConfig.priorityTeacherIds.includes(teacherId)) {
+          priorityWeight += 100;
+        }
+        // B. පන්තිභාර ගුරුතුමා නම් දෙවන ප්‍රමුඛතාව
+        if (teacherId && cls.classTeacherId && String(teacherId) === String(cls.classTeacherId)) {
+          priorityWeight += 50;
+        }
+        // C. කාණ්ඩ (Basket) විෂයන් නම් තෙවන ප්‍රමුඛතාව
+        if (q.isBasket || q.isCombined) {
+          priorityWeight += 30;
+        }
+
+        taskQueue.push({
+          classId: classId,
+          subject: q.subject,
+          teacherId: teacherId,
+          chunkSize: chunkSize,
+          priority: priorityWeight,
+          isBasket: !!(q.isBasket || q.isCombined),
+          combinedSubjectId: q.combinedSubjectId || null
+        });
+      });
+    });
+  });
+
+  // කාර්යයන් ප්‍රමුඛතාව (Priority) අනුව ඉහළ සිට පහළට පෙළගැස්වීම
+  taskQueue.sort((a, b) => b.priority - a.priority);
+
+  // 4. Backtracking Algorithm මඟින් කාලසටහන පිරවීම
+  const days = [0, 1, 2, 3, 4]; // සඳුදා - සිකුරාදා
+  const periods = [1, 2, 3, 4, 5, 6, 7, 8];
+
+  function solve(taskIndex) {
+    if (taskIndex >= taskQueue.length) {
+      return true; // සියලු විෂයන් සාර්ථකව ස්ථානගත කර අවසන් (Zero Clash)
+    }
+
+    const task = taskQueue[taskIndex];
+    let candidateSlots = [];
+
+    // වලංගු හිස් ස්ථාන සොයා ගැනීම
+    for (let d of days) {
+      for (let p of periods) {
+        if (isPlacementValid(workingSchedule, task.classId, task.subject, task.teacherId, d, p, task.chunkSize)) {
+          let score = 0;
+          if (mode === "PEDAGOGICAL") {
+            const currentClassSlots = workingSchedule.filter(s => String(s.classId) === String(task.classId));
+            score = getPedagogicalScore(task.subject, d, p, currentClassSlots);
+          } else {
+            // SHUFFLE MODE: සසම්භාවී ලකුණු
+            score = Math.random() * 100;
+          }
+          candidateSlots.push({ day: d, period: p, score: score });
+        }
+      }
+    }
+
+    // ලකුණු වැඩිම ස්ථානවල සිට උත්සාහ කිරීමට Sort කිරීම
+    candidateSlots.sort((a, b) => b.score - a.score);
+
+    for (let slot of candidateSlots) {
+      // Slot එක තාවකාලිකව ඇතුළත් කිරීම
+      const newPlacedSlots = [];
+      for (let offset = 0; offset < task.chunkSize; offset++) {
+        const slotObj = {
+          classId: task.classId,
+          day: slot.day,
+          period: slot.period + offset,
+          subject: task.subject,
+          teacherId: task.teacherId,
+          isLocked: false,
+          isCombined: task.isBasket,
+          combinedSubjectId: task.combinedSubjectId
+        };
+        newPlacedSlots.push(slotObj);
+        workingSchedule.push(slotObj);
+      }
+
+      // ඊළඟ විෂය සඳහා පියවර ගැනීම (Recursion)
+      if (solve(taskIndex + 1)) {
+        return true;
+      }
+
+      // Deadlock එකක් ආවොත්: ආපසු ගැනීම (Backtrack)
+      for (let placed of newPlacedSlots) {
+        const idx = workingSchedule.indexOf(placed);
+        if (idx > -1) workingSchedule.splice(idx, 1);
+      }
+    }
+
+    return false; // මෙම ශාඛාවෙන් විසඳුමක් නැත
+  }
+
+  // ඇල්ගොරිතමය ධාවනය කිරීම
+  const success = solve(0);
+
+  if (success) {
+    if (typeof masterSchedule !== "undefined") masterSchedule = workingSchedule;
+    window.masterSchedule = workingSchedule;
+
+    if (typeof saveAllToStorage === "function") saveAllToStorage();
+    if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+
+    alert(`🎉 සාර්ථකයි! [${mode === "PEDAGOGICAL" ? "AI මනෝවිද්‍යාත්මක ක්‍රමය" : "ස්මාර්ට් ශෆල් ක්‍රමය"}] මඟින් කිසිදු ගැටුමකින් තොරව (Zero Clash) කාලසටහන සම්පූර්ණයෙන්ම සකස් කරන ලදී.`);
+  } else {
+    alert("⚠️ සියලු විෂයන් එකවර පිරවීමට තරම් ඉඩකඩ ප්‍රමාණවත් නොවීය. කරුණාකර ගුරු සීමාවන් හෝ අගුළු ලූ (Locked) විෂයන් පරීක්ෂා කරන්න.");
+  }
+}
+
+window.runAutomatedTimetableGenerator = runAutomatedTimetableGenerator;
+    
+    
     // =========================================================================
-    // INTERACTIVE DRAG & DROP, QUOTA ENFORCEMENT & 5-DAY TIMETABLE CONTROLLER
+    // AUTO FILL ENGINE
     // =========================================================================
+
+// 🔴 තනි පන්තියක් හෝ මුළු පාසලම පිරවීමට සහය දක්වන ප්‍රධාන එන්ජිම
+async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassId = null) {
+  let scheduleList = (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) 
+    ? [...masterSchedule] 
+    : [...(window.masterSchedule || [])];
+
+  const isSingleClass = Boolean(targetClassId);
+  const cleanTargetCid = isSingleClass ? String(targetClassId).trim().toLowerCase() : null;
+
+  // 1. පදනම සකස් කිරීම:
+  // - තනි පන්තියක් නම්: අනෙක් සියලු පන්තිවල Slots එලෙසම තබා, මෙම පන්තියේ Locked ඒවා පමණක් රඳවා ගනී.
+  // - මුළු පාසලම නම්: සියලු පන්තිවල Locked Slots පමණක් රඳවා ගනී.
+  let workingSchedule = scheduleList.filter(s => {
+    if (isSingleClass) {
+      const isThisClass = String(s.classId).trim().toLowerCase() === cleanTargetCid;
+      return isThisClass ? Boolean(s.isLocked) : true;
+    } else {
+      return Boolean(s.isLocked);
+    }
+  });
+
+  // 2. පන්ති පෙළගැස්වීම:
+  let targetClasses = [...(window.schoolClasses || [])];
+  if (isSingleClass) {
+    targetClasses = targetClasses.filter(c => 
+      String(c.id).trim().toLowerCase() === cleanTargetCid || 
+      String(c.name).trim().toLowerCase() === cleanTargetCid
+    );
+    if (targetClasses.length === 0) {
+      alert("තෝරාගත් පන්තිය හඳුනාගත නොහැකි විය.");
+      return;
+    }
+  } else {
+    // 11 සිට 6 දක්වා Top-Down
+    targetClasses.sort((a, b) => {
+      const gradeA = parseInt(a.name) || parseInt(a.id) || 0;
+      const gradeB = parseInt(b.name) || parseInt(b.id) || 0;
+      return gradeB - gradeA;
+    });
+  }
+
+  // 3. පිරවීමට නියමිත කාර්යයන් (Task Queue) එකතු කිරීම
+  const taskQueue = [];
+
+  targetClasses.forEach(cls => {
+    const classId = cls.id;
+    const quotaList = (cls.subjectQuotas || []);
+
+    quotaList.forEach(q => {
+      const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(q.subject) : q.subject.toLowerCase();
+      const teacherId = (cls.subjectTeachers && cls.subjectTeachers[subKey]) ? cls.subjectTeachers[subKey] : null;
+
+      // දැනටමත් Locked slots මඟින් පිරී ඇති ප්‍රමාණය සෙවීම
+      const alreadyPlacedCount = workingSchedule.filter(s => 
+        String(s.classId).trim().toLowerCase() === String(classId).trim().toLowerCase() &&
+        (typeof cleanSubjectKey === "function" ? cleanSubjectKey(s.subject) : s.subject.toLowerCase()) === subKey
+      ).length;
+
+      const remainingPeriods = Math.max(0, Number(q.periods || 0) - alreadyPlacedCount);
+      if (remainingPeriods <= 0) return;
+
+      const chunks = calculateSubjectChunks(remainingPeriods, q.type || "single");
+
+      chunks.forEach(chunkSize => {
+        let priorityWeight = 10;
+        if (teacherId && (timetableConfig.priorityTeacherIds || []).includes(teacherId)) priorityWeight += 100;
+        if (teacherId && cls.classTeacherId && String(teacherId) === String(cls.classTeacherId)) priorityWeight += 50;
+        if (q.isBasket || q.isCombined) priorityWeight += 30;
+
+        taskQueue.push({
+          classId: classId,
+          subject: q.subject,
+          teacherId: teacherId,
+          chunkSize: chunkSize,
+          priority: priorityWeight,
+          isBasket: !!(q.isBasket || q.isCombined),
+          combinedSubjectId: q.combinedSubjectId || null
+        });
+      });
+    });
+  });
+
+  taskQueue.sort((a, b) => b.priority - a.priority);
+
+  // 4. Backtracking Algorithm මඟින් විසඳීම
+  const days = [0, 1, 2, 3, 4];
+  const periods = [1, 2, 3, 4, 5, 6, 7, 8];
+
+  function solve(taskIndex) {
+    if (taskIndex >= taskQueue.length) return true;
+
+    const task = taskQueue[taskIndex];
+    let candidateSlots = [];
+
+    for (let d of days) {
+      for (let p of periods) {
+        if (isPlacementValid(workingSchedule, task.classId, task.subject, task.teacherId, d, p, task.chunkSize)) {
+          let score = 0;
+          if (mode === "PEDAGOGICAL") {
+            const currentClassSlots = workingSchedule.filter(s => String(s.classId) === String(task.classId));
+            score = getPedagogicalScore(task.subject, d, p, currentClassSlots);
+          } else {
+            score = Math.random() * 100;
+          }
+          candidateSlots.push({ day: d, period: p, score: score });
+        }
+      }
+    }
+
+    candidateSlots.sort((a, b) => b.score - a.score);
+
+    for (let slot of candidateSlots) {
+      const newPlacedSlots = [];
+      for (let offset = 0; offset < task.chunkSize; offset++) {
+        const slotObj = {
+          classId: task.classId,
+          day: slot.day,
+          period: slot.period + offset,
+          subject: task.subject,
+          teacherId: task.teacherId,
+          isLocked: false,
+          isCombined: task.isBasket,
+          combinedSubjectId: task.combinedSubjectId
+        };
+        newPlacedSlots.push(slotObj);
+        workingSchedule.push(slotObj);
+      }
+
+      if (solve(taskIndex + 1)) return true;
+
+      for (let placed of newPlacedSlots) {
+        const idx = workingSchedule.indexOf(placed);
+        if (idx > -1) workingSchedule.splice(idx, 1);
+      }
+    }
+
+    return false;
+  }
+
+  // ක්‍රියාත්මක කිරීම
+  const success = solve(0);
+
+  if (success) {
+    if (typeof masterSchedule !== "undefined") masterSchedule = workingSchedule;
+    window.masterSchedule = workingSchedule;
+
+    if (typeof saveAllToStorage === "function") saveAllToStorage();
+    if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+
+    const scopeTitle = isSingleClass ? `තෝරාගත් පන්තිය` : `මුළු පාසලේම සියලු පන්ති`;
+    const modeTitle = mode === "PEDAGOGICAL" ? "AI මනෝවිද්‍යාත්මක ක්‍රමය" : "ස්මාර්ට් ශෆල් ක්‍රමය";
+    alert(`🎉 සාර්ථකයි! [${scopeTitle}] සඳහා [${modeTitle}] මඟින් කිසිදු ගැටුමකින් තොරව (Zero Clash) කාලසටහන සකස් කරන ලදී.`);
+  } else {
+    alert("⚠️ පවතින සීමාවන් හෝ අනෙක් පන්තිවල ගුරු කාලසටහන් හේතුවෙන් සියලු කාලච්ඡේද සම්පූර්ණ කිරීමට නොහැකි විය. කරුණාකර ගුරු සීමාවන් හෝ අගුළු ලූ (Locked) විෂයන් පරීක්ෂා කරන්න.");
+  }
+}
+
+// 🔴 බොත්තම් 2 සඳහා සෘජුව සම්බන්ධ වන Wrapper Functions:
+
+// 1. තෝරාගත් පන්තිය සඳහා Auto-Fill ක්‍රියාත්මක කිරීම
+function triggerClassAutoFill(mode = 'PEDAGOGICAL') {
+  const select = document.getElementById("activeClassSelect") || document.getElementById("classTimetableSelectClass");
+  if (!select || !select.value) {
+    alert("කරුණාකර පළමුව පන්තියක් තෝරන්න.");
+    return;
+  }
+  runAutomatedTimetableGenerator(mode, select.value);
+}
+
+// 2. මුළු පාසලම සඳහා Auto-Fill ක්‍රියාත්මක කිරීම
+function triggerWholeSchoolAutoFill(mode = 'PEDAGOGICAL') {
+  const confirmMsg = confirm(
+    `⚠️ අවවාදයයි: මුළු පාසලේම සියලු පන්ති සඳහා ස්වයංක්‍රීය කාලසටහන [${mode === 'PEDAGOGICAL' ? 'AI මනෝවිද්‍යාත්මක ක්‍රමයට' : 'ස්මාර්ට් ශෆල් ක්‍රමයට'}] සකස් කිරීමට අවශ්‍ය බව තහවුරු කරන්නද?\n\n` +
+    `• අගුළු ලූ (Locked) කාලච්ඡේද වෙනස් නොවේ.\n` +
+    `• අගුළු නොදැමූ කාලච්ඡේද නැවත සකස් වේ.`
+  );
+  if (!confirmMsg) return;
+  runAutomatedTimetableGenerator(mode, null);
+}
+
+window.runAutomatedTimetableGenerator = runAutomatedTimetableGenerator;
+window.triggerClassAutoFill = triggerClassAutoFill;
+window.triggerWholeSchoolAutoFill = triggerWholeSchoolAutoFill;
+
+
+
+
+ // =========================================================================
+    // BULLETPROOF SUBJECT TRAY (SHOWS ALL SUBJECTS WITH OR WITHOUT TEACHERS)
+    // =========================================================================
+   
 
     // Dragged Data State
     window.draggedSubjectData = null;
