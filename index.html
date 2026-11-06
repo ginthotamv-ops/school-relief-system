@@ -4003,6 +4003,160 @@ async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassI
 //window.runAutomatedTimetableGenerator = runAutomatedTimetableGenerator;
 
 // =========================================================================
+// 6. TRAY එකේ ආකාරයටම විෂයන් කියවන ශ්‍රිතය (BUILD TASK QUEUE)
+// =========================================================================
+function buildTimetableTaskQueue(targetClasses, workingSchedule) {
+  const taskQueue = [];
+  const handledCombinedIds = new Set();
+
+  targetClasses.forEach(cls => {
+    const cleanClassId = String(cls.id).trim();
+    const currentGrade = typeof cleanGradeNum === "function" ? cleanGradeNum(cls.grade) : Number(cls.grade);
+    const currentClassName = cls.name || cleanClassId;
+
+    // A. Combined / Basket
+    const relevantCombined = (window.combinedCurriculumSubjects || []).filter(comb => {
+      const combGrade = typeof cleanGradeNum === "function" ? cleanGradeNum(comb.grade) : Number(comb.grade);
+      if (combGrade !== currentGrade) return false;
+      return (comb.targetClassIds || []).some(cid => 
+        String(cid).trim().toLowerCase() === cleanClassId.toLowerCase() ||
+        String(cid).trim().toLowerCase() === currentClassName.toLowerCase()
+      );
+    });
+
+    const suppressedSubjects = new Set();
+    relevantCombined.forEach(comb => {
+      (comb.subjects || []).forEach(sub => {
+        suppressedSubjects.add(typeof cleanSubjectKey === "function" ? cleanSubjectKey(sub) : sub.trim().toLowerCase());
+      });
+    });
+
+    relevantCombined.forEach(comb => {
+      const combKey = `${comb.id}_${currentGrade}`;
+      if (handledCombinedIds.has(combKey)) return;
+      handledCombinedIds.add(combKey);
+
+      let allocatedCount = 0;
+      workingSchedule.forEach(s => {
+        if (String(s.classId).trim().toLowerCase() === cleanClassId.toLowerCase() && 
+           (s.subject === comb.name || s.combinedSubjectId === comb.id)) {
+          allocatedCount++;
+        }
+      });
+
+      const max = Number(comb.maxWeekly) || 2;
+      const remaining = Math.max(0, max - allocatedCount);
+
+      if (remaining > 0) {
+        const chunks = calculateSubjectChunks(remaining, comb.type || "double");
+        chunks.forEach(chunkSize => {
+          taskQueue.push({
+            classId: cleanClassId,
+            grade: currentGrade,
+            subject: comb.name,
+            teacherId: null,
+            chunkSize: chunkSize,
+            priority: 80,
+            isBasket: true,
+            combinedSubjectId: comb.id,
+            groupCode: comb.groupCode || "GRP",
+            basketSubjects: comb.subjects || [],
+            linkedClassIds: comb.targetClassIds || [cleanClassId]
+          });
+        });
+      }
+    });
+
+    // B. සාමාන්‍ය තනි විෂයන්
+    const rawQuotas = typeof calculateClassSubjectQuotas === "function" ? calculateClassSubjectQuotas(cleanClassId) : [];
+
+    const filteredQuotas = rawQuotas.filter(q => {
+      const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(q.subject) : q.subject.trim().toLowerCase();
+      return !suppressedSubjects.has(sKey);
+    });
+
+    const finalQuotas = filteredQuotas.filter(q => {
+      const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(q.subject) : q.subject.trim().toLowerCase();
+
+      if (typeof isSubjectExcludedForClass === "function" && isSubjectExcludedForClass(cleanClassId, q.subject)) return false;
+
+      const assignedTid = typeof getAssignedTeacherIdForClass === "function"
+        ? getAssignedTeacherIdForClass(cls, q.subject)
+        : (cls && cls.subjectTeachers ? cls.subjectTeachers[sKey] : null);
+
+      if (String(assignedTid).trim().toUpperCase() === "EXCLUDED") return false;
+      if (cls && cls.subjectTeachers && String(cls.subjectTeachers[sKey]).trim().toUpperCase() === "EXCLUDED") return false;
+
+      const cs = (window.curriculumSubjects || []).find(c => 
+        (typeof cleanGradeNum === "function" ? cleanGradeNum(c.grade) : Number(c.grade)) === currentGrade &&
+        (typeof cleanSubjectKey === "function" ? cleanSubjectKey(c.subject) : c.subject.trim().toLowerCase()) === sKey
+      );
+      if (cs && Array.isArray(cs.applicableClassIds) && cs.applicableClassIds.length > 0) {
+        const isApplicable = cs.applicableClassIds.some(cid => 
+          String(cid).trim().toLowerCase() === cleanClassId.toLowerCase() ||
+          String(cid).trim().toLowerCase() === currentClassName.toLowerCase()
+        );
+        if (!isApplicable) return false;
+      }
+      return true;
+    });
+
+    finalQuotas.forEach(q => {
+      const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(q.subject) : q.subject.trim().toLowerCase();
+
+      let allocatedCount = 0;
+      workingSchedule.forEach(s => {
+        const slotKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(s.subject) : (s.subject || '').trim().toLowerCase();
+        if (String(s.classId).trim().toLowerCase() === cleanClassId.toLowerCase() && slotKey === sKey && !s.isCombined) {
+          allocatedCount++;
+        }
+      });
+
+      const max = Number(q.maxWeekly) || 0;
+      const remaining = Math.max(0, max - allocatedCount);
+      if (remaining <= 0) return;
+
+      const cs = (window.curriculumSubjects || []).find(c => 
+        (typeof cleanGradeNum === "function" ? cleanGradeNum(c.grade) : Number(c.grade)) === currentGrade &&
+        (typeof cleanSubjectKey === "function" ? cleanSubjectKey(c.subject) : c.subject.trim().toLowerCase()) === sKey
+      );
+      const periodType = q.type || (cs && cs.type) || "single";
+
+      let teacherId = null;
+      if (q.assignedTeacher && q.assignedTeacher.id) {
+        teacherId = q.assignedTeacher.id;
+      } else if (typeof getAssignedTeacherIdForClass === "function") {
+        teacherId = getAssignedTeacherIdForClass(cls, q.subject);
+      } else if (cls && cls.subjectTeachers) {
+        teacherId = cls.subjectTeachers[sKey] || null;
+      }
+      if (teacherId === "NONE" || teacherId === "EXCLUDED") teacherId = null;
+
+      const chunks = calculateSubjectChunks(remaining, periodType);
+
+      chunks.forEach(chunkSize => {
+        let priorityWeight = 10;
+        if (teacherId && (timetableConfig.priorityTeacherIds || []).includes(teacherId)) priorityWeight += 100;
+        if (teacherId && cls.classTeacherId && String(teacherId) === String(cls.classTeacherId)) priorityWeight += 50;
+
+        taskQueue.push({
+          classId: cleanClassId,
+          grade: currentGrade,
+          subject: q.subject,
+          teacherId: teacherId,
+          chunkSize: chunkSize,
+          priority: priorityWeight,
+          isBasket: false
+        });
+      });
+    });
+  });
+
+  return taskQueue;
+}
+    
+
+// =========================================================================
 // 7. බොත්තම් සඳහා WRAPPERS & GLOBAL EXPORTS
 // =========================================================================
 
