@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V7895
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V1245
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -284,83 +284,83 @@
               <!-- JavaScript මඟින් පන්ති ලැයිස්තුව පිරවේ -->
             </select>
 
-<div class="flex flex-wrap items-center gap-2">
+<!-- 🔴 Auto-Fill Action Toolbar -->
+<div class="flex flex-wrap items-center gap-2.5 p-1.5 bg-slate-50 border border-slate-200 rounded-2xl shadow-2xs">
 
-  <!-- 🔴 1. පන්තිය Auto-Fill බොත්තම (Dropdown Option සමග) -->
-  <div class="relative inline-block text-left group">
+  <!-- 1. පන්තිය Auto-Fill (Split Button with Quick Dropdown) -->
+  <div class="relative inline-flex items-center rounded-xl shadow-xs group">
+    
+    <!-- ප්‍රධාන බොත්තම: සැකසුම් Modal එක විවෘත කිරීම -->
     <button type="button" 
-            onclick="triggerClassAutoFill('PEDAGOGICAL')"
-            title="මෙම පන්තියේ හිස් කාලච්ඡේද AI මනෝවිද්‍යාත්මක ක්‍රමයට පිරවීම සඳහා ඔබන්න (හෝ ඊතලය ඔබා Shuffle තෝරන්න)"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-bold rounded-l-lg shadow-2xs hover:shadow transition cursor-pointer">
-      <i class="fa-solid fa-wand-magic-sparkles text-[11px] text-indigo-200"></i>
+            onclick="openAutoFillConfigModal(document.getElementById('activeClassSelect')?.value || document.getElementById('classTimetableSelectClass')?.value)"
+            title="ගුරුවරුන්, Labs සහ සැකසුම් තෝරා මෙම පන්තිය Auto-Fill කරන්න"
+            class="inline-flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-bold rounded-l-xl transition-all cursor-pointer">
+      <i class="fa-solid fa-wand-magic-sparkles text-indigo-200 text-xs"></i>
       <span>පන්තිය Auto-Fill</span>
     </button>
-    
-    <!-- ක්‍රමය තේරීමේ Dropdown ඊතලය -->
-    <button type="button" 
-            onclick="document.getElementById('classAutoFillDropdown').classList.toggle('hidden')"
-            class="inline-flex items-center px-2 py-1.5 bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-bold rounded-r-lg border-l border-indigo-500 shadow-2xs cursor-pointer">
-      <i class="fa-solid fa-chevron-down text-[10px]"></i>
-    </button>
-     <button type="button" onclick="openAutoFillConfigModal(document.getElementById('activeClassSelect')?.value)">
-  පන්තිය Auto-Fill
-</button>
-      <button type="button" onclick="openAutoFillConfigModal(null)">
-  මුළු පාසලම Auto-Fill
-</button>
-    <!-- Dropdown Menu -->
-    <div id="classAutoFillDropdown" class="hidden absolute left-0 mt-1 w-52 bg-white rounded-lg shadow-lg border border-slate-200 z-50 py-1 text-xs">
 
-      <button type="button" 
-              onclick="triggerClassAutoFill('PEDAGOGICAL'); document.getElementById('classAutoFillDropdown').classList.add('hidden');" 
-              class="w-full text-left px-3 py-2 hover:bg-indigo-50 text-indigo-950 font-semibold flex items-center gap-2">
-        <i class="fa-solid fa-brain text-indigo-600"></i>
-        <span>AI මනෝවිද්‍යාත්මක ක්‍රමය</span>
-      </button>
-      <button type="button" 
-              onclick="triggerClassAutoFill('SHUFFLE'); document.getElementById('classAutoFillDropdown').classList.add('hidden');" 
-              class="w-full text-left px-3 py-2 hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-2">
-        <i class="fa-solid fa-shuffle text-slate-500"></i>
-        <span>ස්මාර්ට් ශෆල් (Shuffle) ක්‍රමය</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- 🔴 2. මුළු පාසලම Auto-Fill බොත්තම (Dropdown Option සමග) -->
-  <div class="relative inline-block text-left group">
+    <!-- Dropdown ඊතලය: ක්ෂණික ක්‍රම තේරීම සඳහා -->
     <button type="button" 
-            onclick="triggerWholeSchoolAutoFill('PEDAGOGICAL')"
-            title="මුළු පාසලේම සියලු පන්ති සඳහා එකවර AI මනෝවිද්‍යාත්මක ක්‍රමයට කාලසටහන සකස් කිරීමට ඔබන්න"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white text-xs font-bold rounded-l-lg shadow-2xs hover:shadow transition cursor-pointer">
-      <i class="fa-solid fa-school text-[11px] text-violet-200"></i>
-      <span>මුළු පාසලම Auto-Fill</span>
-    </button>
-
-    <!-- ක්‍රමය තේරීමේ Dropdown ඊතලය -->
-    <button type="button" 
-            onclick="document.getElementById('schoolAutoFillDropdown').classList.toggle('hidden')"
-            class="inline-flex items-center px-2 py-1.5 bg-purple-800 hover:bg-purple-900 text-white text-xs font-bold rounded-r-lg border-l border-purple-500 shadow-2xs cursor-pointer">
+            onclick="event.stopPropagation(); document.getElementById('classAutoFillDropdown').classList.toggle('hidden');"
+            title="ක්ෂණික ක්‍රම තෝරන්න (Direct Mode)"
+            class="inline-flex items-center px-2.5 py-2 bg-indigo-700 hover:bg-indigo-800 text-indigo-100 hover:text-white text-xs font-bold rounded-r-xl border-l border-indigo-500/60 transition-all cursor-pointer">
       <i class="fa-solid fa-chevron-down text-[10px]"></i>
     </button>
 
     <!-- Dropdown Menu -->
-    <div id="schoolAutoFillDropdown" class="hidden absolute left-0 mt-1 w-52 bg-white rounded-lg shadow-lg border border-slate-200 z-50 py-1 text-xs">
+    <div id="classAutoFillDropdown" 
+         class="hidden absolute left-0 top-full mt-1.5 w-60 bg-white rounded-xl shadow-xl border border-slate-200 z-50 py-1.5 text-xs transition-all animate-in fade-in slide-in-from-top-1">
+      
+      <div class="px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 mb-1">
+        ක්‍රමය තෝරන්න (Direct Fill)
+      </div>
+
+      <!-- Option 1: Modal සමඟ -->
       <button type="button" 
-              onclick="triggerWholeSchoolAutoFill('PEDAGOGICAL'); document.getElementById('schoolAutoFillDropdown').classList.add('hidden');" 
-              class="w-full text-left px-3 py-2 hover:bg-violet-50 text-violet-950 font-semibold flex items-center gap-2">
-        <i class="fa-solid fa-brain text-violet-600"></i>
-        <span>AI මනෝවිද්‍යාත්මක ක්‍රමය</span>
+              onclick="document.getElementById('classAutoFillDropdown').classList.add('hidden'); openAutoFillConfigModal(document.getElementById('activeClassSelect')?.value);" 
+              class="w-full text-left px-3 py-2 hover:bg-indigo-50 text-indigo-950 font-bold flex items-center gap-2.5 transition">
+        <i class="fa-solid fa-sliders text-indigo-600 text-[11px] w-4 text-center"></i>
+        <div>
+          <div>සැකසුම් සහිතව (Settings)</div>
+          <div class="text-[10px] text-slate-400 font-normal">ගුරුවරුන් & Labs තෝරා පිරවීම</div>
+        </div>
       </button>
+
+      <!-- Option 2: AI මනෝවිද්‍යාත්මක ක්‍රමය -->
       <button type="button" 
-              onclick="triggerWholeSchoolAutoFill('SHUFFLE'); document.getElementById('schoolAutoFillDropdown').classList.add('hidden');" 
-              class="w-full text-left px-3 py-2 hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-2">
-        <i class="fa-solid fa-shuffle text-slate-500"></i>
-        <span>ස්මාර්ට් ශෆල් (Shuffle) ක්‍රමය</span>
+              onclick="document.getElementById('classAutoFillDropdown').classList.add('hidden'); triggerClassAutoFill('PEDAGOGICAL');" 
+              class="w-full text-left px-3 py-2 hover:bg-indigo-50 text-indigo-950 font-bold flex items-center gap-2.5 transition">
+        <i class="fa-solid fa-brain text-purple-600 text-[11px] w-4 text-center"></i>
+        <div>
+          <div>AI මනෝවිද්‍යාත්මක ක්‍රමය</div>
+          <div class="text-[10px] text-slate-400 font-normal">ක්ෂණිකව සකස් කිරීම</div>
+        </div>
+      </button>
+
+      <!-- Option 3: ස්මාර්ට් ශෆල් -->
+      <button type="button" 
+              onclick="document.getElementById('classAutoFillDropdown').classList.add('hidden'); triggerClassAutoFill('SHUFFLE');" 
+              class="w-full text-left px-3 py-2 hover:bg-slate-50 text-slate-700 font-bold flex items-center gap-2.5 transition">
+        <i class="fa-solid fa-shuffle text-slate-500 text-[11px] w-4 text-center"></i>
+        <div>
+          <div>ස්මාර්ට් ශෆල් (Shuffle)</div>
+          <div class="text-[10px] text-slate-400 font-normal">සසම්භාවී පිරවීම</div>
+        </div>
       </button>
     </div>
   </div>
+
+  <!-- 2. මුළු පාසලම Auto-Fill බොත්තම -->
+  <button type="button" 
+          onclick="openAutoFillConfigModal(null)"
+          title="මුළු පාසලේම සියලු පන්ති සඳහා කාලසටහන එකවර සකස් කිරීමට ඔබන්න"
+          class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition-all cursor-pointer">
+    <i class="fa-solid fa-school text-violet-200 text-xs"></i>
+    <span>මුළු පාසලම Auto-Fill</span>
+  </button>
 
 </div>
+            
             
             <!-- Re-shuffle & Print බොත්තම් -->
             <button type="button" onclick="openReshuffleModal()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow transition flex items-center gap-1.5">
@@ -1693,7 +1693,13 @@ var DEFAULT_CURRICULUM = [
     ];
 
 
-
+// Dropdown එකෙන් පිටත ක්ලික් කළ විට Dropdown එක වැසීම
+document.addEventListener("click", (e) => {
+  const dropdown = document.getElementById("classAutoFillDropdown");
+  if (dropdown && !dropdown.contains(e.target)) {
+    dropdown.classList.add("hidden");
+  }
+});
 
     
 window.saveSubjectTeachersAssignment = function() {
