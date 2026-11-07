@@ -4342,7 +4342,7 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
 // 7. ප්‍රධාන AUTO-FILL එන්ජිම (BOUNDED CSP BACKTRACKING)
 // =========================================================================
 
-    async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassId = null) {
+async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassId = null) {
   let scheduleList = (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) 
     ? masterSchedule 
     : (window.masterSchedule || []);
@@ -4354,6 +4354,7 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
   const isSingleClass = Boolean(targetClassId);
   const cleanTargetCid = isSingleClass ? String(targetClassId).trim().toLowerCase() : null;
 
+  // 1. අගුළු ලූ (Locked) විෂයන් ආරක්ෂා කරගැනීම
   let workingSchedule = scheduleList.filter(s => {
     if (isSingleClass) {
       const isThisClass = String(s.classId).trim().toLowerCase() === cleanTargetCid;
@@ -4374,6 +4375,7 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
       return;
     }
   } else {
+    // මුළු පාසලම නම් ඉහළ ශ්‍රේණිවල සිට පහළට (11 -> 6)
     targetClasses.sort((a, b) => {
       const gradeA = parseInt(a.name) || parseInt(a.id) || 0;
       const gradeB = parseInt(b.name) || parseInt(b.id) || 0;
@@ -4381,6 +4383,7 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
     });
   }
 
+  // 2. Task Queue එක සැකසීම
   const taskQueue = buildTimetableTaskQueue(targetClasses, workingSchedule);
 
   if (taskQueue.length === 0) {
@@ -4392,7 +4395,7 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
   const days = [0, 1, 2, 3, 4];
   const periods = [1, 2, 3, 4, 5, 6, 7, 8];
 
-  // Solver ශ්‍රිතය (Backtracking Core)
+  // 3. Solver ශ්‍රිතය (Backtracking Core)
   function executeSolver(currentMode) {
     let tempSchedule = [...workingSchedule];
     let iterationCount = 0;
@@ -4412,7 +4415,8 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
             let score = 0;
             if (currentMode === "PEDAGOGICAL") {
               const currentClassSlots = tempSchedule.filter(s => String(s.classId).toLowerCase() === String(task.classId).toLowerCase());
-              score = getPedagogicalScore(task.subject, d, p, currentClassSlots);
+              // පන්තිභාර ගුරු ප්‍රමුඛතාව සඳහා සම්පූර්ණ task එකම යවයි
+              score = getPedagogicalScore(task, d, p, currentClassSlots);
             } else {
               score = Math.random() * 100;
             }
@@ -4437,6 +4441,11 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
       for (let slot of candidateSlots) {
         const newPlacedSlots = [];
 
+        // විෂයට අදාළ Lab එකක් තිබේදැයි බැලීම
+        const targetLab = (typeof getRequiredLabForClassSubject === "function")
+          ? getRequiredLabForClassSubject(task.subject, task.grade)
+          : null;
+
         if (task.isBasket) {
           const linkedClasses = isSingleClass ? [task.classId] : (task.linkedClassIds || [task.classId]);
           linkedClasses.forEach(cid => {
@@ -4459,7 +4468,8 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
                 isBasket: true,
                 combinedSubjectId: task.combinedSubjectId,
                 groupCode: task.groupCode,
-                basketItems: basketItems
+                basketItems: basketItems,
+                labId: targetLab ? targetLab.id : null // 🔴 Basket එකට අදාළ Lab ID
               };
               newPlacedSlots.push(slotObj);
               tempSchedule.push(slotObj);
@@ -4474,7 +4484,8 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
               subject: task.subject,
               teacherId: task.teacherId,
               isLocked: false,
-              isCombined: false
+              isCombined: false,
+              labId: targetLab ? targetLab.id : null // 🔴 සාමාන්‍ය විෂයට අදාළ Lab ID
             };
             newPlacedSlots.push(slotObj);
             tempSchedule.push(slotObj);
@@ -4483,6 +4494,7 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
 
         if (solve(taskIndex + 1)) return true;
 
+        // Backtrack (ආපසු ගැනීම)
         for (let placed of newPlacedSlots) {
           const idx = tempSchedule.indexOf(placed);
           if (idx > -1) tempSchedule.splice(idx, 1);
@@ -4496,14 +4508,15 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
     return { success, resultSchedule: tempSchedule };
   }
 
-  // 1. ප්‍රථමයෙන් තෝරාගත් ක්‍රමයට උත්සාහ කිරීම
+  // 4. මුලින් තෝරාගත් ක්‍රමයට උත්සාහ කිරීම
   let outcome = executeSolver(mode);
 
-  // 2. PEDAGOGICAL ක්‍රමය දැඩි වීම නිසා අසමත් වුවහොත් ස්වයංක්‍රීයව SHUFFLE මඟින් උත්සාහ කිරීම
+  // 5. PEDAGOGICAL ක්‍රමයේදී ඉඩකඩ තදබද වුවහොත් ස්වයංක්‍රීයව SHUFFLE මඟින් උත්සාහ කිරීම
   if (!outcome.success && mode === "PEDAGOGICAL") {
     outcome = executeSolver("SHUFFLE");
   }
 
+  // 6. ප්‍රතිඵල සුරැකීම සහ Grid යාවත්කාලීන කිරීම
   if (outcome.success) {
     if (Array.isArray(scheduleList)) {
       scheduleList.length = 0;
@@ -4515,6 +4528,7 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
     if (typeof saveAllToStorage === "function") saveAllToStorage();
     if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
     if (typeof renderSubjectQuotaTray === "function" && targetClassId) renderSubjectQuotaTray(targetClassId);
+    if (typeof renderLabTimetableGrid === "function") renderLabTimetableGrid(); // Lab Grid එකද Refresh වේ
 
     const scopeTitle = isSingleClass ? `තෝරාගත් පන්තිය` : `මුළු පාසලේම සියලු පන්ති`;
     alert(`🎉 සාර්ථකයි! [${scopeTitle}] සඳහා කිසිදු ගැටුමකින් තොරව (Zero Clash) කාලච්ඡේද ${taskQueue.length} ම සාර්ථකව පිරවන ලදී.`);
@@ -4522,7 +4536,6 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
     alert("⚠️ කාලසටහන සම්පූර්ණ කිරීමට නොහැකි විය. පන්තියට පවරා ඇති ගුරුවරුන් වෙනත් පන්තිවල උගන්වන වේලාවන් හෝ අගුළු ලූ (Locked) විෂයන් නිසා ඉඩකඩ ප්‍රමාණවත් නොවේ.");
   }
 }
-    
 //window.runAutomatedTimetableGenerator = runAutomatedTimetableGenerator;
 
 // =========================================================================
@@ -10407,18 +10420,6 @@ window.saveSubjectTeachersAssignment = saveSubjectTeachersAssignment;
 
 
 
-const labCheck = checkLabAvailability(workingSchedule, task, slot.day, [slot.period + offset]);
-const slotObj = {
-  classId: task.classId,
-  day: slot.day,
-  period: slot.period + offset,
-  subject: task.subject,
-  teacherId: task.teacherId,
-  isLocked: false,
-  labId: labCheck.labId // 🔴 Lab එකක් අවශ්‍ය නම් එහි ID එක සටහන් වේ
-};
-
-    // 🔴 පන්තියකට සහ විෂයකට අදාළව Lab එකක් අවශ්‍ය දැයි සොයන ශ්‍රිතය
 // 🔴 පන්තියේ ශ්‍රේණිය සහ විෂය අනුව අදාළ Lab එක හඳුනාගැනීම
 function getRequiredLabForClassSubject(subjectName, classGrade) {
   if (!subjectName || !classGrade) return null;
