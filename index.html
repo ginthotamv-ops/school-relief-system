@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V9855
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V1919
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -10458,39 +10458,70 @@ function checkLabAvailability(scheduleList, task, day, targetPeriods) {
 }
 
     // 🔴 ප්‍රධාන Tabs අතර මාරු වීමේ ශ්‍රිතය
+
+// 🔴 ආරක්ෂිත Tab මාරු කිරීමේ ශ්‍රිතය (Safe Tab Switcher)
 function switchMainTab(tabId) {
-  // 1. සියලු Tab Panes සඟවන්න
-  const allTabs = document.querySelectorAll('.tab-pane');
-  allTabs.forEach(tab => tab.classList.add('hidden'));
-
-  // 2. සියලු Tab Buttons වල Active වර්ණ ඉවත් කරන්න
-  const allButtons = document.querySelectorAll('.tab-btn');
-  allButtons.forEach(btn => {
-    btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-xs');
-    btn.classList.add('text-slate-600', 'hover:bg-slate-100');
-  });
-
-  // 3. තෝරාගත් Tab එක පෙන්වීම
+  // 1. Lab Tab Container එක හඳුනාගැනීම
+  const labPane = document.getElementById('tabContentLabTimetable');
+  
   if (tabId === 'labTimetable') {
-    const labPane = document.getElementById('tabContentLabTimetable');
-    const labBtn = document.getElementById('btnTabLabTimetable');
-    
-    if (labPane) labPane.classList.remove('hidden');
-    if (labBtn) {
-      labBtn.classList.remove('text-slate-600', 'hover:bg-slate-100');
-      labBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-xs');
+    if (!labPane) {
+      console.error("❌ 'tabContentLabTimetable' නමින් HTML div එකක් හමු නොවීය! කරුණාකර HTML හි අදාළ id එක පරීක්ෂා කරන්න.");
+      alert("විද්‍යාගාර Container එක (id='tabContentLabTimetable') HTML තුළ හමු නොවීය.");
+      return;
     }
 
-    // Dropdown එක සහ Grid එක නැවුම් (Refresh) කිරීම
-    if (typeof populateLabDropdown === 'function') populateLabDropdown();
-    if (typeof renderLabTimetableGrid === 'function') renderLabTimetableGrid();
+    // 2. පද්ධතියේ දැනට පවතින අනෙකුත් ප්‍රධාන Timetable කොටස් සැඟවීම
+    // (ඔබගේ පද්ධතියේ Class Timetable එක ඇති Container එකේ ID එක මෙහි ඇත්දැයි බලන්න)
+    const existingContainers = [
+      'classTimetableContainer', 'classTimetableSection', 'classTimetableWrapper',
+      'teacherTimetableContainer', 'teacherTimetableSection',
+      'masterTimetableContainer', 'masterTimetableSection',
+      'tabContentClassTimetable'
+    ];
+    existingContainers.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('hidden');
+    });
+
+    // .tab-pane class එක ඇති කොටස් වේ නම් ඒවාද සඟවයි
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+      if (pane !== labPane) pane.classList.add('hidden');
+    });
+
+    // 3. Lab Tab එක ප්‍රදර්ශනය කිරීම
+    labPane.classList.remove('hidden');
+
+    // 4. Tab බොත්තම්වල Active වර්ණ මාරු කිරීම
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-xs');
+      btn.classList.add('text-slate-600', 'hover:bg-slate-100');
+    });
+    const activeBtn = document.getElementById('btnTabLabTimetable');
+    if (activeBtn) {
+      activeBtn.classList.remove('text-slate-600', 'hover:bg-slate-100');
+      activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-xs');
+    }
+
+    // 5. Dropdown සහ Grid එක Render කිරීම (ආරක්ෂිතව)
+    try {
+      if (typeof populateLabDropdown === 'function') populateLabDropdown();
+      if (typeof renderLabTimetableGrid === 'function') renderLabTimetableGrid();
+    } catch (err) {
+      console.error("Lab Grid එක ඇඳීමේදී දෝෂයක්:", err);
+    }
+
   } else {
-    // ඔබගේ පවතින අනෙක් Tab පෙන්වීම (උදා: classTimetable, teacherTimetable ආදී)
-    const targetPane = document.getElementById(`tabContent_${tabId}`) || document.getElementById(tabId);
+    // වෙනත් Tab එකක් ක්ලික් කළ විට Lab Tab එක සඟවයි
+    if (labPane) labPane.classList.add('hidden');
+    const targetPane = document.getElementById(tabId) || document.getElementById(`tabContent_${tabId}`);
     if (targetPane) targetPane.classList.remove('hidden');
   }
 }
 
+// Global Export එක අනිවාර්යයෙන්ම තබන්න:
+window.switchMainTab = switchMainTab;
+    
     // 🔴 විද්‍යාගාරයේ කාලසටහන වගුවක් ලෙස පෙන්වීම
 function renderLabTimetableGrid() {
   const container = document.getElementById("labTimetableGridContainer");
