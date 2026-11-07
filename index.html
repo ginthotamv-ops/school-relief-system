@@ -10834,39 +10834,77 @@ function checkLabAvailability(scheduleList, task, day, targetPeriods) {
     // 🔴 ප්‍රධාන Tabs අතර මාරු වීමේ ශ්‍රිතය
 
 // 🔴 ආරක්ෂිත Tab මාරු කිරීමේ ශ්‍රිතය (Safe Tab Switcher)
+// 🔴 Container එක නැතිනම් ස්වයංක්‍රීයව සාදන ආරක්ෂිත switchMainTab ශ්‍රිතය
 function switchMainTab(tabId) {
-  // 1. Lab Tab Container එක හඳුනාගැනීම
-  const labPane = document.getElementById('tabContentLabTimetable');
-  
   if (tabId === 'labTimetable') {
+    let labPane = document.getElementById('tabContentLabTimetable');
+
+    // 1. Container එක HTML හි නැතිනම් එය ස්වයංක්‍රීයව නිර්මාණය කිරීම
     if (!labPane) {
-      console.error("❌ 'tabContentLabTimetable' නමින් HTML div එකක් හමු නොවීය! කරුණාකර HTML හි අදාළ id එක පරීක්ෂා කරන්න.");
-      alert("විද්‍යාගාර Container එක (id='tabContentLabTimetable') HTML තුළ හමු නොවීය.");
-      return;
+      labPane = document.createElement('div');
+      labPane.id = 'tabContentLabTimetable';
+      labPane.className = 'tab-pane space-y-4';
+      
+      labPane.innerHTML = `
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mt-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200 mb-4">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black">
+                <i class="fa-solid fa-microscope text-base"></i>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-800">විද්‍යාගාර කාලසටහන් පුවරුව (Lab Timetable Board)</h3>
+                <p class="text-[11px] text-slate-500 font-semibold">තෝරාගත් විද්‍යාගාරය භාවිත වන කාලච්ඡේද සහ පන්ති</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <select id="labTimetableSelect" onchange="renderLabTimetableGrid()" class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700 cursor-pointer">
+              </select>
+
+              <button type="button" onclick="syncExistingScheduleLabs()" title="දැනට පවතින කාලසටහනේ විෂයන් Labs වෙත සවි කරන්න" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs">
+                <i class="fa-solid fa-rotate text-xs"></i> 
+                <span>Labs Sync</span>
+              </button>
+
+              <button type="button" onclick="window.print()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-print"></i> මුද්‍රණය
+              </button>
+
+              <button type="button" onclick="openAdvancedLabModal()" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-gear"></i> Labs සැකසුම්
+              </button>
+            </div>
+          </div>
+
+          <div id="labTimetableGridContainer" class="overflow-x-auto">
+          </div>
+        </div>
+      `;
+
+      // පන්ති කාලසටහන පවතින ප්‍රධාන කොටස අසලින්ම මෙය DOM එකට ඇතුළත් කරයි
+      const parentContainer = document.querySelector('.tab-pane')?.parentElement || document.querySelector('main') || document.body;
+      parentContainer.appendChild(labPane);
     }
 
-    // 2. පද්ධතියේ දැනට පවතින අනෙකුත් ප්‍රධාන Timetable කොටස් සැඟවීම
-    // (ඔබගේ පද්ධතියේ Class Timetable එක ඇති Container එකේ ID එක මෙහි ඇත්දැයි බලන්න)
-    const existingContainers = [
-      'classTimetableContainer', 'classTimetableSection', 'classTimetableWrapper',
-      'teacherTimetableContainer', 'teacherTimetableSection',
-      'masterTimetableContainer', 'masterTimetableSection',
-      'tabContentClassTimetable'
+    // 2. අනෙක් සියලුම Tab Panes සැඟවීම
+    document.querySelectorAll('.tab-pane').forEach(p => {
+      if (p !== labPane) p.classList.add('hidden');
+    });
+
+    const otherContainers = [
+      'classTimetableContainer', 'teacherTimetableContainer', 
+      'masterTimetableContainer', 'tabContentClassTimetable'
     ];
-    existingContainers.forEach(id => {
+    otherContainers.forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.classList.add('hidden');
+      if (el && el !== labPane) el.classList.add('hidden');
     });
 
-    // .tab-pane class එක ඇති කොටස් වේ නම් ඒවාද සඟවයි
-    document.querySelectorAll('.tab-pane').forEach(pane => {
-      if (pane !== labPane) pane.classList.add('hidden');
-    });
-
-    // 3. Lab Tab එක ප්‍රදර්ශනය කිරීම
+    // 3. Lab Tab එක පෙන්වීම
     labPane.classList.remove('hidden');
 
-    // 4. Tab බොත්තම්වල Active වර්ණ මාරු කිරීම
+    // 4. Tab බොත්තම්වල වර්ණ මාරු කිරීම
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-xs');
       btn.classList.add('text-slate-600', 'hover:bg-slate-100');
@@ -10877,47 +10915,65 @@ function switchMainTab(tabId) {
       activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-xs');
     }
 
-    // 5. Dropdown සහ Grid එක Render කිරීම (ආරක්ෂිතව)
-    try {
-      if (typeof populateLabDropdown === 'function') populateLabDropdown();
-      if (typeof renderLabTimetableGrid === 'function') renderLabTimetableGrid();
-    } catch (err) {
-      console.error("Lab Grid එක ඇඳීමේදී දෝෂයක්:", err);
-    }
+    // 5. Grid එක සහ Dropdown එක සකස් කිරීම
+    if (typeof populateLabDropdown === 'function') populateLabDropdown();
+    if (typeof renderLabTimetableGrid === 'function') renderLabTimetableGrid();
 
   } else {
-    // වෙනත් Tab එකක් ක්ලික් කළ විට Lab Tab එක සඟවයි
+    // වෙනත් Tab එකකට යන විට Lab Tab එක සැඟවීම
+    const labPane = document.getElementById('tabContentLabTimetable');
     if (labPane) labPane.classList.add('hidden');
+
     const targetPane = document.getElementById(tabId) || document.getElementById(`tabContent_${tabId}`);
     if (targetPane) targetPane.classList.remove('hidden');
   }
 }
-
 // Global Export එක අනිවාර්යයෙන්ම තබන්න:
 window.switchMainTab = switchMainTab;
     
     // 🔴 විද්‍යාගාරයේ කාලසටහන වගුවක් ලෙස පෙන්වීම
+
+// =========================================================================
+// 2. විද්‍යාගාර කාලසටහන වගුවක් ලෙස ඇඳීම (Bulletproof Grid Renderer)
+// =========================================================================
 function renderLabTimetableGrid() {
   const container = document.getElementById("labTimetableGridContainer");
   const select = document.getElementById("labTimetableSelect");
-  if (!container || !select) return;
+  if (!container) return;
 
-  const selectedLabId = select.value;
+  // Dropdown එක හිස් නම් පළමුව එය පුරවයි
+  if (!select || select.options.length === 0) {
+    populateLabDropdown();
+  }
+
+  const selectedLabId = select ? select.value : (window.schoolLabs && window.schoolLabs[0] ? window.schoolLabs[0].id : null);
+
+  // කිසිදු Lab එකක් නොමැති නම් විශේෂ පණිවිඩයක් පෙන්වයි
   if (!selectedLabId) {
-    container.innerHTML = `<div class="p-4 text-center text-xs text-slate-400 font-bold">කරුණාකර විද්‍යාගාරයක් තෝරන්න.</div>`;
+    container.innerHTML = `
+      <div class="p-8 text-center bg-slate-50 border border-dashed border-slate-300 rounded-2xl space-y-3">
+        <i class="fa-solid fa-flask-vial text-3xl text-emerald-600"></i>
+        <div class="text-xs font-bold text-slate-700">තවමත් විද්‍යාගාර ලියාපදිංචි කර නොමැත.</div>
+        <button type="button" onclick="openAdvancedLabModal()" class="px-3.5 py-1.5 bg-emerald-700 text-white font-bold rounded-lg text-xs hover:bg-emerald-800 cursor-pointer shadow-xs">
+          <i class="fa-solid fa-plus mr-1"></i> විද්‍යාගාරයක් එක් කරන්න
+        </button>
+      </div>
+    `;
     return;
   }
 
   const lab = (window.schoolLabs || []).find(l => l.id === selectedLabId);
-  const labName = lab ? lab.name : selectedLabId;
+  const labSubjects = lab ? (lab.subjects || []).map(s => String(s).trim().toLowerCase()) : [];
+  const labClasses = lab ? [...(lab.priority1Classes || []), ...(lab.priority2Classes || [])].map(c => String(c).trim().toLowerCase()) : [];
 
   const days = ["සඳුදා", "අඟහරුවාදා", "බදාදා", "බ්‍රහස්පතින්දා", "සිකුරාදා"];
   const periods = [1, 2, 3, 4, 5, 6, 7, 8];
+  const schedule = window.masterSchedule || [];
 
   let html = `
     <table class="w-full border-collapse border border-slate-200 text-xs text-center rounded-xl overflow-hidden shadow-2xs">
       <thead>
-        <tr class="bg-emerald-900 text-white font-bold">
+        <tr class="bg-gradient-to-r from-emerald-900 to-teal-900 text-white font-bold">
           <th class="p-2.5 border border-emerald-800 w-24">දිනය</th>
   `;
 
@@ -10926,32 +10982,42 @@ function renderLabTimetableGrid() {
   });
   html += `</tr></thead><tbody>`;
 
-  const schedule = window.masterSchedule || [];
-
   days.forEach((dayName, dIndex) => {
     html += `<tr class="border-b border-slate-200 hover:bg-slate-50/50">`;
     html += `<td class="p-2.5 bg-slate-100 font-extrabold text-slate-800 border border-slate-200">${dayName}</td>`;
 
     periods.forEach(p => {
-      // මෙම Lab එක මෙම දිනයේ සහ කාලච්ඡේදයේ වෙන්ව ඇති Slot එක සෙවීම
-      const slot = schedule.find(s => 
+      // 1. සෘජුවම labId එක ගැළපෙන slot එක සෙවීම
+      let slot = schedule.find(s => 
         s.labId === selectedLabId && 
         Number(s.day) === dIndex && 
         Number(s.period) === p
       );
 
+      // 2. Fallback: labId සටහන්ව නැති පැරණි කාලසටහනක් නම්, විෂය නම සහ පන්තිය අනුව හඳුනාගැනීම
+      if (!slot && lab) {
+        slot = schedule.find(s => {
+          if (Number(s.day) !== dIndex || Number(s.period) !== p) return false;
+          const sub = String(s.subject || '').trim().toLowerCase();
+          const cid = String(s.classId || '').trim().toLowerCase();
+          
+          const isSubMatch = labSubjects.some(ls => sub.includes(ls) || ls.includes(sub));
+          const isClassMatch = labClasses.length === 0 || labClasses.includes(cid);
+          return isSubMatch && isClassMatch;
+        });
+      }
+
       if (slot) {
-        // ගුරුවරයාගේ නම
         const teacher = (window.teachers || []).find(t => String(t.id).toLowerCase() === String(slot.teacherId).toLowerCase());
         const tName = teacher ? teacher.name : (slot.teacherId || "");
 
         html += `
-          <td class="p-2 border border-slate-200 bg-emerald-50/70 text-emerald-950 font-bold transition">
-            <div class="text-[11px] font-black text-emerald-800 bg-white border border-emerald-200 rounded px-1.5 py-0.5 inline-block shadow-2xs">
+          <td class="p-2 border border-slate-200 bg-emerald-50/90 text-emerald-950 font-bold transition">
+            <div class="text-[11px] font-black text-emerald-800 bg-white border border-emerald-300 rounded px-2 py-0.5 inline-block shadow-2xs">
               ${slot.classId}
             </div>
-            <div class="text-xs mt-1 text-slate-800 font-extrabold">${slot.subject}</div>
-            <div class="text-[10px] text-slate-500 font-semibold truncate max-w-[100px] mx-auto mt-0.5">${tName}</div>
+            <div class="text-xs mt-1 text-slate-900 font-extrabold">${slot.subject}</div>
+            <div class="text-[10px] text-slate-600 font-semibold truncate max-w-[110px] mx-auto mt-0.5">${tName}</div>
           </td>
         `;
       } else {
@@ -10970,6 +11036,10 @@ function renderLabTimetableGrid() {
   container.innerHTML = html;
 }
 
+// Global Exports
+window.populateLabDropdown = populateLabDropdown;
+window.renderLabTimetableGrid = renderLabTimetableGrid;
+    
 // 🔴 Modal එක සහ Dropdown එක සූදානම් කිරීමේ ශ්‍රිත
 function openLabManagementModal() {
   const modal = document.getElementById("labManagementModal");
@@ -10985,16 +11055,59 @@ function closeLabManagementModal() {
   renderLabTimetableGrid();
 }
 
+// =========================================================================
+// 1. විද්‍යාගාර Dropdown එක පිරවීම සහ ස්වයංක්‍රීයව 1 වන Lab එක තේරීම
+// =========================================================================
 function populateLabDropdown() {
   const select = document.getElementById("labTimetableSelect");
   if (!select) return;
+
+  // schoolLabs හිස්ව ඇත්නම් Default ආරම්භක දත්ත සැපයීම
+  if (!window.schoolLabs || !Array.isArray(window.schoolLabs) || window.schoolLabs.length === 0) {
+    window.schoolLabs = [
+      {
+        id: "LAB_COMP_1",
+        name: "පරිගණක විද්‍යාගාරය 01",
+        capacity: 1,
+        subjects: ["ICT", "තොරතුරු හා සන්නිවේදන තාක්ෂණය (ICT)", "තොරතුරු තාක්ෂණය", "GIT"],
+        priority1Classes: ["10-A", "10-B", "11-A", "11-B"],
+        priority2Classes: ["6-A", "6-B", "7-A", "7-B", "8-A", "8-B", "9-A", "9-B"]
+      },
+      {
+        id: "LAB_SCI_1",
+        name: "විද්‍යා විද්‍යාගාරය (Science Lab)",
+        capacity: 1,
+        subjects: ["විද්‍යාව", "Science"],
+        priority1Classes: ["10-A", "10-B", "11-A", "11-B"],
+        priority2Classes: ["9-A", "9-B"]
+      },
+      {
+        id: "LAB_HOME_SCI",
+        name: "ගෘහ විද්‍යාගාරය (Home Science Lab)",
+        capacity: 1,
+        subjects: ["ගෘහ විද්‍යාව", "කෘෂි විද්‍යාව", "PTS", "තාක්ෂණවේදය (PTS)"],
+        priority1Classes: ["10-A", "10-B", "11-A", "11-B"],
+        priority2Classes: ["8-A", "8-B", "9-A", "9-B"]
+      }
+    ];
+  }
+
+  const prevVal = select.value;
   select.innerHTML = "";
-  (window.schoolLabs || []).forEach(lab => {
+
+  window.schoolLabs.forEach((lab, idx) => {
     const opt = document.createElement("option");
     opt.value = lab.id;
-    opt.textContent = `${lab.name} (${lab.applicableGrades.map(g => `Gr ${g}`).join(', ')})`;
+    opt.textContent = lab.name;
     select.appendChild(opt);
   });
+
+  // කලින් තෝරාගත් Lab එක තිබේ නම් එය තබා ගනී, නැතහොත් පළමු Lab එක තෝරාගනී
+  if (prevVal && window.schoolLabs.some(l => l.id === prevVal)) {
+    select.value = prevVal;
+  } else if (window.schoolLabs.length > 0) {
+    select.selectedIndex = 0;
+  }
 }
 
 function renderRegisteredLabsList() {
