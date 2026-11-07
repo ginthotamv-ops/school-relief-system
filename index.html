@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V2010
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V75530
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -1171,33 +1171,89 @@
         </div>
 
         <!-- 3. පන්ති තේරීම: ප්‍රමුඛතාව 1 සහ ප්‍රමුඛතාව 2 -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-          
-          <!-- ප්‍රමුඛතාව 1 (Priority 1) -->
-          <div class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200">
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="font-black text-emerald-900">ප්‍රමුඛතාව 1 (අනිවාර්ය පන්ති)</span>
-              <span class="text-[10px] text-emerald-700 font-bold">1st Choice</span>
-            </div>
-            <p class="text-[10px] text-slate-500 mb-2">මෙම පන්තිවලට අදාළ විෂය ඇති විට මෙම Lab එක අනිවාර්යයෙන්ම වෙන් වේ.</p>
-            <div id="labP1ClassesContainer" class="max-h-32 overflow-y-auto bg-white p-2 rounded-lg border border-emerald-200 grid grid-cols-2 gap-1.5">
-              <!-- JS Classes List -->
-            </div>
-          </div>
+<!-- 3. පන්ති තේරීම: ප්‍රමුඛතාව 1 සහ ප්‍රමුඛතාව 2 (පැරණි කොටස වෙනුවට මෙය ආදේශ කරන්න) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+  
+  <!-- 🟢 ප්‍රමුඛතාව 1 (Priority 1) -->
+  <div class="p-3.5 bg-emerald-50/70 rounded-2xl border border-emerald-200 flex flex-col justify-between">
+    <div>
+      <div class="flex items-center justify-between mb-1">
+        <span class="font-black text-emerald-950 text-xs flex items-center gap-1.5">
+          <i class="fa-solid fa-star text-emerald-600 text-[11px]"></i>
+          <span>ප්‍රමුඛතාව 1 (අනිවාර්ය පන්ති)</span>
+        </span>
+        <span class="text-[10px] bg-emerald-200 text-emerald-900 font-extrabold px-1.5 py-0.5 rounded">1st Choice</span>
+      </div>
+      <p class="text-[10px] text-slate-500 mb-2">මෙම පන්තිවලට අදාළ විෂය ඇති විට මෙම Lab එක අනිවාර්යයෙන්ම හිමිවේ.</p>
 
-          <!-- ප්‍රමුඛතාව 2 (Priority 2) -->
-          <div class="p-3 bg-amber-50/70 rounded-xl border border-amber-200">
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="font-black text-amber-900">ප්‍රමුඛතාව 2 (ද්විතීයික / විකල්ප)</span>
-              <span class="text-[10px] text-amber-700 font-bold">2nd Choice</span>
-            </div>
-            <p class="text-[10px] text-slate-500 mb-2">ප්‍රමුඛතා 1 පන්තියක් නොමැති විට හෝ අමතර අවස්ථාවලදී භාවිතයට.</p>
-            <div id="labP2ClassesContainer" class="max-h-32 overflow-y-auto bg-white p-2 rounded-lg border border-amber-200 grid grid-cols-2 gap-1.5">
-              <!-- JS Classes List -->
-            </div>
-          </div>
-
+      <!-- P1 Quick Actions Bar -->
+      <div class="p-2 bg-white rounded-xl border border-emerald-200/80 mb-2 space-y-1.5">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-1.5">
+          <label class="inline-flex items-center gap-1.5 cursor-pointer font-bold text-slate-700 hover:text-emerald-800 text-[11px]">
+            <input type="checkbox" id="p1SelectAllChk" onchange="toggleAllClassesInContainer('labP1ClassesContainer', this.checked)" class="accent-emerald-600 rounded cursor-pointer">
+            <span>සියල්ල තෝරන්න</span>
+          </label>
+          <button type="button" onclick="clearClassesInContainer('labP1ClassesContainer', 'p1SelectAllChk')" class="text-[10px] text-rose-600 hover:underline font-bold cursor-pointer">
+            හිස් කරන්න
+          </button>
         </div>
+
+        <!-- ශ්‍රේණි අනුව තේරීමේ බොත්තම් -->
+        <div>
+          <span class="text-[9px] font-bold text-slate-400 block mb-1">ශ්‍රේණිය අනුව තේරීම:</span>
+          <div id="p1GradeChipsContainer" class="flex flex-wrap gap-1">
+            <!-- JS මඟින් Gr 6, Gr 7, Gr 10... බොත්තම් මෙතැනට Render වේ -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- P1 Classes List -->
+    <div id="labP1ClassesContainer" class="max-h-36 overflow-y-auto bg-white p-2.5 rounded-xl border border-emerald-200 grid grid-cols-2 gap-1.5 shadow-2xs">
+    </div>
+  </div>
+
+  <!-- 🟡 ප්‍රමුඛතාව 2 (Priority 2) -->
+  <div class="p-3.5 bg-amber-50/70 rounded-2xl border border-amber-200 flex flex-col justify-between">
+    <div>
+      <div class="flex items-center justify-between mb-1">
+        <span class="font-black text-amber-950 text-xs flex items-center gap-1.5">
+          <i class="fa-solid fa-clock-rotate-left text-amber-600 text-[11px]"></i>
+          <span>ප්‍රමුඛතාව 2 (ද්විතීයික / විකල්ප)</span>
+        </span>
+        <span class="text-[10px] bg-amber-200 text-amber-900 font-extrabold px-1.5 py-0.5 rounded">2nd Choice</span>
+      </div>
+      <p class="text-[10px] text-slate-500 mb-2">ප්‍රමුඛතා 1 පන්තියක් නොමැති විට හෝ අතිරික්ත අවස්ථාවලදී භාවිතයට.</p>
+
+      <!-- P2 Quick Actions Bar -->
+      <div class="p-2 bg-white rounded-xl border border-amber-200/80 mb-2 space-y-1.5">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-1.5">
+          <label class="inline-flex items-center gap-1.5 cursor-pointer font-bold text-slate-700 hover:text-amber-800 text-[11px]">
+            <input type="checkbox" id="p2SelectAllChk" onchange="toggleAllClassesInContainer('labP2ClassesContainer', this.checked)" class="accent-amber-600 rounded cursor-pointer">
+            <span>සියල්ල තෝරන්න</span>
+          </label>
+          <button type="button" onclick="clearClassesInContainer('labP2ClassesContainer', 'p2SelectAllChk')" class="text-[10px] text-rose-600 hover:underline font-bold cursor-pointer">
+            හිස් කරන්න
+          </button>
+        </div>
+
+        <!-- Priority 01 හැර අනෙක් සියල්ල තේරීමේ බොත්තම -->
+        <button type="button" 
+                onclick="selectP2ExceptP1()" 
+                title="Priority 1 ලෙස තෝරා නොගත් ඉතිරි සියලු පන්ති Priority 2 ලෙස එකවර තෝරන්න"
+                class="w-full py-1 px-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-extrabold rounded-lg text-[10px] flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition">
+          <i class="fa-solid fa-bolt text-amber-200"></i>
+          <span>P1 හැර අනෙක් සියල්ල තෝරන්න (Except P1)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- P2 Classes List -->
+    <div id="labP2ClassesContainer" class="max-h-36 overflow-y-auto bg-white p-2.5 rounded-xl border border-amber-200 grid grid-cols-2 gap-1.5 shadow-2xs">
+    </div>
+  </div>
+
+</div>
 
         <div class="flex justify-end pt-1">
           <button type="button" onclick="saveAdvancedLab()" class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-lg shadow-xs cursor-pointer flex items-center gap-1.5">
@@ -10615,38 +10671,144 @@ function populateLabSubjectCheckboxes(selectedSubs = []) {
   });
 }
 
+// =========================================================================
+// 2. ක්ෂණික තේරීම් සහ සහායක ශ්‍රිත (Quick Select Helpers)
+// =========================================================================
+
+// A. සියල්ල තෝරන්න / ඉවත් කරන්න (Select All)
+function toggleAllClassesInContainer(containerId, isChecked) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const checkboxes = container.querySelectorAll("input[type='checkbox']");
+  checkboxes.forEach(cb => cb.checked = isChecked);
+}
+
+// B. ශ්‍රේණියක් අනුව පමණක් තේරීම / ඉවත් කිරීම (Grade Wise Toggle)
+function toggleGradeClassesInContainer(containerId, gradeNum) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const checkboxes = Array.from(container.querySelectorAll(`input[data-grade='${gradeNum}']`));
+  if (checkboxes.length === 0) return;
+
+  // සියල්ල දැනටමත් Checked නම් Uncheck කරයි, නැතහොත් Checked කරයි
+  const areAllChecked = checkboxes.every(cb => cb.checked);
+  checkboxes.forEach(cb => cb.checked = !areAllChecked);
+}
+
+// C. ලැයිස්තුව හිස් කිරීම (Clear)
+function clearClassesInContainer(containerId, masterChkId) {
+  const container = document.getElementById(containerId);
+  if (container) {
+    const checkboxes = container.querySelectorAll("input[type='checkbox']");
+    checkboxes.forEach(cb => cb.checked = false);
+  }
+  const masterChk = document.getElementById(masterChkId);
+  if (masterChk) masterChk.checked = false;
+}
+
+// 🔴 D. ප්‍රමුඛතාව 01 හැර අනෙක් සියල්ල P2 ලෙස තේරීම (Except P1)
+function selectP2ExceptP1() {
+  // 1. දැනට Priority 1 හි Check කර ඇති පන්ති සොයා ගැනීම
+  const p1CheckedBoxes = document.querySelectorAll("#labP1ClassesContainer input.lab-p1-chk:checked");
+  const p1SelectedClassIds = new Set(Array.from(p1CheckedBoxes).map(cb => String(cb.value).trim().toLowerCase()));
+
+  // 2. Priority 2 ලැයිස්තුවේ ඇති පන්ති පරීක්ෂා කිරීම
+  const p2Boxes = document.querySelectorAll("#labP2ClassesContainer input.lab-p2-chk");
+  let selectedCount = 0;
+
+  p2Boxes.forEach(cb => {
+    const cid = String(cb.value).trim().toLowerCase();
+    // P1 හි නැතිනම් P2 ලෙස Check කරයි, P1 හි ඇත්නම් P2 වෙතින් ඉවත් කරයි (ගැටුම් වැළැක්වීමට)
+    if (!p1SelectedClassIds.has(cid)) {
+      cb.checked = true;
+      selectedCount++;
+    } else {
+      cb.checked = false;
+    }
+  });
+
+  const p2MasterChk = document.getElementById("p2SelectAllChk");
+  if (p2MasterChk) p2MasterChk.checked = false;
+
+  if (p1SelectedClassIds.size === 0) {
+    alert("ℹ️ Priority 1 සඳහා පන්ති තෝරා නැති බැවින්, සියලුම පන්ති Priority 2 ලෙස සලකුණු විය.");
+  }
+}
+
+// Global Exports
+window.populateLabClassCheckboxes = populateLabClassCheckboxes;
+window.toggleAllClassesInContainer = toggleAllClassesInContainer;
+window.toggleGradeClassesInContainer = toggleGradeClassesInContainer;
+window.clearClassesInContainer = clearClassesInContainer;
+window.selectP2ExceptP1 = selectP2ExceptP1;
+
+    
 // 🔴 3. පන්ති ලැයිස්තුව (P1 සහ P2) Checkboxes ලෙස පිරවීම
+// =========================================================================
+// 1. පන්ති සහ ශ්‍රේණි Checkbox ලැයිස්තු සැකසීම (Dynamic Class Populator)
+// =========================================================================
 function populateLabClassCheckboxes(p1Selected = [], p2Selected = []) {
   const p1Container = document.getElementById("labP1ClassesContainer");
   const p2Container = document.getElementById("labP2ClassesContainer");
+  const p1ChipsContainer = document.getElementById("p1GradeChipsContainer");
+
   if (!p1Container || !p2Container) return;
 
   p1Container.innerHTML = "";
   p2Container.innerHTML = "";
+  if (p1ChipsContainer) p1ChipsContainer.innerHTML = "";
 
   const classes = window.schoolClasses || [];
+  if (classes.length === 0) {
+    p1Container.innerHTML = `<span class="text-slate-400 text-[11px] col-span-2 text-center p-2">පන්ති හමු නොවීය.</span>`;
+    p2Container.innerHTML = `<span class="text-slate-400 text-[11px] col-span-2 text-center p-2">පන්ති හමු නොවීය.</span>`;
+    return;
+  }
 
+  // 1. පාසලේ ඇති සියලු ශ්‍රේණි හඳුනාගැනීම (උදා: 6, 7, 8, 9, 10, 11...)
+  const gradeSet = new Set();
+  classes.forEach(c => {
+    const rawGrade = c.grade || parseInt(c.name) || parseInt(c.id) || 0;
+    if (rawGrade > 0) gradeSet.add(rawGrade);
+  });
+  const sortedGrades = Array.from(gradeSet).sort((a, b) => a - b);
+
+  // 2. Priority 1 සඳහා ශ්‍රේණි අනුව තේරීමේ බොත්තම් (Grade Chips) සෑදීම
+  if (p1ChipsContainer) {
+    sortedGrades.forEach(g => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "px-2 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 font-extrabold rounded-md text-[10px] cursor-pointer transition";
+      btn.textContent = `Gr ${g}`;
+      btn.title = `Grade ${g} පන්ති සියල්ල තෝරන්න / ඉවත් කරන්න`;
+      btn.onclick = () => toggleGradeClassesInContainer('labP1ClassesContainer', g);
+      p1ChipsContainer.appendChild(btn);
+    });
+  }
+
+  // 3. එක් එක් පන්තිය සඳහා P1 සහ P2 Checkbox සැකසීම
   classes.forEach(cls => {
     const cid = String(cls.id || cls.name).trim();
-    const cName = cls.name ? `${cls.name} (${cid})` : cid;
+    const cName = cls.name ? `${cls.name}` : cid;
+    const gradeNum = cls.grade || parseInt(cls.name) || parseInt(cls.id) || 0;
 
     // P1 Checkbox
-    const isP1 = p1Selected.includes(cid);
+    const isP1 = p1Selected.some(c => String(c).trim().toLowerCase() === cid.toLowerCase());
     const p1Label = document.createElement("label");
-    p1Label.className = "flex items-center gap-1.5 p-1 rounded hover:bg-emerald-100/60 cursor-pointer font-bold text-emerald-950";
+    p1Label.className = "flex items-center gap-1.5 p-1 rounded-lg hover:bg-emerald-50 cursor-pointer font-bold text-slate-800 text-[11px]";
     p1Label.innerHTML = `
-      <input type="checkbox" value="${cid}" class="lab-p1-chk accent-emerald-600 rounded cursor-pointer" ${isP1 ? 'checked' : ''}>
-      <span class="truncate">${cName}</span>
+      <input type="checkbox" value="${cid}" data-grade="${gradeNum}" class="lab-p1-chk accent-emerald-600 rounded cursor-pointer" ${isP1 ? 'checked' : ''}>
+      <span class="truncate" title="${cName}">${cName}</span>
     `;
     p1Container.appendChild(p1Label);
 
     // P2 Checkbox
-    const isP2 = p2Selected.includes(cid);
+    const isP2 = p2Selected.some(c => String(c).trim().toLowerCase() === cid.toLowerCase());
     const p2Label = document.createElement("label");
-    p2Label.className = "flex items-center gap-1.5 p-1 rounded hover:bg-amber-100/60 cursor-pointer font-bold text-amber-950";
+    p2Label.className = "flex items-center gap-1.5 p-1 rounded-lg hover:bg-amber-50 cursor-pointer font-bold text-slate-800 text-[11px]";
     p2Label.innerHTML = `
-      <input type="checkbox" value="${cid}" class="lab-p2-chk accent-amber-600 rounded cursor-pointer" ${isP2 ? 'checked' : ''}>
-      <span class="truncate">${cName}</span>
+      <input type="checkbox" value="${cid}" data-grade="${gradeNum}" class="lab-p2-chk accent-amber-600 rounded cursor-pointer" ${isP2 ? 'checked' : ''}>
+      <span class="truncate" title="${cName}">${cName}</span>
     `;
     p2Container.appendChild(p2Label);
   });
