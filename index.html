@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V1919
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V5055
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -1073,48 +1073,101 @@
     </div>
   </div>
 
-<!-- 🔴 Lab Timetable Tab Content (පෙරනිමියෙන් සඟවා තබයි) -->
-<div id="tabContentLabTimetable" class="tab-pane hidden space-y-4">
-  
-  <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+<!-- 🔴 වැඩිදියුණු කළ Lab Configuration Modal -->
+<div id="advancedLabModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3">
+  <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
     
-    <!-- Header & Dropdown Toolbar -->
-    <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200 mb-4">
+    <!-- Modal Header -->
+    <div class="px-5 py-3.5 bg-gradient-to-r from-teal-800 to-emerald-900 text-white flex items-center justify-between">
       <div class="flex items-center gap-2.5">
-        <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black">
-          <i class="fa-solid fa-microscope text-base"></i>
-        </div>
-        <div>
-          <h3 class="font-extrabold text-sm text-slate-800">විද්‍යාගාර කාලසටහන් පුවරුව (Lab Timetable Board)</h3>
-          <p class="text-[11px] text-slate-500 font-semibold">තෝරාගත් විද්‍යාගාරය භාවිත වන කාලච්ඡේද සහ පන්ති</p>
-        </div>
+        <i class="fa-solid fa-flask-vial text-teal-300"></i>
+        <h3 class="font-bold text-sm">විද්‍යාගාර සහ විශේෂ කාමර වෙන්කිරීම් (Lab Setup)</h3>
       </div>
-
-      <div class="flex items-center gap-2">
-        <!-- Lab තෝරන Dropdown එක -->
-        <select id="labTimetableSelect" onchange="renderLabTimetableGrid()" class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700 cursor-pointer">
-          <!-- JS මඟින් ලැයිස්තුව පිරවේ -->
-        </select>
-
-        <!-- මුද්‍රණ බොත්තම -->
-        <button type="button" onclick="window.print()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer">
-          <i class="fa-solid fa-print"></i> මුද්‍රණය
-        </button>
-
-        <!-- සැකසුම් Modal බොත්තම -->
-        <button type="button" onclick="openLabManagementModal()" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer">
-          <i class="fa-solid fa-gear"></i> Labs සැකසුම්
-        </button>
-      </div>
+      <button type="button" onclick="closeAdvancedLabModal()" class="text-teal-200 hover:text-white cursor-pointer">
+        <i class="fa-solid fa-xmark text-base"></i>
+      </button>
     </div>
 
-    <!-- Grid Table එක Render වන ස්ථානය -->
-    <div id="labTimetableGridContainer" class="overflow-x-auto">
-      <!-- Grid එක මෙතැනට පිරවේ -->
+    <!-- Modal Body (Scrollable) -->
+    <div class="p-5 overflow-y-auto space-y-4 text-xs">
+      
+      <!-- නව Lab එකක් සැකසීමේ Panel එක -->
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
+        <input type="hidden" id="labEditId" value="">
+        <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+          <span class="font-extrabold text-slate-800 text-xs" id="labFormTitle">නව විද්‍යාගාරයක් / විශේෂ කාමරයක් ඇතුළත් කිරීම</span>
+          <button type="button" onclick="resetLabForm()" class="text-indigo-600 hover:underline font-bold text-[11px]">අලුතින් සකසන්න</button>
+        </div>
+
+        <!-- 1. නම සහ ධාරිතාව -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="md:col-span-2">
+            <label class="font-bold text-slate-700 block mb-1">විද්‍යාගාරයේ නම:</label>
+            <input type="text" id="labInputName" placeholder="උදා: ගෘහ විද්‍යාගාරය / පරිගණක විද්‍යාගාරය 01" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-bold text-slate-800">
+          </div>
+          <div>
+            <label class="font-bold text-slate-700 block mb-1">ධාරිතාව (එකවර පන්ති):</label>
+            <input type="number" id="labInputCapacity" min="1" max="5" value="1" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-bold text-slate-800">
+          </div>
+        </div>
+
+        <!-- 2. මෙම Lab එකට අදාළ විෂයන් (Multi-Select Checkboxes) -->
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">
+            මෙම Lab එක භාවිත වන විෂයන් (එකක් හෝ කිහිපයක් තෝරන්න):
+          </label>
+          <div id="labSubjectCheckboxes" class="max-h-28 overflow-y-auto bg-white p-2.5 rounded-lg border border-slate-200 grid grid-cols-2 md:grid-cols-3 gap-2">
+            <!-- JS මඟින් දැනට පවතින විෂයන් මෙතැනට Render වේ -->
+          </div>
+        </div>
+
+        <!-- 3. පන්ති තේරීම: ප්‍රමුඛතාව 1 සහ ප්‍රමුඛතාව 2 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+          
+          <!-- ප්‍රමුඛතාව 1 (Priority 1) -->
+          <div class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="font-black text-emerald-900">ප්‍රමුඛතාව 1 (අනිවාර්ය පන්ති)</span>
+              <span class="text-[10px] text-emerald-700 font-bold">1st Choice</span>
+            </div>
+            <p class="text-[10px] text-slate-500 mb-2">මෙම පන්තිවලට අදාළ විෂය ඇති විට මෙම Lab එක අනිවාර්යයෙන්ම වෙන් වේ.</p>
+            <div id="labP1ClassesContainer" class="max-h-32 overflow-y-auto bg-white p-2 rounded-lg border border-emerald-200 grid grid-cols-2 gap-1.5">
+              <!-- JS Classes List -->
+            </div>
+          </div>
+
+          <!-- ප්‍රමුඛතාව 2 (Priority 2) -->
+          <div class="p-3 bg-amber-50/70 rounded-xl border border-amber-200">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="font-black text-amber-900">ප්‍රමුඛතාව 2 (ද්විතීයික / විකල්ප)</span>
+              <span class="text-[10px] text-amber-700 font-bold">2nd Choice</span>
+            </div>
+            <p class="text-[10px] text-slate-500 mb-2">ප්‍රමුඛතා 1 පන්තියක් නොමැති විට හෝ අමතර අවස්ථාවලදී භාවිතයට.</p>
+            <div id="labP2ClassesContainer" class="max-h-32 overflow-y-auto bg-white p-2 rounded-lg border border-amber-200 grid grid-cols-2 gap-1.5">
+              <!-- JS Classes List -->
+            </div>
+          </div>
+
+        </div>
+
+        <div class="flex justify-end pt-1">
+          <button type="button" onclick="saveAdvancedLab()" class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-lg shadow-xs cursor-pointer flex items-center gap-1.5">
+            <i class="fa-solid fa-floppy-disk text-xs"></i> විද්‍යාගාරය සුරකින්න
+          </button>
+        </div>
+      </div>
+
+      <!-- දැනට සකසා ඇති Labs ලැයිස්තුව -->
+      <div>
+        <label class="font-extrabold text-slate-800 block mb-2">දැනට ලියාපදිංචි කර ඇති විද්‍යාගාර ලැයිස්තුව:</label>
+        <div id="advancedLabsList" class="space-y-2">
+          <!-- JS මඟින් Cards මෙතැනට Render වේ -->
+        </div>
+      </div>
+
     </div>
 
   </div>
-
 </div>
 
   
@@ -2469,26 +2522,37 @@ function resetSystemData() {
 
 
     // 🔴 පාසලේ පවතින විද්‍යාගාර ලැයිස්තුව (Global School Labs State)
-var schoolLabs = window.schoolLabs || [
-  {
-    id: "LAB_COMP_1",
-    name: "ප්‍රධාන පරිගණක විද්‍යාගාරය",
-    type: "computer",
-    applicableGrades: [10, 11, 12, 13], // 6-9 සාමාන්‍ය පන්තියේ නම් මෙහි නොවැටේ
-    applicableSubjects: ["ict", "තොරතුරු තාක්ෂණය", "git"],
-    capacity: 1 // එකවර භාවිත කළ හැකි පන්ති ගණන
-  },
-  {
-    id: "LAB_SCI_1",
-    name: "විද්‍යා විද්‍යාගාරය (Science Lab)",
-    type: "science",
-    applicableGrades: [9, 10, 11], // ප්‍රායෝගික පරීක්ෂණ අවශ්‍ය ශ්‍රේණි පමණි
-    applicableSubjects: ["science", "විද්‍යාව"],
-    capacity: 1
-  }
-];
-window.schoolLabs = schoolLabs;
+// 🔴 නව ආකෘතියට අනුව යාවත්කාලීන කළ ආරම්භක විද්‍යාගාර ලැයිස්තුව
+var schoolLabs = (typeof window !== "undefined" && window.schoolLabs && window.schoolLabs.length > 0 && window.schoolLabs[0].subjects) 
+  ? window.schoolLabs 
+  : [
+      {
+        id: "LAB_COMP_1",
+        name: "පරිගණක විද්‍යාගාරය 01",
+        capacity: 1,
+        subjects: ["තොරතුරු හා සන්නිවේදන තාක්ෂණය (ICT)", "ICT", "තොරතුරු තාක්ෂණය", "GIT"],
+        priority1Classes: ["10-A", "10-B", "11-A", "11-B"], // ප්‍රමුඛතාව 1 පන්ති
+        priority2Classes: ["6-A", "6-B", "7-A", "7-B", "8-A", "8-B", "9-A", "9-B"]  // ප්‍රමුඛතාව 2 පන්ති
+      },
+      {
+        id: "LAB_SCI_1",
+        name: "විද්‍යා විද්‍යාගාරය (Science Lab)",
+        capacity: 1,
+        subjects: ["විද්‍යාව", "Science"],
+        priority1Classes: ["10-A", "10-B", "11-A", "11-B"],
+        priority2Classes: ["9-A", "9-B"]
+      },
+      {
+        id: "LAB_HOME_SCI",
+        name: "ගෘහ විද්‍යාගාරය (Home Science Lab)",
+        capacity: 1,
+        subjects: ["ගෘහ විද්‍යාව", "කෘෂි විද්‍යාව", "තාක්ෂණවේදය (PTS)", "PTS"],
+        priority1Classes: ["10-A", "10-B", "11-A", "11-B"],
+        priority2Classes: ["8-A", "8-B", "9-A", "9-B"]
+      }
+    ];
 
+window.schoolLabs = schoolLabs;
     
     // =========================================================================
     // 5. ATTENDANCE & AUTO RELIEF
@@ -10418,6 +10482,267 @@ window.saveSubjectTeachersAssignment = saveSubjectTeachersAssignment;
 
 
 
+// 🔴 1. Modal එක විවෘත කිරීම සහ Checkboxes පිරවීම
+function openAdvancedLabModal() {
+  const modal = document.getElementById("advancedLabModal");
+  if (!modal) return;
+
+  populateLabSubjectCheckboxes();
+  populateLabClassCheckboxes();
+  renderAdvancedLabsList();
+  modal.classList.remove("hidden");
+}
+
+function closeAdvancedLabModal() {
+  const modal = document.getElementById("advancedLabModal");
+  if (modal) modal.classList.add("hidden");
+  resetLabForm();
+  if (typeof populateLabDropdown === 'function') populateLabDropdown();
+  if (typeof renderLabTimetableGrid === 'function') renderLabTimetableGrid();
+}
+
+// 🔴 2. පද්ධතියේ දැනට පවතින විෂයන් ලබාගෙන Checkboxes සෑදීම
+// 🔴 ඔබගේ DB එකේ ලියාපදිංචි කර ඇති විෂයන් පමණක් සෘජුවම කියවන ශ්‍රිතය
+function populateLabSubjectCheckboxes(selectedSubs = []) {
+  const container = document.getElementById("labSubjectCheckboxes");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const subjectSet = new Set();
+
+  // 1. Curriculum Subjects DB එකෙන් විෂයන් කියවීම
+  if (Array.isArray(window.curriculumSubjects)) {
+    window.curriculumSubjects.forEach(cs => {
+      if (cs && cs.subject && typeof cs.subject === 'string') {
+        const cleanName = cs.subject.trim();
+        if (cleanName) subjectSet.add(cleanName);
+      }
+    });
+  }
+
+  // 2. Combined / Basket Subjects DB එකෙන් කියවීම
+  if (Array.isArray(window.combinedCurriculumSubjects)) {
+    window.combinedCurriculumSubjects.forEach(comb => {
+      if (comb.name) subjectSet.add(comb.name.trim());
+      if (Array.isArray(comb.subjects)) {
+        comb.subjects.forEach(sub => {
+          if (sub && typeof sub === 'string') subjectSet.add(sub.trim());
+        });
+      }
+    });
+  }
+
+  // 3. පන්තිවල ගුරුවරුන් පවරා ඇති විෂයන්ගෙන් (Classes DB) කියවීම
+  if (Array.isArray(window.schoolClasses)) {
+    window.schoolClasses.forEach(cls => {
+      if (cls && cls.subjectTeachers && typeof cls.subjectTeachers === 'object') {
+        Object.keys(cls.subjectTeachers).forEach(subKey => {
+          if (subKey && typeof subKey === 'string') {
+            subjectSet.add(subKey.trim());
+          }
+        });
+      }
+    });
+  }
+
+  // DB එකේ විෂයන් කිසිවක් නැතිනම් පමණක් පණිවිඩයක් පෙන්වයි
+  if (subjectSet.size === 0) {
+    container.innerHTML = `<span class="text-slate-400 font-bold p-2 col-span-3 text-center">DB එකේ කිසිදු විෂයක් හමු නොවීය. කරුණාකර පළමුව විෂය නිර්දේශය පරීක්ෂා කරන්න.</span>`;
+    return;
+  }
+
+  // 4. අකාරාදී පිළිවෙළට සකසා Checkboxes නිර්මාණය කිරීම
+  Array.from(subjectSet).sort().forEach(subName => {
+    // තෝරාගෙන ඇති විෂයක් දැයි නිරවද්‍යව බැලීම (Case-insensitive)
+    const isChecked = selectedSubs.some(s => String(s).trim().toLowerCase() === subName.toLowerCase());
+
+    const label = document.createElement("label");
+    label.className = "flex items-center gap-1.5 p-1.5 rounded-lg border border-slate-100 hover:bg-slate-50 cursor-pointer font-bold text-slate-700 transition";
+    label.innerHTML = `
+      <input type="checkbox" value="${subName}" class="lab-subject-chk accent-teal-600 rounded cursor-pointer" ${isChecked ? 'checked' : ''}>
+      <span class="truncate text-[11px]" title="${subName}">${subName}</span>
+    `;
+    container.appendChild(label);
+  });
+}
+
+// 🔴 3. පන්ති ලැයිස්තුව (P1 සහ P2) Checkboxes ලෙස පිරවීම
+function populateLabClassCheckboxes(p1Selected = [], p2Selected = []) {
+  const p1Container = document.getElementById("labP1ClassesContainer");
+  const p2Container = document.getElementById("labP2ClassesContainer");
+  if (!p1Container || !p2Container) return;
+
+  p1Container.innerHTML = "";
+  p2Container.innerHTML = "";
+
+  const classes = window.schoolClasses || [];
+
+  classes.forEach(cls => {
+    const cid = String(cls.id || cls.name).trim();
+    const cName = cls.name ? `${cls.name} (${cid})` : cid;
+
+    // P1 Checkbox
+    const isP1 = p1Selected.includes(cid);
+    const p1Label = document.createElement("label");
+    p1Label.className = "flex items-center gap-1.5 p-1 rounded hover:bg-emerald-100/60 cursor-pointer font-bold text-emerald-950";
+    p1Label.innerHTML = `
+      <input type="checkbox" value="${cid}" class="lab-p1-chk accent-emerald-600 rounded cursor-pointer" ${isP1 ? 'checked' : ''}>
+      <span class="truncate">${cName}</span>
+    `;
+    p1Container.appendChild(p1Label);
+
+    // P2 Checkbox
+    const isP2 = p2Selected.includes(cid);
+    const p2Label = document.createElement("label");
+    p2Label.className = "flex items-center gap-1.5 p-1 rounded hover:bg-amber-100/60 cursor-pointer font-bold text-amber-950";
+    p2Label.innerHTML = `
+      <input type="checkbox" value="${cid}" class="lab-p2-chk accent-amber-600 rounded cursor-pointer" ${isP2 ? 'checked' : ''}>
+      <span class="truncate">${cName}</span>
+    `;
+    p2Container.appendChild(p2Label);
+  });
+}
+
+// 🔴 4. විද්‍යාගාරය සුරැකීම (Add / Edit)
+function saveAdvancedLab() {
+  const name = document.getElementById("labInputName").value.trim();
+  const capacity = parseInt(document.getElementById("labInputCapacity").value) || 1;
+  const editId = document.getElementById("labEditId").value;
+
+  if (!name) {
+    alert("කරුණාකර විද්‍යාගාරයේ නම ඇතුළත් කරන්න.");
+    return;
+  }
+
+  // තෝරාගත් විෂයන්
+  const selectedSubjects = Array.from(document.querySelectorAll(".lab-subject-chk:checked")).map(cb => cb.value);
+  if (selectedSubjects.length === 0) {
+    alert("කරුණාකර මෙම Lab එකට අදාළ විෂයක් හෝ කිහිපයක් තෝරන්න.");
+    return;
+  }
+
+  // තෝරාගත් P1 සහ P2 පන්ති
+  const p1Classes = Array.from(document.querySelectorAll(".lab-p1-chk:checked")).map(cb => cb.value);
+  const p2Classes = Array.from(document.querySelectorAll(".lab-p2-chk:checked")).map(cb => cb.value);
+
+  if (!window.schoolLabs) window.schoolLabs = [];
+
+  if (editId) {
+    // Edit පවතින Lab එකක්
+    const lab = window.schoolLabs.find(l => l.id === editId);
+    if (lab) {
+      lab.name = name;
+      lab.capacity = capacity;
+      lab.subjects = selectedSubjects;
+      lab.priority1Classes = p1Classes;
+      lab.priority2Classes = p2Classes;
+    }
+  } else {
+    // නව Lab එකක්
+    const newLab = {
+      id: `LAB_${Date.now()}`,
+      name: name,
+      capacity: capacity,
+      subjects: selectedSubjects,
+      priority1Classes: p1Classes,
+      priority2Classes: p2Classes
+    };
+    window.schoolLabs.push(newLab);
+  }
+
+  if (typeof saveAllToStorage === "function") saveAllToStorage();
+  resetLabForm();
+  renderAdvancedLabsList();
+  alert("✅ විද්‍යාගාර සැකසුම් සාර්ථකව සුරකින ලදී!");
+}
+
+// 🔴 5. ලියාපදිංචි Labs පෙන්වීම සහ Edit / Delete
+function renderAdvancedLabsList() {
+  const container = document.getElementById("advancedLabsList");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const labs = window.schoolLabs || [];
+  if (labs.length === 0) {
+    container.innerHTML = `<div class="p-3 bg-slate-50 text-slate-400 font-bold text-center rounded-lg">තවමත් විද්‍යාගාර ඇතුළත් කර නැත.</div>`;
+    return;
+  }
+
+  labs.forEach((lab, index) => {
+    const card = document.createElement("div");
+    card.className = "p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-1.5";
+    card.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div class="font-black text-slate-800 text-xs flex items-center gap-2">
+          <i class="fa-solid fa-flask text-teal-600"></i>
+          <span>${lab.name}</span>
+          <span class="bg-teal-50 text-teal-700 text-[10px] px-2 py-0.5 rounded-full font-bold">ධාරිතාව: ${lab.capacity || 1}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="editAdvancedLab('${lab.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold px-1.5 cursor-pointer">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+          <button type="button" onclick="deleteAdvancedLab(${index})" class="text-rose-600 hover:text-rose-800 font-bold px-1.5 cursor-pointer">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="text-[11px] text-slate-600">
+        <span class="font-bold text-slate-700">විෂයන්:</span> ${(lab.subjects || []).join(", ") || 'සියල්ල'}
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 text-[10px] pt-1 border-t border-slate-100">
+        <div>
+          <span class="font-extrabold text-emerald-800">ප්‍රමුඛතාව 1 (P1):</span> 
+          <span class="text-slate-600 font-semibold">${(lab.priority1Classes || []).join(", ") || 'නැත'}</span>
+        </div>
+        <div>
+          <span class="font-extrabold text-amber-800">ප්‍රමුඛතාව 2 (P2):</span> 
+          <span class="text-slate-600 font-semibold">${(lab.priority2Classes || []).join(", ") || 'නැත'}</span>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function editAdvancedLab(id) {
+  const lab = (window.schoolLabs || []).find(l => l.id === id);
+  if (!lab) return;
+
+  document.getElementById("labEditId").value = lab.id;
+  document.getElementById("labInputName").value = lab.name;
+  document.getElementById("labInputCapacity").value = lab.capacity || 1;
+  document.getElementById("labFormTitle").textContent = `විද්‍යාගාරය සංස්කරණය: ${lab.name}`;
+
+  populateLabSubjectCheckboxes(lab.subjects || []);
+  populateLabClassCheckboxes(lab.priority1Classes || [], lab.priority2Classes || []);
+}
+
+function resetLabForm() {
+  document.getElementById("labEditId").value = "";
+  document.getElementById("labInputName").value = "";
+  document.getElementById("labInputCapacity").value = "1";
+  document.getElementById("labFormTitle").textContent = "නව විද්‍යාගාරයක් / විශේෂ කාමරයක් ඇතුළත් කිරීම";
+  populateLabSubjectCheckboxes([]);
+  populateLabClassCheckboxes([], []);
+}
+
+function deleteAdvancedLab(index) {
+  if (confirm("මෙම විද්‍යාගාරය ඉවත් කිරීමට අවශ්‍ය බව තහවුරු කරන්නද?")) {
+    window.schoolLabs.splice(index, 1);
+    if (typeof saveAllToStorage === "function") saveAllToStorage();
+    renderAdvancedLabsList();
+  }
+}
+
+window.openAdvancedLabModal = openAdvancedLabModal;
+window.closeAdvancedLabModal = closeAdvancedLabModal;
+window.saveAdvancedLab = saveAdvancedLab;
+window.editAdvancedLab = editAdvancedLab;
+window.deleteAdvancedLab = deleteAdvancedLab;
+    
 
 
 // 🔴 පන්තියේ ශ්‍රේණිය සහ විෂය අනුව අදාළ Lab එක හඳුනාගැනීම
@@ -10686,13 +11011,64 @@ window.addEventListener("DOMContentLoaded", () => {
   populateLabDropdown();
   renderLabTimetableGrid();
 });
+    
 
 window.renderLabTimetableGrid = renderLabTimetableGrid;
 window.openLabManagementModal = openLabManagementModal;
 window.closeLabManagementModal = closeLabManagementModal;
 window.addNewSchoolLab = addNewSchoolLab;
 window.removeSchoolLab = removeSchoolLab;
-//**********************************
+
+
+// 🔴 පන්තියකට සහ විෂයකට අදාළ වඩාත්ම සුදුසු Lab එක තෝරාගැනීම
+function getBestLabForClassSubject(classId, subjectName, scheduleList, day, targetPeriods) {
+  if (!subjectName || !classId) return null;
+  const cleanCid = String(classId).trim().toLowerCase();
+  const sName = String(subjectName).trim().toLowerCase();
+
+  // 1. මෙම විෂය අඩංගු සියලුම Labs සෙවීම
+  const matchingLabs = (window.schoolLabs || []).filter(lab => {
+    return (lab.subjects || []).some(sub => {
+      const targetSub = sub.toLowerCase();
+      return sName.includes(targetSub) || targetSub.includes(sName);
+    });
+  });
+
+  if (matchingLabs.length === 0) return null;
+
+  // 2. ප්‍රමුඛතාව 1 (P1) ඇති Lab එකක් තිබේදැයි බැලීම
+  let designatedLab = matchingLabs.find(lab => 
+    (lab.priority1Classes || []).some(cid => String(cid).trim().toLowerCase() === cleanCid)
+  );
+
+  // 3. P1 නැතිනම් ප්‍රමුඛතාව 2 (P2) ඇති Lab එකක් බැලීම
+  if (!designatedLab) {
+    designatedLab = matchingLabs.find(lab => 
+      (lab.priority2Classes || []).some(cid => String(cid).trim().toLowerCase() === cleanCid)
+    );
+  }
+
+  // පන්තිය කිසිදු P1 හෝ P2 ලැයිස්තුවක නැතිනම්, මෙම පන්තියට Lab එකක් අවශ්‍ය නොවේ (සාමාන්‍ය පන්තියේ සිදු කෙරේ)
+  if (!designatedLab) return null;
+
+  // 4. එම Lab එක එම වේලාවේ නිදහස්දැයි බැලීම (Capacity Check)
+  const maxCap = Number(designatedLab.capacity) || 1;
+  for (let p of targetPeriods) {
+    const occupying = new Set();
+    scheduleList.forEach(slot => {
+      if (slot.labId === designatedLab.id && Number(slot.day) === Number(day) && Number(slot.period) === Number(p)) {
+        if (String(slot.classId).trim().toLowerCase() !== cleanCid) {
+          occupying.add(String(slot.classId).toLowerCase());
+        }
+      }
+    });
+    if (occupying.size >= maxCap) {
+      return { lab: null, isConflict: true }; // Lab එක කාර්යබහුලයි
+    }
+  }
+
+  return { lab: designatedLab, isConflict: false };
+}
     
     // 8. විෂය නිර්දේශ වගුව Render කිරීම (ගුරුවරුන් නැති පන්ති නිවැරදිව පෙන්වයි)
    
