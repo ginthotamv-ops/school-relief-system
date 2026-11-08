@@ -7619,9 +7619,9 @@ function renderGradeTimetableGrid() {
             cellInlineStyle = "background-color: #fff1f2; border-color: #f43f5e; color: #881337;";
             cellClassNames += " ring-2 ring-rose-500 shadow-sm animate-pulse";
           } else if (isHighlighted) {
-            // 🟢 2. තෝරාගත් අවස්ථාව: තද කොළ පැහැය (Dark Emerald) සහ සුදු පැහැති අකුරු
-            cellInlineStyle = "background-color: #065f46 !important; border-color: #047857 !important; color: #ffffff !important;";
-            cellClassNames += " ring-2 ring-emerald-400 shadow-md font-black z-10";
+           // 🔵 තෝරාගත් අවස්ථාව: තද ලස්සන රාජකීය නිල් (Royal Blue) සහ සුදු අකුරු
+            cellInlineStyle = "background-color: #1e40af !important; border-color: #2563eb !important; color: #ffffff !important;";
+            cellClassNames += " ring-2 ring-sky-400 shadow-md font-black z-10";
           } else if (isComb) {
             // 🟣 3. Combined: සාමාන්‍ය අවස්ථාවේ විෂයන් 2ක Linear Gradient එක
             let subList = [];
@@ -7689,7 +7689,7 @@ function renderGradeTimetableGrid() {
               </div>
 
               <!-- ගුරු නම (Highlight වූ විට ලා කොළ පැහැයෙන් පැහැදිලිව දිස්වේ) -->
-              <div class="text-[8.5px] font-semibold truncate mt-0.5 ${isHighlighted ? 'text-emerald-100 font-bold' : 'opacity-85'}">
+              <div class="text-[8.5px] font-semibold truncate mt-0.5 ${isHighlighted ? 'text-blue-100 font-bold' : 'opacity-85'}">
                 ${tName || (isComb ? 'Combined' : '-')}
               </div>
             </td>
