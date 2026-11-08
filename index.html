@@ -14023,7 +14023,38 @@ function printCustomTimetables(type = 'CLASS', layout = '2') {
 }
 
 window.printCustomTimetables = printCustomTimetables;
-    
+
+
+    // =========================================================================
+// 🎯 GRADE VIEW QUICK HIGHLIGHTER (Fixes ReferenceError)
+// =========================================================================
+function handleGradeCellQuickHighlight(subject, teacherId) {
+  const typeSelect = document.getElementById("gradeHighlightTypeSelect");
+  const valueSelect = document.getElementById("gradeHighlightValueSelect");
+  if (!typeSelect || !valueSelect) return;
+
+  // 1. දැනටමත් ගුරු මාදිලිය තෝරා ඇත්නම් සහ ගුරු ID එකක් තිබේ නම් ගුරුවරයා Highlight කරයි
+  if (typeSelect.value === "TEACHER" && teacherId && teacherId !== "NONE") {
+    valueSelect.value = teacherId;
+    window.gradeViewSelectedValue = teacherId;
+  } else {
+    // 2. නැතහොත් විෂය මාදිලියට මාරු වී අදාළ විෂය Highlight කරයි
+    typeSelect.value = "SUBJECT";
+    if (typeof handleGradeFilterTypeChange === "function") {
+      handleGradeFilterTypeChange();
+    }
+    valueSelect.value = subject;
+    window.gradeViewSelectedValue = subject;
+  }
+
+  // 3. Grid එක නැවත Render කිරීම
+  if (typeof renderGradeTimetableGrid === "function") {
+    renderGradeTimetableGrid();
+  }
+}
+
+// 🔴 ගෝලීයව (Global Window) ලබාගත හැකි වන පරිදි Export කිරීම
+window.handleGradeCellQuickHighlight = handleGradeCellQuickHighlight;
   
   </script>
 
