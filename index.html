@@ -77,7 +77,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය F202020
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය F999958
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -3986,6 +3986,10 @@ window.resetAllTimetables = resetAllTimetables;
       else if (Array.from(sel.options).some(o => o.value === "10")) sel.value = "10";
     }
 
+
+
+
+    
     function renderGradeMasterGrid() {
       populateGradeMasterSelect();
       const sel = document.getElementById("gradeMasterSelect");
@@ -4042,6 +4046,60 @@ window.resetAllTimetables = resetAllTimetables;
 // =========================================================================
 // 1. ගෝලීය නීති සහ සීමාවන් (GLOBAL CONFIGURATION)
 // =========================================================================
+// =========================================================================
+// 🌐 විෂයයන් Highlight කිරීමේ ගෝලීය තත්ත්වය සහ පාලක ශ්‍රිත (Highlight Manager)
+// =========================================================================
+window.activeHighlightedSubject = null;
+
+// A. විෂයයන් දෙකක නම් සමානදැයි (Basket ද ඇතුළුව) සසඳන ශ්‍රිතය
+function isMatchingSubjectName(sub1, sub2) {
+  if (!sub1 || !sub2) return false;
+  const s1 = String(sub1).trim().toLowerCase();
+  const s2 = String(sub2).trim().toLowerCase();
+  return s1 === s2 || s1.includes(s2) || s2.includes(s1);
+}
+
+// B. Highlight කිරීම සක්‍රීය / අක්‍රිය කිරීම (Toggle Highlight)
+function toggleSubjectHighlight(subjectName) {
+  if (!subjectName) return;
+  const cleanTarget = String(subjectName).trim();
+
+  // දැනටමත් Highlight වී ඇත්නම් ඉවත් කරයි, නැතහොත් නව විෂය සක්‍රිය කරයි
+  if (window.activeHighlightedSubject && isMatchingSubjectName(window.activeHighlightedSubject, cleanTarget)) {
+    window.activeHighlightedSubject = null;
+  } else {
+    window.activeHighlightedSubject = cleanTarget;
+  }
+
+  // Grid එක සහ Tray එක ක්ෂණිකව Refresh කිරීම
+  const select = document.getElementById("activeClassSelect") || document.getElementById("classTimetableSelectClass");
+  const selectedClassId = select ? select.value : null;
+
+  if (typeof renderClassTimetableGrid === "function") {
+    renderClassTimetableGrid();
+  }
+  if (selectedClassId && typeof renderSubjectQuotaTray === "function") {
+    renderSubjectQuotaTray(selectedClassId);
+  }
+}
+
+// C. Grid Slot එකක් ක්ලික් කළ විට ක්‍රියාත්මක වන Handler එක
+function handleSlotCellClick(event, classId, day, period, subject) {
+  // Slot එක තුළ විෂයක් තිබේ නම් Highlight ක්‍රියාත්මක කරයි
+  if (subject && subject !== "null" && subject !== "undefined" && String(subject).trim() !== "") {
+    toggleSubjectHighlight(subject);
+  } else {
+    // හිස් කොටුවක් නම් සාමාන්‍ය පරිදි Modal එක විවෘත කරයි
+    if (typeof openTimetableSlotModal === "function") {
+      openTimetableSlotModal(classId, day, period);
+    }
+  }
+}
+
+window.toggleSubjectHighlight = toggleSubjectHighlight;
+window.handleSlotCellClick = handleSlotCellClick;
+
+    
 // =========================================================================
 // 1. ගෝලීය නීති සහ සීමාවන් (GLOBAL CONFIGURATION)
 // =========================================================================
@@ -5194,6 +5252,10 @@ window.triggerWholeSchoolAutoFill = triggerWholeSchoolAutoFill;
   // =========================================================================
 // 🔴 Combined & Single Clashes නිවැරදිව පෙන්වන යාවත්කාලීන Timetable Renderer
 // =========================================================================
+
+// =========================================================================
+// 📅 HIGHLIGHTING & CLASH-PROTECTED TIMETABLE GRID RENDERER (FINAL)
+// =========================================================================
 function renderClassTimetableGrid() {
   if (typeof populateClassTimetableDropdown === "function") {
     populateClassTimetableDropdown();
@@ -5245,7 +5307,7 @@ function renderClassTimetableGrid() {
   let isScheduleDirty = false;
 
   // -------------------------------------------------------------------------
-  // 🔴 1. ශ්‍රේණිය, ගුරුවරුන් සහ එකම Group Session එකදැයි බලන නිශ්චිත සහායක ශ්‍රිත
+  // සහායක ශ්‍රිත (Grade, Teachers, Group Check & Subject Match)
   // -------------------------------------------------------------------------
   function extractGradeNum(slot) {
     if (!slot) return null;
@@ -5281,33 +5343,22 @@ function renderClassTimetableGrid() {
     return Array.from(list);
   }
 
-  // 🔴 ප්‍රධාන නීතිය: එකම Group එකක්ද (6A සහ 6B) නැතහොත් වෙනත් Group/පන්තියක්ද (6D හෝ 7A)
   function isLegitimateSameGroupSession(s1, s2) {
     if (!s1 || !s2) return false;
     if (s1 === s2) return true;
 
-    // A. දෙකම Combined / Basket විය යුතුය. එකක් හෝ සාමාන්‍ය තනි විෂයක් නම් (උදා: 7A) -> CLASH!
     const isComb1 = Boolean(s1.isCombined || s1.isBasket || s1.combinedSubjectId || s1.groupCode);
     const isComb2 = Boolean(s2.isCombined || s2.isBasket || s2.combinedSubjectId || s2.groupCode);
-    if (!isComb1 || !isComb2) {
-      return false; 
-    }
+    if (!isComb1 || !isComb2) return false;
 
-    // B. ශ්‍රේණිය (Grade) අනිවාර්යයෙන්ම සමාන විය යුතුය (උදා: 6 සහ 7 වෙනස් නම්) -> CLASH!
     const g1 = extractGradeNum(s1);
     const g2 = extractGradeNum(s2);
-    if (g1 !== null && g2 !== null && g1 !== g2) {
-      return false;
-    }
+    if (g1 !== null && g2 !== null && g1 !== g2) return false;
 
-    // C. Group Code / GR අගය පරීක්ෂාව (උදා: GR1 සහ GR2 වෙනස් නම්) -> CLASH!
     const grp1 = String(s1.groupCode || s1.groupId || s1.combinedGroupId || '').trim().toLowerCase();
     const grp2 = String(s2.groupCode || s2.groupId || s2.combinedGroupId || '').trim().toLowerCase();
-    if (grp1 && grp2 && grp1 !== grp2) {
-      return false; // 6A (GR1) සහ 6D (GR2) වෙනස් groups -> CLASH!
-    }
+    if (grp1 && grp2 && grp1 !== grp2) return false;
 
-    // D. Combined Configurations පරීක්ෂාව (window.combinedCurriculumSubjects)
     const c1 = String(s1.classId || '').trim().toLowerCase();
     const c2 = String(s2.classId || '').trim().toLowerCase();
     const configs = window.combinedCurriculumSubjects || window.combinedSubjects || [];
@@ -5315,29 +5366,29 @@ function renderClassTimetableGrid() {
     if (Array.isArray(configs) && configs.length > 0) {
       for (let cfg of configs) {
         const cfgClasses = (cfg.classes || cfg.applicableClasses || []).map(c => String(c).trim().toLowerCase());
-        // පන්ති 2ම එකම configuration ලැයිස්තුවේ ඇත්නම් (උදා: 6A සහ 6B එකම ලැයිස්තුවේ):
         if (cfgClasses.includes(c1) && cfgClasses.includes(c2)) {
           const cfgGrp = String(cfg.groupCode || cfg.groupId || '').trim().toLowerCase();
-          if (!grp1 || !cfgGrp || cfgGrp === grp1) {
-            return true; // 🔴 6A සහ 6B එකම group එකක -> NO CLASH!
-          }
+          if (!grp1 || !cfgGrp || cfgGrp === grp1) return true;
         }
       }
     }
 
-    // E. විෂය සහ Group Code දෙකම සමාන නම්:
     const sub1 = String(s1.subject || '').trim().toLowerCase();
     const sub2 = String(s2.subject || '').trim().toLowerCase();
-    if (sub1 === sub2 && grp1 && grp2 && grp1 === grp2) {
-      return true; // එකම ශ්‍රේණියේ, එකම විෂයේ, එකම GR එකේ -> NO CLASH!
-    }
+    if (sub1 === sub2 && grp1 && grp2 && grp1 === grp2) return true;
 
-    // ඉහත කිසිවකට නොගැළපේ නම් වෙනස් Groups වේ (උදා: 6A සහ 6D) -> CLASH!
     return false;
   }
 
+  function isMatchingSub(sub1, sub2) {
+    if (!sub1 || !sub2) return false;
+    const s1 = String(sub1).trim().toLowerCase();
+    const s2 = String(sub2).trim().toLowerCase();
+    return s1 === s2 || s1.includes(s2) || s2.includes(s1);
+  }
+
   // -------------------------------------------------------------------------
-  // 2. කාලසටහන වගුව ඇඳීම
+  // කාලසටහන වගුව ඇඳීම
   // -------------------------------------------------------------------------
   days.forEach((d, dayIndex) => {
     let rowHtml = `<tr class="hover:bg-slate-50/60 transition border-b border-slate-200">`;
@@ -5352,7 +5403,7 @@ function renderClassTimetableGrid() {
     // කාලච්ඡේද 1 සිට 8 දක්වා
     for (let p = 1; p <= 8; p++) {
 
-      // විවේකය තීරුව (Interval)
+      // විවේකය තීරුව
       if (p === 5 && dayIndex === 0) {
         rowHtml += `
           <td rowspan="5" class="bg-amber-50/90 border-r border-slate-200 text-amber-800 font-extrabold text-[11px] p-1 tracking-widest uppercase select-none shadow-inner" style="writing-mode: vertical-rl; text-orientation: mixed;">
@@ -5373,6 +5424,16 @@ function renderClassTimetableGrid() {
         const isCombinedOrBasket = !!(slot.isCombined || slot.isBasket || slot.combinedSubjectId || slot.groupCode);
         const isLocked = Boolean(slot.isLocked);
 
+        // 🔴 1. HIGHLIGHT පරීක්ෂාව
+        let isSlotHighlighted = false;
+        if (window.activeHighlightedSubject) {
+          if (isMatchingSub(slot.subject, window.activeHighlightedSubject)) {
+            isSlotHighlighted = true;
+          } else if (Array.isArray(slot.basketItems)) {
+            isSlotHighlighted = slot.basketItems.some(b => isMatchingSub(b.subject, window.activeHighlightedSubject));
+          }
+        }
+
         // ගුරුවරයා Settings සමඟ Dynamic Sync කිරීම
         const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(slot.subject) : String(slot.subject || '').trim().toLowerCase();
         if (!isCombinedOrBasket && cls && cls.subjectTeachers) {
@@ -5384,7 +5445,7 @@ function renderClassTimetableGrid() {
           }
         }
 
-        // 🔴 3. ගුරු ගැටුම් පරීක්ෂාව (Grade, Group, Subject නිවැරදිව වෙන් කරමින්)
+        // 🔴 2. ගුරු ගැටුම් පරීක්ෂාව
         let hasClash = false;
         let clashingClassNames = [];
         let clashingTeacherNames = [];
@@ -5394,7 +5455,6 @@ function renderClassTimetableGrid() {
         const slotTeachers = getTeachersFromSlotObj(slot);
 
         if (slotTeachers.length > 0) {
-          // එම දිනයේ සහ වේලාවේ පාසලේ ඇති අනෙක් සියලු පන්තිවල slots ලබා ගැනීම
           const otherSlotsAtTime = (masterSchedule || []).filter(s => 
             s !== slot &&
             (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, d.id) : Number(s.day) === Number(d.id)) &&
@@ -5405,11 +5465,8 @@ function renderClassTimetableGrid() {
             otherSlotsAtTime.forEach(os => {
               const osTeachers = getTeachersFromSlotObj(os);
               if (osTeachers.includes(tid)) {
-                
-                // 🔴 එකම Grade + එකම GR + එකම Subject නම් ගැටුමක් නොවේ!
                 const isLegitSameGroup = isLegitimateSameGroupSession(slot, os);
 
-                // වෙනත් Group එකක් (6D) හෝ වෙනත් ශ්‍රේණියක්/තනි පන්තියක් (7A) නම් සැබෑ ගැටුමකි!
                 if (!isLegitSameGroup) {
                   hasClash = true;
                   clashingTeacherIds.add(tid);
@@ -5439,11 +5496,16 @@ function renderClassTimetableGrid() {
           }
         }
 
-        // 🔴 4. පසුබිම් වර්ණය තීරණය කිරීම (Clash ඇත්නම් අනිවාර්යයෙන්ම රතු පැහැය)
+        // 🔴 3. පසුබිම් වර්ණ තීරණය කිරීම (Clash > Highlight > Lock > Combined)
         let bgClass = "bg-indigo-50/40 hover:bg-indigo-100/60 border-r border-slate-200";
+
         if (hasClash) {
           bgClass = "bg-rose-50/95 hover:bg-rose-100 border-r border-rose-400 text-rose-950 ring-2 ring-rose-400 shadow-sm";
+        } else if (isSlotHighlighted) {
+          // 🔵 අහස් නිල් (Sky Blue) Highlight වර්ණය
+          bgClass = "bg-sky-100/95 hover:bg-sky-200/80 border-r border-sky-400 text-sky-950 ring-2 ring-sky-500 shadow-md font-bold";
         } else if (isLocked) {
+          // 🟡 Lock කර ඇති විට Amber වර්ණය
           bgClass = "bg-amber-50/90 hover:bg-amber-100/80 border-r border-amber-300 text-amber-950 ring-1 ring-amber-300 shadow-xs";
         } else if (isCombinedOrBasket) {
           bgClass = "bg-gradient-to-br from-indigo-50/70 to-emerald-50/60 border-r border-indigo-200";
@@ -5451,7 +5513,7 @@ function renderClassTimetableGrid() {
 
         const leftPaddingClass = isLocked ? "pl-5" : "";
 
-        // 5. BASKET සහ CLASS SPECIFIC විෂයන් පෙන්වීම
+        // BASKET සහ CLASS SPECIFIC විෂයන් පෙන්වීම
         if (isCombinedOrBasket) {
           let items = [];
           if (Array.isArray(slot.basketItems)) items = slot.basketItems;
@@ -5465,14 +5527,15 @@ function renderClassTimetableGrid() {
             const t = (teachers || []).find(tch => String(tch.id).trim().toLowerCase() === String(it.teacherId).trim().toLowerCase());
             let tName = t ? t.name : '<span class="text-amber-600 font-bold">නැත</span>';
 
-            // Basket එක ඇතුළත ගැටුමට ලක්වූ නිශ්චිත ගුරුවරයා රතු පැහැයෙන් පෙන්වීම
             const isThisTeacherClashing = it.teacherId && clashingTeacherIds.has(String(it.teacherId).trim().toLowerCase());
             if (isThisTeacherClashing) {
               tName = `<span class="text-rose-600 font-extrabold flex items-center gap-0.5"><i class="fa-solid fa-triangle-exclamation text-[7px]"></i>${t ? t.name : it.teacherId}</span>`;
             }
 
+            const isItemHighlighted = window.activeHighlightedSubject && isMatchingSub(it.subject, window.activeHighlightedSubject);
+
             return `
-              <div class="flex items-center justify-between text-[8.5px] py-0.5 border-b border-indigo-100/60 last:border-0 leading-tight ${isThisTeacherClashing ? 'bg-rose-100/70 rounded px-1' : ''}">
+              <div class="flex items-center justify-between text-[8.5px] py-0.5 border-b border-indigo-100/60 last:border-0 leading-tight ${isItemHighlighted ? 'bg-sky-200/80 font-black rounded px-1' : ''} ${isThisTeacherClashing ? 'bg-rose-100/70 rounded px-1' : ''}">
                 <span class="font-bold text-indigo-950 truncate max-w-[55%]">${it.subject}</span>
                 <span class="text-slate-600 truncate max-w-[45%] text-right font-medium">${tName}</span>
               </div>
@@ -5480,7 +5543,7 @@ function renderClassTimetableGrid() {
           }).join("");
 
           slotContentHtml = `
-            <div class="${leftPaddingClass} flex items-center justify-between gap-1 pr-12 pb-0.5">
+            <div class="${leftPaddingClass} flex items-center justify-between gap-1 pr-14 pb-0.5">
               <span class="font-black text-[10.5px] text-indigo-950 truncate">
                 <i class="fa-solid fa-layer-group text-[9px] text-indigo-600"></i> ${slot.subject}
               </span>
@@ -5514,7 +5577,7 @@ function renderClassTimetableGrid() {
           }
 
           slotContentHtml = `
-            <div class="${leftPaddingClass} font-bold text-xs text-indigo-950 truncate pr-12" title="${slot.subject}">
+            <div class="${leftPaddingClass} font-bold text-xs text-indigo-950 truncate pr-14" title="${slot.subject}">
               ${slot.subject}
             </div>
             <div class="${leftPaddingClass}">
@@ -5523,7 +5586,7 @@ function renderClassTimetableGrid() {
           `;
         }
 
-        // 🔴 6. Clash අනතුරු ඇඟවීමේ Badge එක (Tooltip එක සහ ගැටුණු පන්ති නම් සහිතව)
+        // Clash අනතුරු ඇඟවීමේ Badge එක
         if (hasClash) {
           const classListStr = clashingClassNames.join(" සහ ");
           slotContentHtml += `
@@ -5542,14 +5605,17 @@ function renderClassTimetableGrid() {
         const cleanSub = String(slot.subject || '').replace(/'/g, "\\'");
         const cleanCombId = String(slot.combinedSubjectId || '').replace(/'/g, "\\'");
 
+        // 🔴 Slot එක Render කිරීම (Single-Click = Highlight | Double-Click = Modal)
         rowHtml += `
           <td ondragover="handleSlotDragOver(event)"
               ondragleave="handleSlotDragLeave(event)"
               ondrop="handleSlotDrop(event, '${selectedClassId}', ${d.id}, ${p})"
-              onclick="openTimetableSlotModal('${selectedClassId}', ${d.id}, ${p})" 
+              onclick="handleSlotCellClick(event, '${selectedClassId}', ${d.id}, ${p}, '${cleanSub}')"
+              ondblclick="openTimetableSlotModal('${selectedClassId}', ${d.id}, ${p})"
+              title="ක්ලික් කරන්න: Highlight කිරීමට | දෙවරක් ක්ලික් කරන්න: සංස්කරණයට"
               class="p-1.5 cursor-pointer transition relative group select-none min-w-[105px] align-top ${bgClass}">
             
-            <!-- Lock Icon -->
+            <!-- Lock Icon (Amber) -->
             ${isLocked ? `
               <button type="button"
                       onclick="event.stopPropagation(); toggleSlotLock('${selectedClassId}', ${d.id}, ${p})"
@@ -5559,21 +5625,31 @@ function renderClassTimetableGrid() {
               </button>
             ` : ''}
 
-            <!-- Action Buttons on Hover -->
+            <!-- Hover Action Buttons -->
             <div class="absolute top-1 right-1 flex items-center gap-1 z-10 opacity-0 group-hover:opacity-100 transition">
+              <!-- Edit Button (✏️) -->
+              <button type="button"
+                      onclick="event.stopPropagation(); openTimetableSlotModal('${selectedClassId}', ${d.id}, ${p})"
+                      title="සංස්කරණය කරන්න"
+                      class="w-5 h-5 rounded bg-white hover:bg-indigo-600 text-slate-500 hover:text-white border border-slate-300 hover:border-indigo-600 flex items-center justify-center shadow-xs transition cursor-pointer">
+                <i class="fa-solid fa-pen text-[8px]"></i>
+              </button>
+
+              <!-- Lock Button -->
               <button type="button"
                       onclick="event.stopPropagation(); toggleSlotLock('${selectedClassId}', ${d.id}, ${p})"
                       title="${isLocked ? 'Unlock කරන්න' : 'අගුළු ලෑමට ඔබන්න'}"
                       class="w-5 h-5 rounded bg-white hover:bg-amber-500 text-amber-600 hover:text-white border border-slate-300 hover:border-amber-500 flex items-center justify-center shadow-xs transition cursor-pointer">
-                <i class="fa-solid ${isLocked ? 'fa-lock' : 'fa-lock-open'} text-[9px]"></i>
+                <i class="fa-solid ${isLocked ? 'fa-lock' : 'fa-lock-open'} text-[8px]"></i>
               </button>
 
+              <!-- Delete Button -->
               ${!isLocked ? `
                 <button type="button"
                         onclick="event.stopPropagation(); removeSingleClassSlot('${selectedClassId}', ${d.id}, ${p}, '${cleanCombId}', '${cleanSub}')"
                         class="w-5 h-5 rounded bg-white hover:bg-rose-600 text-slate-400 hover:text-white border border-slate-300 hover:border-rose-600 flex items-center justify-center shadow-xs transition cursor-pointer"
-                        title="මෙම පන්තියෙන් පමණක් කාලච්ඡේදය ඉවත් කරන්න">
-                  <i class="fa-solid fa-xmark text-[11px]"></i>
+                        title="කාලච්ඡේදය ඉවත් කරන්න">
+                  <i class="fa-solid fa-xmark text-[10px]"></i>
                 </button>
               ` : ''}
             </div>
@@ -5607,11 +5683,9 @@ function renderClassTimetableGrid() {
   }
 }
 
-window.renderClassTimetableGrid = renderClassTimetableGrid; 
+window.renderClassTimetableGrid = renderClassTimetableGrid;
 
-
-
-
+    
 function removeSingleClassSlot(classId, day, period, combinedSubjectId, subjectName) {
   const cleanCid = String(classId).trim().toLowerCase();
   day = Number(day);
@@ -7516,6 +7590,9 @@ window.saveClassSpecificCombinedSubject = saveClassSpecificCombinedSubject;
     // 2. TRAY RENDER CONTROLLER (INCLUDES BOTH REGULAR & BASKET SUBJECTS)
     // =========================================================================
 
+// =========================================================================
+// 📦 Drag & Drop, Filtering, Completed Color සහ Highlighting සහිත Quota Tray
+// =========================================================================
 function renderSubjectQuotaTray(classId) {
   const tray = document.getElementById("classSubjectQuotaTray") || document.getElementById("classSubjectQuotaStatus");
   if (!tray) return;
@@ -7546,7 +7623,7 @@ function renderSubjectQuotaTray(classId) {
     );
   });
 
-  // 🔴 මෙම පන්තිය සඳහා Quota Tray එකෙන් ඉවත් කළ යුතු (Suppressed) තනි විෂයන් ලැයිස්තුව
+  // මෙම පන්තිය සඳහා Quota Tray එකෙන් ඉවත් කළ යුතු තනි විෂයන්
   const suppressedSubjects = new Set();
   relevantCombined.forEach(comb => {
     (comb.subjects || []).forEach(sub => suppressedSubjects.add(typeof cleanSubjectKey === "function" ? cleanSubjectKey(sub) : sub.trim().toLowerCase()));
@@ -7567,16 +7644,35 @@ function renderSubjectQuotaTray(classId) {
     const remaining = Math.max(0, max - allocatedCount);
     const isCompleted = allocatedCount >= max;
 
+    // 🔴 Highlight වී ඇත්දැයි බැලීම
+    const isHighlighted = window.activeHighlightedSubject && typeof isMatchingSubjectName === "function" 
+      && isMatchingSubjectName(comb.name, window.activeHighlightedSubject);
+
+    // 🎨 වර්ණ තීරණය කිරීම (Completed -> Emerald | Highlighted -> Sky Blue)
+    let cardStyle = "bg-gradient-to-r from-indigo-50 to-emerald-50 border-indigo-400 text-indigo-950 hover:shadow-md cursor-grab active:cursor-grabbing";
+    let badgeStyle = "bg-indigo-100 text-indigo-800 border-indigo-300";
+
+    if (isHighlighted) {
+      cardStyle = "bg-sky-100 border-2 border-sky-500 text-sky-950 ring-2 ring-sky-400 shadow-md scale-102";
+      badgeStyle = "bg-sky-600 text-white font-black border-sky-600";
+    } else if (isCompleted) {
+      cardStyle = "bg-emerald-50/90 border-2 border-emerald-400 text-emerald-950 shadow-2xs";
+      badgeStyle = "bg-emerald-200 text-emerald-900 border-emerald-400 font-black";
+    }
+
     const card = document.createElement("div");
-    card.className = `p-2.5 rounded-xl border-2 shadow-sm transition flex items-center justify-between gap-3 select-none ${
-      isCompleted 
-        ? "bg-indigo-50/60 border-indigo-200 text-indigo-900 opacity-75" 
-        : "bg-gradient-to-r from-indigo-50 to-emerald-50 border-indigo-400 text-indigo-950 hover:shadow-md cursor-grab active:cursor-grabbing"
-    }`;
+    card.className = `p-2.5 rounded-xl border-2 shadow-sm transition flex items-center justify-between gap-3 select-none ${cardStyle}`;
+
+    // 🔴 Click කළ විට කාලසටහන තුළ Highlight වීම
+    card.addEventListener("click", () => {
+      if (typeof toggleSubjectHighlight === "function") {
+        toggleSubjectHighlight(comb.name);
+      }
+    });
 
     if (remaining > 0) {
       card.draggable = true;
-      card.title = `ඇදගෙන ගොස් කාලසටහනට දමන්න (ඉතිරි: ${remaining})`;
+      card.title = `ක්ලික් කරන්න: Highlight කිරීමට | ඇදගෙන ගොස් කාලසටහනට දමන්න (ඉතිරි: ${remaining})`;
       card.addEventListener("dragstart", (e) => {
         window.draggedSubjectData = {
           type: "COMBINED_SUBJECT",
@@ -7589,6 +7685,8 @@ function renderSubjectQuotaTray(classId) {
         e.dataTransfer.setData("text/plain", comb.name);
         e.dataTransfer.effectAllowed = "copy";
       });
+    } else {
+      card.title = `ක්ලික් කරන්න: කාලසටහන තුළ Highlight කිරීමට (සම්පූර්ණයි)`;
     }
 
     const subNames = (comb.subjects || []).join(", ");
@@ -7598,18 +7696,19 @@ function renderSubjectQuotaTray(classId) {
         <div class="font-extrabold text-xs flex items-center gap-1.5 text-indigo-950">
           <i class="fa-solid fa-layer-group text-indigo-600"></i>
           <span>${comb.name}</span>
-          <span class="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded font-black border border-indigo-200">${comb.groupCode}</span>
+          <span class="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded font-black border border-indigo-200">${comb.groupCode || 'GRP'}</span>
+          ${isCompleted ? '<i class="fa-solid fa-circle-check text-emerald-600 text-[11px] ml-0.5"></i>' : ''}
         </div>
         <div class="text-[10px] text-slate-500 font-semibold truncate max-w-[140px] mt-0.5" title="${subNames}">
           ${subNames}
         </div>
       </div>
       <div class="flex flex-col items-end gap-0.5">
-        <span class="text-[10px] font-black px-2 py-0.5 rounded-md border bg-indigo-100 text-indigo-800 border-indigo-300">
-          ${allocatedCount} / ${max}
+        <span class="text-[10px] font-black px-2 py-0.5 rounded-md border ${badgeStyle}">
+          ${allocatedCount} / ${max} ${isCompleted ? '✓' : ''}
         </span>
-        <span class="text-[9px] font-bold ${remaining > 0 ? 'text-indigo-600' : 'text-slate-400'}">
-          ${remaining > 0 ? `ඉතිරි: ${remaining}` : 'අවසන්'}
+        <span class="text-[9px] font-bold ${remaining > 0 ? 'text-indigo-600' : 'text-emerald-700 font-black'}">
+          ${remaining > 0 ? `ඉතිරි: ${remaining}` : 'සම්පූර්ණයි'}
         </span>
       </div>
     `;
@@ -7622,36 +7721,30 @@ function renderSubjectQuotaTray(classId) {
   // =========================================================================
   const quotas = typeof calculateClassSubjectQuotas === "function" ? calculateClassSubjectQuotas(cleanClassId) : [];
 
-  // 🔴 1. Group එකට අයත් විෂයන් ඉවත් කිරීම
   const filteredQuotas = quotas.filter(q => {
     const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(q.subject) : q.subject.trim().toLowerCase();
     return !suppressedSubjects.has(sKey);
   });
 
-  // 🔴 2. EXCLUDED කර ඇති විෂයන් ආරක්ෂිතව පෙරීම (Bulletproof Exclude Filter)
   const finalTrayQuotas = filteredQuotas.filter(q => {
     const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(q.subject) : q.subject.trim().toLowerCase();
 
-    // (A) Helper ශ්‍රිතයක් තිබේ නම්
     if (typeof isSubjectExcludedForClass === "function" && isSubjectExcludedForClass(cleanClassId, q.subject)) {
       return false;
     }
 
-    // (B) getAssignedTeacherIdForClass මඟින් ලැබෙන අගය පරීක්ෂාව
     const assignedTid = typeof getAssignedTeacherIdForClass === "function"
       ? getAssignedTeacherIdForClass(currentCls, q.subject)
       : (currentCls && currentCls.subjectTeachers ? currentCls.subjectTeachers[sKey] : null);
 
     if (String(assignedTid).trim().toUpperCase() === "EXCLUDED") {
-      return false; // Tray එකෙන් ඉවත් කරයි
+      return false;
     }
 
-    // (C) currentCls.subjectTeachers සෘජු පරීක්ෂාව
     if (currentCls && currentCls.subjectTeachers && String(currentCls.subjectTeachers[sKey]).trim().toUpperCase() === "EXCLUDED") {
-      return false; // Tray එකෙන් ඉවත් කරයි
+      return false;
     }
 
-    // (D) curriculumSubjects හි applicableClassIds පරීක්ෂාව
     const cs = (curriculumSubjects || []).find(c => 
       (typeof cleanGradeNum === "function" ? cleanGradeNum(c.grade) : Number(c.grade)) === currentGrade &&
       (typeof cleanSubjectKey === "function" ? cleanSubjectKey(c.subject) : c.subject.trim().toLowerCase()) === sKey
@@ -7661,15 +7754,30 @@ function renderSubjectQuotaTray(classId) {
         String(cid).trim().toLowerCase() === cleanClassId.toLowerCase() ||
         String(cid).trim().toLowerCase() === currentClassName.toLowerCase()
       );
-      if (!isApplicable) return false; // අදාළ පන්ති අතර නැතිනම් ඉවත් කරයි
+      if (!isApplicable) return false;
     }
 
     return true;
   });
 
-  // 🔴 3. මෙන්න මෙතැන finalTrayQuotas ලැයිස්තුව Loop කළ යුතුය (පැරණි filteredQuotas වෙනුවට):
   finalTrayQuotas.forEach(q => {
-    const isCompleted = q.allocated === q.maxWeekly;
+    const isCompleted = q.allocated >= q.maxWeekly;
+
+    // 🔴 Highlight වී ඇත්දැයි බැලීම
+    const isHighlighted = window.activeHighlightedSubject && typeof isMatchingSubjectName === "function" 
+      && isMatchingSubjectName(q.subject, window.activeHighlightedSubject);
+
+    // 🎨 වර්ණ තීරණය කිරීම (Completed -> Emerald | Highlighted -> Sky Blue)
+    let cardStyle = "bg-white border-slate-200 text-slate-800 hover:border-indigo-400";
+    let badgeStyle = "bg-indigo-50 text-indigo-700 border-indigo-200";
+
+    if (isHighlighted) {
+      cardStyle = "bg-sky-100 border-2 border-sky-500 text-sky-950 ring-2 ring-sky-400 shadow-md scale-102";
+      badgeStyle = "bg-sky-600 text-white font-black border-sky-600";
+    } else if (isCompleted) {
+      cardStyle = "bg-emerald-50/90 border-2 border-emerald-400 text-emerald-950 shadow-2xs";
+      badgeStyle = "bg-emerald-200 text-emerald-900 border-emerald-400 font-black";
+    }
 
     let teacherDisplayHtml = "";
     if (q.assignedTeacher && q.assignedTeacher.name) {
@@ -7688,13 +7796,20 @@ function renderSubjectQuotaTray(classId) {
     }
 
     const card = document.createElement("div");
-    card.className = `p-2.5 rounded-xl border shadow-sm transition flex items-center justify-between gap-3 select-none bg-white border-slate-200 text-slate-800 hover:border-indigo-400 ${
-      q.remaining > 0 ? "cursor-grab active:cursor-grabbing hover:shadow-md" : "opacity-75 cursor-not-allowed"
+    card.className = `p-2.5 rounded-xl border shadow-sm transition flex items-center justify-between gap-3 select-none ${cardStyle} ${
+      q.remaining > 0 ? "cursor-grab active:cursor-grabbing hover:shadow-md" : "cursor-pointer"
     }`;
+
+    // 🔴 Click කළ විට කාලසටහන තුළ Highlight වීම
+    card.addEventListener("click", () => {
+      if (typeof toggleSubjectHighlight === "function") {
+        toggleSubjectHighlight(q.subject);
+      }
+    });
 
     if (q.remaining > 0) {
       card.draggable = true;
-      card.title = `ඇදගෙන ගොස් කාලසටහනට දමන්න (ඉතිරි: ${q.remaining})`;
+      card.title = `ක්ලික් කරන්න: Highlight කිරීමට | ඇදගෙන ගොස් කාලසටහනට දමන්න (ඉතිරි: ${q.remaining})`;
       card.addEventListener("dragstart", (e) => {
         window.draggedSubjectData = {
           type: "NEW_SUBJECT",
@@ -7704,6 +7819,8 @@ function renderSubjectQuotaTray(classId) {
         e.dataTransfer.setData("text/plain", q.subject);
         e.dataTransfer.effectAllowed = "copy";
       });
+    } else {
+      card.title = `ක්ලික් කරන්න: කාලසටහන තුළ Highlight කිරීමට (සම්පූර්ණයි)`;
     }
 
     card.innerHTML = `
@@ -7717,11 +7834,11 @@ function renderSubjectQuotaTray(classId) {
         </div>
       </div>
       <div class="flex flex-col items-end gap-0.5">
-        <span class="text-[10px] font-black px-2 py-0.5 rounded-md border bg-indigo-50 text-indigo-700 border-indigo-200">
-          ${q.allocated} / ${q.maxWeekly}
+        <span class="text-[10px] font-black px-2 py-0.5 rounded-md border ${badgeStyle}">
+          ${q.allocated} / ${q.maxWeekly} ${isCompleted ? '✓' : ''}
         </span>
-        <span class="text-[9px] font-bold ${q.remaining > 0 ? 'text-indigo-600' : 'text-slate-400'}">
-          ${q.remaining > 0 ? `ඉතිරි: ${q.remaining}` : 'අවසන්'}
+        <span class="text-[9px] font-bold ${q.remaining > 0 ? 'text-indigo-600' : 'text-emerald-700 font-black'}">
+          ${q.remaining > 0 ? `ඉතිරි: ${q.remaining}` : 'සම්පූර්ණයි'}
         </span>
       </div>
     `;
@@ -7731,6 +7848,7 @@ function renderSubjectQuotaTray(classId) {
 }
 
 window.renderSubjectQuotaTray = renderSubjectQuotaTray;
+    
 
 // =========================================================================
 // INTELLIGENT AUTO-FILL ENGINE WITH PRIORITY & CONSTRAINTS
