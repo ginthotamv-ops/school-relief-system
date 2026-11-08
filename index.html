@@ -535,15 +535,16 @@
     <!-- TAB 3: GRADE MASTER -->
  
 <!-- ශ්‍රේණි කාලසටහන් පාලක තීරුව (Toolbar) -->
-<div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs mb-4 flex flex-wrap items-center justify-between gap-3">
+<div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs mb-4 flex flex-wrap items-center justify-between gap-3">
   
   <div class="flex flex-wrap items-center gap-2.5">
     <!-- 1. ශ්‍රේණිය / පාසල තෝරන Dropdown -->
     <div>
       <label class="text-[10px] font-extrabold text-slate-500 block mb-0.5">ශ්‍රේණිය තෝරන්න:</label>
       <select id="gradeSelectFilter" 
+              onfocus="if (typeof populateGradeDropdown === 'function') populateGradeDropdown();"
               onchange="window.gradeViewActiveGrade = this.value; renderGradeTimetableGrid();"
-              class="text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+              class="text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer">
         <option value="ALL">සම්පූර්ණ පාසලම (All Classes)</option>
       </select>
     </div>
@@ -553,7 +554,7 @@
       <label class="text-[10px] font-extrabold text-slate-500 block mb-0.5">Highlighter ක්‍රමය:</label>
       <select id="gradeHighlightTypeSelect" 
               onchange="handleGradeFilterTypeChange()"
-              class="text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-sky-500 outline-none">
+              class="text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-sky-500 outline-none cursor-pointer">
         <option value="NONE">Highlighter අක්‍රියයි</option>
         <option value="SUBJECT">විෂය අනුව Highlight</option>
         <option value="TEACHER">ගුරුවරයා අනුව Highlight</option>
@@ -566,40 +567,54 @@
       <select id="gradeHighlightValueSelect" 
               disabled
               onchange="handleGradeHighlightValueChange()"
-              class="text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-sky-500 outline-none min-w-[140px]">
+              class="text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-sky-500 outline-none min-w-[150px] cursor-pointer disabled:opacity-50">
         <option value="">-- තෝරන්න --</option>
       </select>
     </div>
 
     <!-- 4. Highlight Occurrence Count Badge -->
     <div id="gradeHighlightCountBadge" 
-         class="hidden self-end mb-0.5 text-xs font-black bg-sky-500 text-white px-2.5 py-1 rounded-xl shadow-xs animate-pulse">
+         class="hidden self-end mb-0.5 text-xs font-black bg-sky-500 text-white px-2.5 py-1.5 rounded-xl shadow-xs animate-pulse">
       හමු වූ වාර ගණන: 0
     </div>
   </div>
 
-  <!-- 5. මුද්‍රණ බොත්තම් (Print Menu) -->
-  <div class="flex items-center gap-1.5 self-end">
-    <button onclick="printCustomTimetables('CLASS', '2')" 
-            class="text-xs font-bold bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border border-indigo-200 px-3 py-1.5 rounded-xl transition flex items-center gap-1 shadow-2xs">
-      <i class="fa-solid fa-print"></i> පන්ති (A4 ට 2යි)
-    </button>
-    <button onclick="printCustomTimetables('TEACHER', '4')" 
-            class="text-xs font-bold bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 px-3 py-1.5 rounded-xl transition flex items-center gap-1 shadow-2xs">
-      <i class="fa-solid fa-id-badge"></i> ගුරු (A4 ට 4යි)
-    </button>
+  <!-- 5. A4 ප්‍රමාණය තෝරා මුද්‍රණය කිරීමේ පාලකය (Dynamic Print Controls) -->
+  <div class="flex flex-wrap items-center gap-2 self-end bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+    <div>
+      <label class="text-[9px] font-black text-slate-500 block leading-tight">A4 පිටුවකට:</label>
+      <select id="printLayoutSelect" 
+              class="text-[11px] font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 outline-none">
+        <option value="1">1 බැගින් (Full Page)</option>
+        <option value="2" selected>2 බැගින් (Half Page)</option>
+        <option value="4">4 බැගින් (Pocket Slip)</option>
+      </select>
+    </div>
+
+    <div class="flex items-center gap-1 mt-2.5">
+      <button onclick="printCustomTimetables('CLASS', document.getElementById('printLayoutSelect').value)" 
+              title="පන්ති කාලසටහන් මුද්‍රණය"
+              class="text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer">
+        <i class="fa-solid fa-print text-[10px]"></i> පන්ති
+      </button>
+
+      <button onclick="printCustomTimetables('TEACHER', document.getElementById('printLayoutSelect').value)" 
+              title="ගුරු කාලසටහන් මුද්‍රණය"
+              class="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer">
+        <i class="fa-solid fa-id-badge text-[10px]"></i> ගුරු
+      </button>
+    </div>
   </div>
+
 </div>
 
-<!-- ශ්‍රේණි කාලසටහන් Table Container (Horizontal Scroll සහිතයි) -->
-<div class="w-full overflow-x-auto bg-white rounded-2xl border border-slate-200 shadow-xs max-h-[75vh]">
-  <table class="w-full border-collapse text-left">
+<!-- ශ්‍රේණි කාලසටහන් Table Container (තිරස් සහ සිරස් Scroll සහිතයි) -->
+<div class="w-full overflow-auto bg-white rounded-2xl border border-slate-200 shadow-xs max-h-[78vh]">
+  <table class="w-max min-w-full border-collapse text-left">
     <thead id="gradeTimetableHead"></thead>
     <tbody id="gradeTimetableBody"></tbody>
   </table>
 </div>
-
-    
 
     <!-- TAB 4: TEACHER SCHEDULES -->
     <div id="teacherScheduleTab" class="hidden space-y-6">
@@ -7205,6 +7220,11 @@ function getFilteredClassesForGradeView() {
 // =========================================================================
 // 🔴 ප්‍රධාන GRADE / MASTER TIMETABLE RENDERER
 // =========================================================================
+
+// =========================================================================
+// 🌐 GRADE & MASTER TIMETABLE RENDERER
+// (පන්ති සියල්ල පහළට සහ කාලච්ඡේද 40 හරහට සිටින සේ සැකසූ Master Grid)
+// =========================================================================
 function renderGradeTimetableGrid() {
   const thead = document.getElementById("gradeTimetableHead");
   const tbody = document.getElementById("gradeTimetableBody");
@@ -7212,7 +7232,8 @@ function renderGradeTimetableGrid() {
 
   const targetClasses = getFilteredClassesForGradeView();
   if (targetClasses.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-slate-400 font-bold">පන්ති හමු නොවීය.</td></tr>`;
+    thead.innerHTML = "";
+    tbody.innerHTML = `<tr><td class="p-8 text-center text-slate-400 font-bold">පන්ති හමු නොවීය.</td></tr>`;
     return;
   }
 
@@ -7226,59 +7247,77 @@ function renderGradeTimetableGrid() {
 
   let totalHighlightMatchCount = 0;
 
-  // -------------------------------------------------------------
-  // A. Header සකස් කිරීම (පන්ති නම් සහ ඒවායේ ලයිව් Counts 34/40)
-  // -------------------------------------------------------------
-  let headHtml = `<tr>
-    <th class="sticky left-0 z-20 bg-slate-800 text-white p-2.5 text-xs font-black border-r border-slate-700 min-w-[90px] text-center shadow-md">
-      දින / වේලාව
-    </th>`;
+  // -------------------------------------------------------------------------
+  // 1. HEADER පේළි 2 සකස් කිරීම (දින සහ කාලච්ඡේද හරහට)
+  // -------------------------------------------------------------------------
+  
+  // Header Row 1: වම් පස පන්තිය මාතෘකාව + දින 5 (එක් දිනකට Colspan 8 බැගින්)
+  let headHtml = `
+    <tr>
+      <th rowspan="2" class="sticky left-0 top-0 z-40 bg-slate-900 text-white p-2 text-xs font-black border-r border-b border-slate-700 min-w-[130px] max-w-[130px] text-center shadow-md">
+        පන්තිය / ප්‍රගතිය
+      </th>
+  `;
 
-  targetClasses.forEach(cls => {
-    const cId = String(cls.id || cls.name).trim();
-    // සැබෑ Count එක ගණනය කිරීම
-    const allocated = (window.masterSchedule || []).filter(s => {
-      const scId = String(s.classId || '').trim().toLowerCase();
-      return (scId === cId.toLowerCase() || scId === String(cls.name || '').toLowerCase()) && s.subject;
-    }).length;
-
-    const isDone = allocated >= 40;
-
+  days.forEach(d => {
     headHtml += `
-      <th class="p-2 border-r border-slate-200 bg-slate-50 text-slate-800 min-w-[120px] text-center select-none">
-        <div class="font-extrabold text-xs text-indigo-950">${cls.name || cls.id}</div>
-        <div class="mt-0.5 inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.2 rounded border ${
-          isDone ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-        }">
-          <span>${allocated}/40</span>
-          ${isDone ? '<i class="fa-solid fa-check text-[8px]"></i>' : ''}
-        </div>
+      <th colspan="8" class="sticky top-0 z-30 p-1.5 border-r border-b border-indigo-900 bg-indigo-950 text-white text-[11px] font-black text-center tracking-wider select-none shadow-xs">
+        ${d.name}
       </th>
     `;
   });
   headHtml += `</tr>`;
+
+  // Header Row 2: එක් එක් දිනය යටතේ කාලච්ඡේද 1 සිට 8 දක්වා තීරු
+  headHtml += `<tr>`;
+  days.forEach(d => {
+    for (let p = 1; p <= 8; p++) {
+      headHtml += `
+        <th class="sticky top-[30px] z-30 p-1 border-r border-b border-slate-300 bg-slate-100 text-slate-700 text-[10px] font-black min-w-[70px] max-w-[85px] text-center select-none">
+          ${p}
+        </th>
+      `;
+    }
+  });
+  headHtml += `</tr>`;
   thead.innerHTML = headHtml;
 
-  // -------------------------------------------------------------
-  // B. Body සකස් කිරීම (Day x Period Matrix)
-  // -------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // 2. BODY සකස් කිරීම (එක් එක් පන්තිය පහළට පේළි වශයෙන්)
+  // -------------------------------------------------------------------------
   let bodyHtml = "";
 
-  days.forEach((d) => {
-    for (let p = 1; p <= 8; p++) {
-      let rowHtml = `<tr class="hover:bg-slate-50/50 transition border-b border-slate-200">`;
+  targetClasses.forEach(cls => {
+    const cId = String(cls.id || cls.name).trim();
 
-      // මුල් තීරුව (Sticky Day + Period)
-      rowHtml += `
-        <td class="sticky left-0 z-10 bg-slate-100 border-r border-slate-300 p-2 text-center select-none shadow-xs">
-          <div class="text-[10px] font-bold text-slate-500">${d.name}</div>
-          <div class="text-xs font-black text-indigo-950">${p} වන කාලය</div>
-        </td>
-      `;
+    // මෙම පන්තිය සම්පූර්ණ කර ඇති කාලච්ඡේද ගණන (34/40 ගණනය කිරීම)
+    const allocated = (window.masterSchedule || []).filter(s => {
+      const scId = String(s.classId || '').trim().toLowerCase();
+      return (scId === cId.toLowerCase() || scId === String(cls.name || '').toLowerCase()) && s.subject && String(s.subject).trim() !== "";
+    }).length;
 
-      // එක් එක් පන්තියේ කොටුව (Cell)
-      targetClasses.forEach(cls => {
-        const cId = String(cls.id || cls.name).trim();
+    const isDone = allocated >= 40;
+
+    let rowHtml = `<tr class="hover:bg-slate-50/70 transition border-b border-slate-200">`;
+
+    // වම් පස Sticky තීරුව (පන්තියේ නම සහ සජීවී Count එක)
+    rowHtml += `
+      <td class="sticky left-0 z-20 bg-slate-50 border-r border-slate-300 p-2 text-center select-none shadow-xs min-w-[130px] max-w-[130px]">
+        <div class="font-black text-xs text-indigo-950 truncate" title="${cls.name || cls.id}">
+          ${cls.name || cls.id}
+        </div>
+        <div class="mt-1 inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-md border ${
+          isDone ? 'bg-emerald-100 text-emerald-800 border-emerald-300 shadow-2xs' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+        }">
+          <span>${allocated}/40</span>
+          ${isDone ? '<i class="fa-solid fa-check text-[8px]"></i>' : ''}
+        </div>
+      </td>
+    `;
+
+    // සතියේ දින 5 සහ කාලච්ඡේද 8 පුරා කොටු 40 ඇඳීම
+    days.forEach(d => {
+      for (let p = 1; p <= 8; p++) {
         const slot = (window.masterSchedule || []).find(s => {
           const scId = String(s.classId || '').trim().toLowerCase();
           const matchClass = (scId === cId.toLowerCase() || scId === String(cls.name || '').toLowerCase());
@@ -7290,7 +7329,7 @@ function renderGradeTimetableGrid() {
           const isLocked = Boolean(slot.isLocked);
           const isComb = Boolean(slot.isCombined || slot.isBasket || slot.combinedSubjectId);
 
-          // 🔴 Highlighting පරීක්ෂාව
+          // 🔴 Highlighter පරීක්ෂාව (Subject හෝ Teacher)
           let isHighlighted = false;
           if (window.gradeViewFilterType === "SUBJECT" && window.gradeViewSelectedValue) {
             const val = window.gradeViewSelectedValue.toLowerCase();
@@ -7318,7 +7357,7 @@ function renderGradeTimetableGrid() {
             cellStyle = "bg-indigo-50/70 border border-indigo-200 text-indigo-950";
           }
 
-          // ගුරුවරයා ලබා ගැනීම
+          // ගුරු නම ලබා ගැනීම
           let tName = "";
           if (slot.teacherId && slot.teacherId !== "NONE") {
             const tObj = (window.teachers || []).find(t => String(t.id).toLowerCase() === String(slot.teacherId).toLowerCase());
@@ -7328,44 +7367,44 @@ function renderGradeTimetableGrid() {
           const cleanSubEsc = String(slot.subject).replace(/'/g, "\\'");
 
           rowHtml += `
-            <td class="p-1.5 border-r border-slate-200 text-center relative group select-none transition ${cellStyle}"
+            <td class="p-1 border-r border-slate-200 text-center relative group select-none transition min-w-[70px] max-w-[85px] h-[52px] align-middle ${cellStyle}"
                 onclick="handleGradeCellQuickHighlight('${cleanSubEsc}', '${slot.teacherId || ''}')"
-                title="ක්ලික් කරන්න: මෙම විෂය/ගුරුවරයා මුළු කාලසටහන තුළ Highlight කිරීමට">
+                title="ක්ලික් කරන්න: Highlight කිරීමට | දින: ${d.name} (${p} වන කාලය)">
               
               <!-- Lock ලාංඡනය -->
               ${isLocked ? `
-                <span class="absolute top-1 left-1 text-amber-600 text-[8px] bg-amber-100 rounded px-0.5">
+                <span class="absolute top-0.5 left-0.5 text-amber-600 text-[8px] bg-amber-100 rounded px-0.5 pointer-events-none">
                   <i class="fa-solid fa-lock"></i>
                 </span>
               ` : ''}
 
-              <!-- ❌ Delete බොත්තම (Hover කළ විට පමණක් මතුවේ) -->
+              <!-- ❌ Delete බොත්තම (Hover වූ විට පමණක් මතුවේ) -->
               <button type="button" 
                       onclick="event.stopPropagation(); handleGradeSlotDelete('${cId}', ${d.id}, ${p}, ${isLocked})"
                       title="${isLocked ? 'අගුළු ලා ඇත (ඉවත් කිරීමට පෙර Unlock කරන්න)' : 'මෙම කොටුව ඉවත් කරන්න'}"
-                      class="absolute top-1 right-1 w-4 h-4 rounded bg-white hover:bg-rose-600 text-slate-400 hover:text-white border border-slate-200 hover:border-rose-600 flex items-center justify-center text-[8px] opacity-0 group-hover:opacity-100 transition shadow-2xs">
-                <i class="fa-solid fa-xmark"></i>
+                      class="absolute top-0.5 right-0.5 w-4 h-4 rounded bg-white hover:bg-rose-600 text-slate-400 hover:text-white border border-slate-200 hover:border-rose-600 flex items-center justify-center text-[8px] opacity-0 group-hover:opacity-100 transition shadow-2xs cursor-pointer">
+                <i class="fa-solid fa-xmark pointer-events-none"></i>
               </button>
 
-              <div class="text-[11px] font-black leading-tight truncate px-1">${slot.subject}</div>
-              <div class="text-[9px] text-slate-500 font-semibold truncate mt-0.5">${tName || (isComb ? 'Combined' : '-')}</div>
+              <div class="text-[10px] font-black leading-tight truncate px-0.5">${slot.subject}</div>
+              <div class="text-[8.5px] text-slate-500 font-semibold truncate mt-0.5">${tName || (isComb ? 'Combined' : '-')}</div>
             </td>
           `;
         } else {
-          // හිස් කොටුව (නව විෂයන් ඇතුළත් කිරීමට නොහැකිය - පන්ති කාලසටහනට යොමු කෙරේ)
+          // හිස් කොටුව (නව විෂයන් දැමීම වැළැක්වීම - පන්ති කාලසටහනට යොමු කෙරේ)
           rowHtml += `
-            <td class="p-1.5 border-r border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-center text-slate-300 text-[10px] font-bold cursor-pointer transition select-none"
+            <td class="p-1 border-r border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-center text-slate-300 text-[10px] font-bold cursor-pointer transition select-none min-w-[70px] max-w-[85px] h-[52px]"
                 onclick="redirectToClassSchedule('${cId}')"
-                title="විෂයන් ඇතුළත් කිරීමට ${cls.name || cId} පන්ති කාලසටහනට යන්න">
+                title="විෂයන් ඇතුළත් කිරීමට ${cls.name || cId} පන්ති කාලසටහන වෙත යන්න">
               -
             </td>
           `;
         }
-      });
+      }
+    });
 
-      rowHtml += `</tr>`;
-      bodyHtml += rowHtml;
-    }
+    rowHtml += `</tr>`;
+    bodyHtml += rowHtml;
   });
 
   tbody.innerHTML = bodyHtml;
@@ -7382,25 +7421,8 @@ function renderGradeTimetableGrid() {
   }
 }
 
-// 5. කොටුවක් ක්ලික් කළ විට ක්ෂණිකව Highlight කිරීම (Cell Click Auto-Highlighter)
-function handleGradeCellQuickHighlight(subject, teacherId) {
-  const typeSelect = document.getElementById("gradeHighlightTypeSelect");
-  const valueSelect = document.getElementById("gradeHighlightValueSelect");
-  if (!typeSelect || !valueSelect) return;
-
-  // දැනටමත් විෂය අනුව සෙවීම සක්‍රිය නම් හෝ Default නම්
-  if (typeSelect.value === "TEACHER" && teacherId) {
-    valueSelect.value = teacherId;
-    window.gradeViewSelectedValue = teacherId;
-  } else {
-    typeSelect.value = "SUBJECT";
-    handleGradeFilterTypeChange();
-    valueSelect.value = subject;
-    window.gradeViewSelectedValue = subject;
-  }
-  renderGradeTimetableGrid();
-}
-
+window.renderGradeTimetableGrid = renderGradeTimetableGrid;
+    
 // 6. Slot එකක් ඉවත් කිරීම (Delete Logic with Lock Protection)
 function handleGradeSlotDelete(classId, day, period, isLocked) {
   if (isLocked) {
