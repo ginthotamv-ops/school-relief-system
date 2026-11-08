@@ -7400,7 +7400,8 @@ function getFilteredClassesForGradeView() {
 // (පන්ති සියල්ල පහළට සහ කාලච්ඡේද 40 හරහට සිටින සේ සැකසූ Master Grid)
 // =========================================================================
 // =========================================================================
-// 🌐 GRADE & MASTER TIMETABLE RENDERER (FULL COLOR PALETTE & DUAL GRADIENT)
+// 🌐 GRADE & MASTER TIMETABLE RENDERER
+// (Highlight වන විට තද කොළ පසුබිම සහ සුදු පැහැති අකුරු සහිතයි)
 // =========================================================================
 function renderGradeTimetableGrid() {
   const thead = document.getElementById("gradeTimetableHead");
@@ -7425,27 +7426,27 @@ function renderGradeTimetableGrid() {
   let totalHighlightMatchCount = 0;
 
   // -------------------------------------------------------------------------
-  // 🎨 1. විෂය වර්ණ පද්ධතිය (Color Palette Engine)
+  // 1. විෂය වර්ණ පද්ධතිය (Color Palette Engine)
   // -------------------------------------------------------------------------
   const SUBJECT_COLOR_MAP = {
-    "ගණිතය":            { bg: "#e0f2fe", border: "#7dd3fc", text: "#0369a1" }, // Sky Blue
-    "විද්‍යාව":           { bg: "#dcfce7", border: "#86efac", text: "#15803d" }, // Emerald Green
-    "සිංහල":             { bg: "#ffedd5", border: "#fdba74", text: "#c2410c" }, // Soft Orange
-    "ඉංග්‍රීසි":          { bg: "#ede9fe", border: "#c4b5fd", text: "#6d28d9" }, // Violet / Purple
-    "බුද්ධ ධර්මය":        { bg: "#fef9c3", border: "#fde047", text: "#a16207" }, // Soft Gold
+    "ගණිතය":            { bg: "#e0f2fe", border: "#7dd3fc", text: "#0369a1" },
+    "විද්‍යාව":           { bg: "#dcfce7", border: "#86efac", text: "#15803d" },
+    "සිංහල":             { bg: "#ffedd5", border: "#fdba74", text: "#c2410c" },
+    "ඉංග්‍රීසි":          { bg: "#ede9fe", border: "#c4b5fd", text: "#6d28d9" },
+    "බුද්ධ ධර්මය":        { bg: "#fef9c3", border: "#fde047", text: "#a16207" },
     "ආගම":              { bg: "#fef9c3", border: "#fde047", text: "#a16207" },
-    "ඉතිහාසය":           { bg: "#ffe4e6", border: "#fda4af", text: "#be123c" }, // Rose Tint
-    "භූගෝල විද්‍යාව":     { bg: "#ccfbf1", border: "#5eead4", text: "#0f766e" }, // Teal
-    "පුරවැසි අධ්‍යාපනය":  { bg: "#ecfccb", border: "#bef264", text: "#4d7c0f" }, // Lime
-    "සෞඛ්‍යය":           { bg: "#fce7f3", border: "#f472b6", text: "#be185d" }, // Pink
-    "තොරතුරු තාක්ෂණය":   { bg: "#e0e7ff", border: "#a5b4fc", text: "#4338ca" }, // Indigo
-    "දෙමළ":              { bg: "#fed7aa", border: "#fb923c", text: "#9a3412" }, // Warm Amber
-    "චිත්‍ර":             { bg: "#fae8ff", border: "#f0abfc", text: "#a21caf" }, // Fuchsia
-    "සංගීතය":            { bg: "#cffafe", border: "#67e8f9", text: "#0e7490" }, // Cyan
-    "නැටුම්":             { bg: "#fef08a", border: "#facc15", text: "#854d0e" }, // Yellow
-    "නාට්‍ය":             { bg: "#d1fae5", border: "#6ee7b7", text: "#065f46" }, // Mint Green
-    "සාහිත්‍යය":          { bg: "#f5d0fe", border: "#e879f9", text: "#86198f" }, // Light Purple
-    "වාණිජ":             { bg: "#f1f5f9", border: "#cbd5e1", text: "#334155" }  // Slate Gray
+    "ඉතිහාසය":           { bg: "#ffe4e6", border: "#fda4af", text: "#be123c" },
+    "භූගෝල විද්‍යාව":     { bg: "#ccfbf1", border: "#5eead4", text: "#0f766e" },
+    "පුරවැසි අධ්‍යාපනය":  { bg: "#ecfccb", border: "#bef264", text: "#4d7c0f" },
+    "සෞඛ්‍යය":           { bg: "#fce7f3", border: "#f472b6", text: "#be185d" },
+    "තොරතුරු තාක්ෂණය":   { bg: "#e0e7ff", border: "#a5b4fc", text: "#4338ca" },
+    "දෙමළ":              { bg: "#fed7aa", border: "#fb923c", text: "#9a3412" },
+    "චිත්‍ර":             { bg: "#fae8ff", border: "#f0abfc", text: "#a21caf" },
+    "සංගීතය":            { bg: "#cffafe", border: "#67e8f9", text: "#0e7490" },
+    "නැටුම්":             { bg: "#fef08a", border: "#facc15", text: "#854d0e" },
+    "නාට්‍ය":             { bg: "#d1fae5", border: "#6ee7b7", text: "#065f46" },
+    "සාහිත්‍යය":          { bg: "#f5d0fe", border: "#e879f9", text: "#86198f" },
+    "වාණිජ":             { bg: "#f1f5f9", border: "#cbd5e1", text: "#334155" }
   };
 
   const DYNAMIC_FALLBACK_COLORS = [
@@ -7474,7 +7475,7 @@ function renderGradeTimetableGrid() {
   }
 
   // -------------------------------------------------------------------------
-  // 2. සහායක ශ්‍රිත (Slot එකකින් ගුරුවරුන් ලබා ගැනීම & ගැටුම් පරීක්ෂාව)
+  // 2. සහායක ශ්‍රිත (Slot ගුරු හඳුනාගැනීම & ගැටුම් පරීක්ෂාව)
   // -------------------------------------------------------------------------
   function extractTeachers(s) {
     const list = new Set();
@@ -7513,7 +7514,7 @@ function renderGradeTimetableGrid() {
   }
 
   // -------------------------------------------------------------------------
-  // 3. HEADER පේළි 2 සකස් කිරීම (දින සහ කාලච්ඡේද හරහට)
+  // 3. HEADER පේළි 2 සකස් කිරීම
   // -------------------------------------------------------------------------
   let headHtml = `
     <tr>
@@ -7545,14 +7546,13 @@ function renderGradeTimetableGrid() {
   thead.innerHTML = headHtml;
 
   // -------------------------------------------------------------------------
-  // 4. BODY සකස් කිරීම (පන්ති පහළට සහ කොටු 40 හරහට)
+  // 4. BODY සකස් කිරීම
   // -------------------------------------------------------------------------
   let bodyHtml = "";
 
   targetClasses.forEach(cls => {
     const cId = String(cls.id || cls.name).trim();
 
-    // මෙම පන්තියේ සජීවී Count එක ගණනය කිරීම (34/40)
     const allocated = (window.masterSchedule || []).filter(s => {
       const scId = String(s.classId || '').trim().toLowerCase();
       return (scId === cId.toLowerCase() || scId === String(cls.name || '').toLowerCase()) && s.subject && String(s.subject).trim() !== "";
@@ -7562,7 +7562,6 @@ function renderGradeTimetableGrid() {
 
     let rowHtml = `<tr class="hover:bg-slate-50/70 transition border-b border-slate-200">`;
 
-    // වම් පස Sticky තීරුව (පන්තියේ නම සහ සජීවී Count එක)
     rowHtml += `
       <td class="sticky left-0 z-20 bg-slate-50 border-r border-slate-300 p-2 text-center select-none shadow-xs min-w-[130px] max-w-[130px]">
         <div class="font-black text-xs text-indigo-950 truncate" title="${cls.name || cls.id}">
@@ -7577,7 +7576,6 @@ function renderGradeTimetableGrid() {
       </td>
     `;
 
-    // දින 5 සහ කාලච්ඡේද 8 (කොටු 40)
     days.forEach(d => {
       for (let p = 1; p <= 8; p++) {
         const slot = (window.masterSchedule || []).find(s => {
@@ -7610,20 +7608,22 @@ function renderGradeTimetableGrid() {
 
           if (isHighlighted) totalHighlightMatchCount++;
 
-          // 🔴 වර්ණ තීරණය කිරීම (Clash > Highlight > Dual Gradient > Single Pastel)
+          // -------------------------------------------------------------------
+          // 🔴 වර්ණ තීරණය කිරීම (Clash > Dark Green Highlight > Gradient > Pastel)
+          // -------------------------------------------------------------------
           let cellInlineStyle = "";
           let cellClassNames = "p-1 border-r text-center relative group select-none transition min-w-[70px] max-w-[85px] h-[52px] align-middle";
 
           if (hasClash) {
-            // 🛑 Clash: රතු පැහැය
+            // 🛑 1. Clash: රතු පැහැය
             cellInlineStyle = "background-color: #fff1f2; border-color: #f43f5e; color: #881337;";
             cellClassNames += " ring-2 ring-rose-500 shadow-sm animate-pulse";
           } else if (isHighlighted) {
-            // 🔵 Highlighted: අහස් නිල්
-            cellInlineStyle = "background-color: #e0f2fe; border-color: #0ea5e9; color: #0369a1;";
-            cellClassNames += " ring-2 ring-sky-500 shadow-md font-black";
+            // 🟢 2. තෝරාගත් අවස්ථාව: තද කොළ පැහැය (Dark Emerald) සහ සුදු පැහැති අකුරු
+            cellInlineStyle = "background-color: #065f46 !important; border-color: #047857 !important; color: #ffffff !important;";
+            cellClassNames += " ring-2 ring-emerald-400 shadow-md font-black z-10";
           } else if (isComb) {
-            // 🟣 Combined: විෂයන් 2ක Linear Gradient එක
+            // 🟣 3. Combined: සාමාන්‍ය අවස්ථාවේ විෂයන් 2ක Linear Gradient එක
             let subList = [];
             if (Array.isArray(slot.basketItems) && slot.basketItems.length > 0) {
               subList = slot.basketItems.map(b => b.subject).filter(Boolean);
@@ -7648,13 +7648,12 @@ function renderGradeTimetableGrid() {
             }
             cellClassNames += isLocked ? " ring-1 ring-amber-400 shadow-xs" : " shadow-2xs";
           } else {
-            // 🟢 Regular Single Subject: අනන්‍ය Pastel වර්ණය
+            // 🎨 4. Regular Subject: සාමාන්‍ය අවස්ථාවේ අනන්‍ය Pastel වර්ණය
             const singleV = getSubjectVisual(slot.subject);
             cellInlineStyle = `background-color: ${singleV.bg}; border-color: ${singleV.border}; color: ${singleV.text};`;
             cellClassNames += isLocked ? " ring-1 ring-amber-400 shadow-xs" : " shadow-2xs";
           }
 
-          // ගුරු නම ලබා ගැනීම
           let tName = "";
           if (slot.teacherId && slot.teacherId !== "NONE") {
             const tObj = (window.teachers || []).find(t => String(t.id).toLowerCase() === String(slot.teacherId).toLowerCase());
@@ -7671,12 +7670,12 @@ function renderGradeTimetableGrid() {
               
               <!-- Lock ලාංඡනය -->
               ${isLocked ? `
-                <span class="absolute top-0.5 left-0.5 text-amber-600 text-[8px] bg-amber-100/90 rounded px-0.5 pointer-events-none">
+                <span class="absolute top-0.5 left-0.5 ${isHighlighted ? 'text-amber-300 bg-black/30' : 'text-amber-600 bg-amber-100/90'} text-[8px] rounded px-0.5 pointer-events-none">
                   <i class="fa-solid fa-lock"></i>
                 </span>
               ` : ''}
 
-              <!-- ❌ Delete බොත්තම (Hover වූ විට පමණක් මතුවේ) -->
+              <!-- ❌ Delete බොත්තම -->
               <button type="button" 
                       onclick="event.stopPropagation(); handleGradeSlotDelete('${cId}', ${d.id}, ${p}, ${isLocked})"
                       title="${isLocked ? 'අගුළු ලා ඇත (ඉවත් කිරීමට පෙර Unlock කරන්න)' : 'මෙම කොටුව ඉවත් කරන්න'}"
@@ -7684,12 +7683,19 @@ function renderGradeTimetableGrid() {
                 <i class="fa-solid fa-xmark pointer-events-none"></i>
               </button>
 
-              <div class="text-[10px] font-black leading-tight truncate px-0.5">${slot.subject}</div>
-              <div class="text-[8.5px] opacity-85 font-semibold truncate mt-0.5">${tName || (isComb ? 'Combined' : '-')}</div>
+              <!-- විෂය නම (Highlight වූ විට සුදු පැහැයෙන් දිස්වේ) -->
+              <div class="text-[10px] font-black leading-tight truncate px-0.5 ${isHighlighted ? 'text-white' : ''}">
+                ${slot.subject}
+              </div>
+
+              <!-- ගුරු නම (Highlight වූ විට ලා කොළ පැහැයෙන් පැහැදිලිව දිස්වේ) -->
+              <div class="text-[8.5px] font-semibold truncate mt-0.5 ${isHighlighted ? 'text-emerald-100 font-bold' : 'opacity-85'}">
+                ${tName || (isComb ? 'Combined' : '-')}
+              </div>
             </td>
           `;
         } else {
-          // හිස් කොටුව (නව විෂයන් දැමීම වැළැක්වීම - පන්ති කාලසටහනට යොමු කෙරේ)
+          // හිස් කොටුව
           rowHtml += `
             <td class="p-1 border-r border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-center text-slate-300 text-[10px] font-bold cursor-pointer transition select-none min-w-[70px] max-w-[85px] h-[52px]"
                 onclick="redirectToClassSchedule('${cId}')"
@@ -7707,12 +7713,13 @@ function renderGradeTimetableGrid() {
 
   tbody.innerHTML = bodyHtml;
 
-  // Highlight Occurrence Count Badge එක යාවත්කාලීන කිරීම
+  // Highlight Occurrence Count Badge එක තද කොළ පැහැයෙන් යාවත්කාලීන කිරීම
   const countBadge = document.getElementById("gradeHighlightCountBadge");
   if (countBadge) {
     if (window.gradeViewSelectedValue && totalHighlightMatchCount > 0) {
       countBadge.classList.remove("hidden");
-      countBadge.innerHTML = `<i class="fa-solid fa-bullseye mr-1"></i>හමු වූ වාර ගණන: ${totalHighlightMatchCount}`;
+      countBadge.className = "self-end mb-0.5 text-xs font-black bg-emerald-800 text-white border border-emerald-600 px-2.5 py-1.5 rounded-xl shadow-xs animate-pulse";
+      countBadge.innerHTML = `<i class="fa-solid fa-bullseye mr-1 text-emerald-300"></i>හමු වූ වාර ගණන: ${totalHighlightMatchCount}`;
     } else {
       countBadge.classList.add("hidden");
     }
@@ -7720,7 +7727,6 @@ function renderGradeTimetableGrid() {
 }
 
 window.renderGradeTimetableGrid = renderGradeTimetableGrid;
-
     
 // 6. Slot එකක් ඉවත් කිරීම (Delete Logic with Lock Protection)
 function handleGradeSlotDelete(classId, day, period, isLocked) {
