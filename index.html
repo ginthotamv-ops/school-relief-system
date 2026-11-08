@@ -2641,34 +2641,77 @@ function resetSystemData() {
       return false;
     }
 
-    function switchTab(tabId) {
-      const allPanels = ['reliefTab', 'classTimetableTab', 'gradeMasterTab', 'teacherScheduleTab', 'subjectCurriculumTab', 'gradeSettingsTab', 'teachersTab'];
-      allPanels.forEach(t => {
-        const el = document.getElementById(t);
-        if (el) el.classList.add('hidden');
-      });
-      document.querySelectorAll('nav button').forEach(btn => {
-        btn.classList.remove('border-indigo-600', 'text-indigo-600');
-        btn.classList.add('border-transparent', 'text-slate-500');
-      });
+// =========================================================================
+// 🔄 යාවත්කාලීන කළ TAB CONTROLLER ශ්‍රිතය
+// =========================================================================
+function switchTab(tabId) {
+  const allPanels = [
+    'reliefTab', 
+    'classTimetableTab', 
+    'gradeMasterTab', 
+    'teacherScheduleTab', 
+    'subjectCurriculumTab', 
+    'gradeSettingsTab', 
+    'teachersTab'
+  ];
 
-      const targetEl = document.getElementById(tabId);
-      if (targetEl) targetEl.classList.remove('hidden');
+  // 1. සියලුම Panels සඟවයි (hidden class එක එක් කරයි)
+  allPanels.forEach(t => {
+    const el = document.getElementById(t);
+    if (el) el.classList.add('hidden');
+  });
 
-      const activeNavBtn = document.getElementById('tab-' + tabId);
-      if (activeNavBtn) {
-        activeNavBtn.classList.add('border-indigo-600', 'text-indigo-600');
-        activeNavBtn.classList.remove('border-transparent', 'text-slate-500');
-      }
+  // 2. සියලුම Nav Buttons සාමාන්‍ය තත්ත්වයට පත් කරයි
+  document.querySelectorAll('nav button').forEach(btn => {
+    btn.classList.remove('border-indigo-600', 'text-indigo-600');
+    btn.classList.add('border-transparent', 'text-slate-500');
+  });
 
-      if (tabId === 'gradeMasterTab') renderGradeMasterGrid();
-      else if (tabId === 'classTimetableTab') renderClassTimetableGrid();
-      else if (tabId === 'teacherScheduleTab') renderIndividualTeacherSchedule();
-      else if (tabId === 'reliefTab') renderReliefAttendance();
-      else if (tabId === 'subjectCurriculumTab') renderCurriculumTable();
-      else if (tabId === 'gradeSettingsTab') { renderGradeToggles(); renderClassesList(); }
-      else if (tabId === 'teachersTab') { renderTeachersMasterList(); onTeacherSectionCheckboxesChange(); }
+  // 3. තෝරාගත් Tab එකේ Panel එක පමණක් පෙන්වයි
+  const targetEl = document.getElementById(tabId);
+  if (targetEl) targetEl.classList.remove('hidden');
+
+  // 4. අදාළ Nav Button එක සක්‍රිය කරයි (Active Tab Style)
+  const activeNavBtn = document.getElementById('tab-' + tabId);
+  if (activeNavBtn) {
+    activeNavBtn.classList.add('border-indigo-600', 'text-indigo-600');
+    activeNavBtn.classList.remove('border-transparent', 'text-slate-500');
+  }
+
+  // 5. තෝරාගත් Tab එකට අදාළ දත්ත Render කිරීම
+  if (tabId === 'gradeMasterTab') {
+    // 🔴 ශ්‍රේණි Dropdown එක පුරවා වගුව Render කිරීම
+    if (typeof populateGradeDropdown === 'function') populateGradeDropdown();
+    if (typeof renderGradeTimetableGrid === 'function') {
+      renderGradeTimetableGrid();
+    } else if (typeof renderGradeMasterGrid === 'function') {
+      renderGradeMasterGrid();
     }
+  } 
+  else if (tabId === 'classTimetableTab') {
+    if (typeof renderClassTimetableGrid === 'function') renderClassTimetableGrid();
+  } 
+  else if (tabId === 'teacherScheduleTab') {
+    if (typeof renderIndividualTeacherSchedule === 'function') renderIndividualTeacherSchedule();
+  } 
+  else if (tabId === 'reliefTab') {
+    if (typeof renderReliefAttendance === 'function') renderReliefAttendance();
+  } 
+  else if (tabId === 'subjectCurriculumTab') {
+    if (typeof renderCurriculumTable === 'function') renderCurriculumTable();
+  } 
+  else if (tabId === 'gradeSettingsTab') {
+    if (typeof renderGradeToggles === 'function') renderGradeToggles();
+    if (typeof renderClassesList === 'function') renderClassesList();
+  } 
+  else if (tabId === 'teachersTab') {
+    if (typeof renderTeachersMasterList === 'function') renderTeachersMasterList();
+    if (typeof onTeacherSectionCheckboxesChange === 'function') onTeacherSectionCheckboxesChange();
+  }
+}
+
+window.switchTab = switchTab;
+    
 
     function changeActiveDay(day) {
       activeDay = day;
