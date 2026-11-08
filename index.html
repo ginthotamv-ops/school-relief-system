@@ -76,7 +76,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V605040
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය V1000010
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -5820,7 +5820,7 @@ function handleSlotDragLeave(e) {
     }
 */
 
-// ⚡ ස්වයංක්‍රීයව ගුරු ගැටුම් නිරාකරණය කරන AI ඇල්ගොරිතමය
+// ⚡ ස්වයංක්‍රීයව ගුරු ගැටුම් නිරාකරණය කරන AI ඇල්ගොරිතමය (Smart Swap සහිතව)
 function autoResolveScheduleClashes() {
   let scheduleList = (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) 
     ? masterSchedule 
@@ -5837,18 +5837,21 @@ function autoResolveScheduleClashes() {
   let unresolvedCount = 0;
   let skippedLockedCount = 0;
 
-  // 🔴 සහායක ශ්‍රිතය: යම් ගුරුවරයෙකු අදාළ දිනයේ සහ වේලාවේ වෙනත් පන්තියක උගන්වන්නේදැයි පරීක්ෂාව
-  function isTeacherFree(teacherId, day, period, excludeSlot) {
+  // 🔴 සහායක ශ්‍රිතය 1: ගුරුවරයෙකු නිදහස්දැයි පරීක්ෂාව (Exclude කරන Slots හැර)
+  function isTeacherFree(teacherId, day, period, excludeSlots = []) {
     if (!teacherId || teacherId === "NONE" || teacherId === "EXCLUDED") return true;
+    const tid = String(teacherId).trim().toLowerCase();
+    const excludes = Array.isArray(excludeSlots) ? excludeSlots : [excludeSlots];
+
     return !scheduleList.some(s => 
-      s !== excludeSlot &&
-      s.teacherId && String(s.teacherId).trim().toLowerCase() === String(teacherId).trim().toLowerCase() &&
+      !excludes.includes(s) &&
+      s.teacherId && String(s.teacherId).trim().toLowerCase() === tid &&
       (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, day) : Number(s.day) === Number(day)) &&
       Number(s.period) === Number(period)
     );
   }
 
-  // 🔴 සහායක ශ්‍රිතය: යම් පන්තියක අදාළ වේලාව හිස්දැයි (Empty) පරීක්ෂාව
+  // 🔴 සහායක ශ්‍රිතය 2: පන්තියේ අදාළ වේලාව හිස්දැයි පරීක්ෂාව
   function isClassSlotFree(classId, day, period) {
     const cleanCid = String(classId).trim().toLowerCase();
     return !scheduleList.some(s => 
@@ -5858,10 +5861,35 @@ function autoResolveScheduleClashes() {
     );
   }
 
-  // 1. පවතින සියලුම ගැටුම් (Clashes) හඳුනාගැනීම
+  // 🔴 සහායක ශ්‍රිතය 3: Lab එකක් නිදහස්දැයි පරීක්ෂාව
+  function isLabFree(labId, day, period, excludeSlots = []) {
+    if (!labId) return true;
+    const targetLab = (window.schoolLabs || []).find(l => l.id === labId);
+    const maxCap = targetLab ? (Number(targetLab.capacity) || 1) : 1;
+    const excludes = Array.isArray(excludeSlots) ? excludeSlots : [excludeSlots];
+
+    const occupying = scheduleList.filter(s => 
+      !excludes.includes(s) &&
+      s.labId === labId &&
+      (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, day) : Number(s.day) === Number(day)) &&
+      Number(s.period) === Number(period)
+    );
+    return occupying.length < maxCap;
+  }
+
+  // 🔴 සහායක ශ්‍රිතය 4: ආගමික විෂය සීමා පරීක්ෂාව
+  function isReligionTimingValid(subject, day, period) {
+    if (typeof isReligiousSubject === "function" && isReligiousSubject(subject)) {
+      if (Number(period) === 6) return false;
+      if (Number(day) === 4 && Number(period) >= 7) return false;
+    }
+    return true;
+  }
+
+  // 1. ගැටුම් නිරාකරණ ලූපය (Clash Resolution Loop)
   let clashesFound = true;
   let iteration = 0;
-  const maxIterations = 20; // Infinite loops වැළැක්වීමට
+  const maxIterations = 25;
 
   while (clashesFound && iteration < maxIterations) {
     iteration++;
@@ -5869,14 +5897,14 @@ function autoResolveScheduleClashes() {
 
     for (let day of days) {
       for (let period of periods) {
-        // එකම දින සහ වේලාවේ එකම ගුරුවරයා සිටින slots සෙවීම
+        // එම වේලාවේ පවතින slots ලබා ගැනීම
         const slotsAtTime = scheduleList.filter(s => 
           s.teacherId && String(s.teacherId).trim() !== "" && s.teacherId !== "NONE" && s.teacherId !== "EXCLUDED" &&
           (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, day) : Number(s.day) === Number(day)) &&
           Number(s.period) === Number(period)
         );
 
-        // ගුරුවරුන් අනුව කාණ්ඩ කිරීම
+        // ගුරුවරුන් අනුව වර්ග කිරීම
         const teacherMap = {};
         slotsAtTime.forEach(s => {
           const tid = String(s.teacherId).trim().toLowerCase();
@@ -5884,17 +5912,23 @@ function autoResolveScheduleClashes() {
           teacherMap[tid].push(s);
         });
 
-        // ගැටුමක් ඇති ගුරුවරුන් විසඳීම
         for (let tid in teacherMap) {
-          const conflictingSlots = teacherMap[tid];
+          const rawConflicting = teacherMap[tid];
+
+          // Basket / Combined විෂයයන් එකම වේලාවේ එකම ගුරුවරයා යටතේ පැවතීම ගැටුමක් නොවේ
+          const conflictingSlots = rawConflicting.filter((s, idx) => {
+            return !rawConflicting.some((other, oIdx) => 
+              idx !== oIdx && s.isCombined && other.isCombined &&
+              ((s.combinedSubjectId && s.combinedSubjectId === other.combinedSubjectId) || (s.subject === other.subject))
+            );
+          });
+
           if (conflictingSlots.length > 1) {
             clashesFound = true;
 
-            // චලනය කළ හැකි (Unlocked) slot එකක් තෝරාගැනීම
-            // (Locked ඒවා මුලින් තබා Unlocked ඒවා පසුවට ගනී)
+            // Unlocked slots ප්‍රමුඛ කර තෝරාගැනීම
             conflictingSlots.sort((a, b) => (b.isLocked ? 1 : 0) - (a.isLocked ? 1 : 0));
 
-            // දෙවැනි slot එකේ සිට විසඳීමට උත්සාහ කිරීම
             let slotToMove = null;
             for (let i = 1; i < conflictingSlots.length; i++) {
               if (!conflictingSlots[i].isLocked) {
@@ -5902,41 +5936,83 @@ function autoResolveScheduleClashes() {
                 break;
               }
             }
-
-            // දෙවැන්නත් Locked නම්, පළමු වැන්න Unlocked දැයි බැලීම
             if (!slotToMove && !conflictingSlots[0].isLocked) {
               slotToMove = conflictingSlots[0];
             }
 
             if (!slotToMove) {
-              // සියලුම ගැටුණු slots locked නම් චලනය කළ නොහැක
               skippedLockedCount++;
               continue;
             }
 
-            // 🔴 2. Slot එක ගෙන යා හැකි සුදුසුම හිස් වේලාව (Alternative Slot) සෙවීම
-            let targetDay = null;
-            let targetPeriod = null;
+            let moveSuccess = false;
 
+            // -----------------------------------------------------------------
+            // ක්‍රමය A: හිස් කාලච්ඡේදයක් (Empty Slot) තිබේදැයි බැලීම
+            // -----------------------------------------------------------------
             for (let candDay of days) {
               for (let candPeriod of periods) {
-                // Interval (විවේකය) මඟහැරීම අවශ්‍ය නම් මෙතැනින් පරීක්ෂා කළ හැක
                 if (isClassSlotFree(slotToMove.classId, candDay, candPeriod) &&
-                    isTeacherFree(slotToMove.teacherId, candDay, candPeriod, slotToMove)) {
-                  targetDay = candDay;
-                  targetPeriod = candPeriod;
+                    isTeacherFree(slotToMove.teacherId, candDay, candPeriod, [slotToMove]) &&
+                    isLabFree(slotToMove.labId, candDay, candPeriod, [slotToMove]) &&
+                    isReligionTimingValid(slotToMove.subject, candDay, candPeriod)) {
+                  
+                  slotToMove.day = candDay;
+                  slotToMove.period = candPeriod;
+                  resolvedCount++;
+                  moveSuccess = true;
                   break;
                 }
               }
-              if (targetDay !== null) break;
+              if (moveSuccess) break;
             }
 
-            // 🔴 3. සුදුසු වේලාවක් හමු වූයේ නම් මාරු කිරීම
-            if (targetDay !== null && targetPeriod !== null) {
-              slotToMove.day = targetDay;
-              slotToMove.period = targetPeriod;
-              resolvedCount++;
-            } else {
+            // -----------------------------------------------------------------
+            // 🔴 ක්‍රමය B: පන්තිය 100% ක් පිරී ඇත්නම් -> SMART SWAP (හුවමාරුව)
+            // -----------------------------------------------------------------
+            if (!moveSuccess) {
+              const cleanCid = String(slotToMove.classId).trim().toLowerCase();
+              
+              // එම පන්තියේම ඇති අනෙක් Unlocked සහ සාමාන්‍ය Slots සෙවීම
+              const candidateSlotsForSwap = scheduleList.filter(s => 
+                String(s.classId).trim().toLowerCase() === cleanCid &&
+                s !== slotToMove &&
+                !s.isLocked &&
+                !s.isCombined // Basket විෂයන් පැටලීම වැළැක්වීමට
+              );
+
+              for (let otherSlot of candidateSlotsForSwap) {
+                const origDay = slotToMove.day;
+                const origPeriod = slotToMove.period;
+                const targetDay = otherSlot.day;
+                const targetPeriod = otherSlot.period;
+
+                // 1. slotToMove හි ගුරුවරයාට සහ Lab එකට target වේලාව ගැළපේද?
+                const canSlotToMoveGo = isTeacherFree(slotToMove.teacherId, targetDay, targetPeriod, [slotToMove, otherSlot]) &&
+                                        isLabFree(slotToMove.labId, targetDay, targetPeriod, [slotToMove, otherSlot]) &&
+                                        isReligionTimingValid(slotToMove.subject, targetDay, targetPeriod);
+
+                // 2. otherSlot හි ගුරුවරයාට සහ Lab එකට original (origDay/origPeriod) වේලාව ගැළපේද?
+                const canOtherSlotCome = isTeacherFree(otherSlot.teacherId, origDay, origPeriod, [slotToMove, otherSlot]) &&
+                                         isLabFree(otherSlot.labId, origDay, origPeriod, [slotToMove, otherSlot]) &&
+                                         isReligionTimingValid(otherSlot.subject, origDay, origPeriod);
+
+                // 3. දෙපාර්ශවයටම කිසිදු ගැටුමක් නැතිනම් පමණක් ස්ථාන මාරු (SWAP) කිරීම!
+                if (canSlotToMoveGo && canOtherSlotCome) {
+                  slotToMove.day = targetDay;
+                  slotToMove.period = targetPeriod;
+
+                  otherSlot.day = origDay;
+                  otherSlot.period = origPeriod;
+
+                  resolvedCount++;
+                  moveSuccess = true;
+                  break;
+                }
+              }
+            }
+
+            if (!moveSuccess) {
               unresolvedCount++;
             }
           }
@@ -5945,26 +6021,31 @@ function autoResolveScheduleClashes() {
     }
   }
 
-  // 4. සුරැකීම සහ අතුරුමුහුණත යාවත්කාලීන කිරීම
+  // 4. දත්ත සුරැකීම සහ අතුරුමුහුණත යාවත්කාලීන කිරීම
   if (typeof masterSchedule !== "undefined") masterSchedule = scheduleList;
   window.masterSchedule = scheduleList;
 
   if (typeof saveAllToStorage === "function") saveAllToStorage();
   if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+  if (typeof renderLabTimetableGrid === "function") renderLabTimetableGrid();
 
-  // 5. අවසන් ප්‍රතිඵලය දැනුම් දීම
+  // 🔴 5. නිවැරදි කළ දැනුම්දීම් පණිවිඩ (Accurate Alert Logic)
   if (resolvedCount > 0 && unresolvedCount === 0) {
-    alert(` සාර්ථකයි! ගුරු ගැටුම් ${resolvedCount} ක් ස්වයංක්‍රීයව නිරාකරණය කර කාලසටහන සකස් කරන ලදී.`);
+    alert(`🎉 සාර්ථකයි! ගුරු ගැටුම් ${resolvedCount} ක් ස්වයංක්‍රීයව හුවමාරු කර (Smart Swap) නිරාකරණය කරන ලදී.`);
   } else if (resolvedCount > 0 && unresolvedCount > 0) {
-    alert(`️ ගැටුම් ${resolvedCount} ක් සාර්ථකව විසඳන ලදී. තවත් ගැටුම් ${unresolvedCount} ක් සඳහා සුදුසු විවේක කාලච්ඡේද නොමැති බැවින් අතින් සකස් කිරීමට සිදුවේ.`);
+    alert(`⚠️ ගැටුම් ${resolvedCount} ක් සාර්ථකව විසඳන ලදී. තවත් ගැටුම් ${unresolvedCount} ක් සඳහා සුදුසු විවේක හෝ හුවමාරු කළ හැකි කාලච්ඡේද නොමැති බැවින් අතින් සකස් කිරීමට සිදුවේ.`);
+  } else if (unresolvedCount > 0) {
+    alert(`⚠️ හඳුනාගත් ගුරු ගැටුම් ${unresolvedCount} ක් ස්වයංක්‍රීයව විසඳීමට නොහැකි විය. පන්ති සියල්ල පිරී ඇති අතර, හුවමාරු කිරීමට සුදුසු වෙනත් විවේක කාලච්ඡේද නොමැති බැවින් අදාළ ගුරුවරුන්ගේ කාලච්ඡේදයක් අතින් වෙනස් කළ යුතුය.`);
   } else if (skippedLockedCount > 0) {
     alert(`⛔ ගැටුම් ඇති කාලච්ඡේද සියල්ලම අගුළු ලා (Locked) ඇති බැවින් චලනය කළ නොහැකි විය. කරුණාකර අදාළ කොටුව Unlock කර නැවත උත්සාහ කරන්න.`);
   } else {
-    alert(" කාලසටහන තුළ කිසිදු ගුරු ගැටුමක් හමු නොවීය!");
+    alert("✅ කාලසටහන තුළ කිසිදු ගුරු ගැටුමක් හමු නොවීය!");
   }
 }
 
 window.autoResolveScheduleClashes = autoResolveScheduleClashes;
+
+
     
     // 4. විෂය පේළියක් එක් කිරීම (එම ශ්‍රේණියේ විෂයන් පමණක් Dropdown එකේ ඇත, ගුරු තේරීමක් නැත)
     function addBasketSubjectRow(selectedSubjectName = "") {
