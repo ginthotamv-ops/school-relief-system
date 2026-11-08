@@ -7593,6 +7593,10 @@ window.saveClassSpecificCombinedSubject = saveClassSpecificCombinedSubject;
 // =========================================================================
 // 📦 Drag & Drop, Filtering, Completed Color සහ Highlighting සහිත Quota Tray
 // =========================================================================
+
+    // =========================================================================
+// 📦 34/40 ප්‍රගති පුවරුව (Progress Banner) සහිත සම්පූර්ණ Quota Tray ශ්‍රිතය
+// =========================================================================
 function renderSubjectQuotaTray(classId) {
   const tray = document.getElementById("classSubjectQuotaTray") || document.getElementById("classSubjectQuotaStatus");
   if (!tray) return;
@@ -7613,6 +7617,71 @@ function renderSubjectQuotaTray(classId) {
   const currentClassName = currentCls ? currentCls.name : cleanClassId;
 
   // =========================================================================
+  // 🔴 0. සතියේ මුළු කාලච්ඡේද 40 න් සම්පූර්ණ වූ ප්‍රමාණය සහ Progress Banner එක
+  // =========================================================================
+  const totalWeeklyPeriods = 40; // සතියේ මුළු කාලච්ඡේද ගණන
+  
+  // මෙම පන්තියට දැනට masterSchedule තුළ යොදා ඇති සියලුම කාලච්ඡේද ගණන
+  const allocatedClassSlots = (masterSchedule || []).filter(s => {
+    const cid = String(s.classId || '').trim().toLowerCase();
+    const isTargetClass = (cid === cleanClassId.toLowerCase() || cid === currentClassName.toLowerCase());
+    return isTargetClass && s.subject && String(s.subject).trim() !== "";
+  });
+
+  const totalAllocated = allocatedClassSlots.length;
+  const isFullyCompleted = totalAllocated >= totalWeeklyPeriods;
+  const remainingPeriods = Math.max(0, totalWeeklyPeriods - totalAllocated);
+  const progressPercent = Math.min(100, Math.round((totalAllocated / totalWeeklyPeriods) * 100));
+
+  // ප්‍රගති පුවරුව (Progress Banner Card)
+  const progressBanner = document.createElement("div");
+  progressBanner.className = `w-full p-3 mb-3 rounded-2xl border transition select-none shadow-2xs ${
+    isFullyCompleted
+      ? "bg-gradient-to-r from-emerald-600 to-teal-700 text-white border-emerald-500 shadow-emerald-200"
+      : "bg-white border-slate-200 text-slate-800"
+  }`;
+
+  progressBanner.innerHTML = `
+    <div class="flex items-center justify-between gap-3 mb-2">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-xl flex items-center justify-center font-black ${
+          isFullyCompleted ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-700'
+        }">
+          <i class="fa-solid ${isFullyCompleted ? 'fa-circle-check text-base text-emerald-200' : 'fa-chart-pie text-sm'}"></i>
+        </div>
+        <div>
+          <h4 class="font-extrabold text-xs leading-tight ${isFullyCompleted ? 'text-white' : 'text-slate-900'}">
+            ${isFullyCompleted ? '🎉 දැනටමත් ඔබගේ කටයුතු අවසානයි!' : 'පන්තියේ කාලසටහන් ප්‍රගතිය'}
+          </h4>
+          <p class="text-[10px] font-semibold mt-0.5 ${isFullyCompleted ? 'text-emerald-100' : 'text-slate-500'}">
+            ${isFullyCompleted ? 'මෙම පන්තියේ සියලුම කාලච්ඡේද සාර්ථකව සම්පූර්ණ කර ඇත.' : `තවත් කාලච්ඡේද ${remainingPeriods}ක් ඇතුළත් කිරීමට ඉතිරිව ඇත.`}
+          </p>
+        </div>
+      </div>
+
+      <!-- 34 / 40 හෝ 40 / 40 Badge එක -->
+      <div class="flex items-center gap-1.5">
+        <span class="text-xs font-black px-2.5 py-1 rounded-xl border tracking-wide ${
+          isFullyCompleted
+            ? 'bg-white text-emerald-800 border-white shadow-xs'
+            : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+        }">
+          ${totalAllocated} / ${totalWeeklyPeriods}
+        </span>
+      </div>
+    </div>
+
+    <!-- Progress Bar (ප්‍රගති තීරුව) -->
+    <div class="w-full h-2 rounded-full overflow-hidden ${isFullyCompleted ? 'bg-black/20' : 'bg-slate-100'}">
+      <div class="h-full rounded-full transition-all duration-500 ${
+        isFullyCompleted ? 'bg-emerald-300' : 'bg-gradient-to-r from-indigo-500 to-indigo-600'
+      }" style="width: ${progressPercent}%"></div>
+    </div>
+  `;
+
+  tray.appendChild(progressBanner);
+
+  // =========================================================================
   // 1. මෙම පන්තිය අයත් COMBINED SUBJECTS හඳුනාගැනීම
   // =========================================================================
   const relevantCombined = (window.combinedCurriculumSubjects || []).filter(comb => {
@@ -7623,7 +7692,6 @@ function renderSubjectQuotaTray(classId) {
     );
   });
 
-  // මෙම පන්තිය සඳහා Quota Tray එකෙන් ඉවත් කළ යුතු තනි විෂයන්
   const suppressedSubjects = new Set();
   relevantCombined.forEach(comb => {
     (comb.subjects || []).forEach(sub => suppressedSubjects.add(typeof cleanSubjectKey === "function" ? cleanSubjectKey(sub) : sub.trim().toLowerCase()));
@@ -7644,11 +7712,9 @@ function renderSubjectQuotaTray(classId) {
     const remaining = Math.max(0, max - allocatedCount);
     const isCompleted = allocatedCount >= max;
 
-    // 🔴 Highlight වී ඇත්දැයි බැලීම
     const isHighlighted = window.activeHighlightedSubject && typeof isMatchingSubjectName === "function" 
       && isMatchingSubjectName(comb.name, window.activeHighlightedSubject);
 
-    // 🎨 වර්ණ තීරණය කිරීම (Completed -> Emerald | Highlighted -> Sky Blue)
     let cardStyle = "bg-gradient-to-r from-indigo-50 to-emerald-50 border-indigo-400 text-indigo-950 hover:shadow-md cursor-grab active:cursor-grabbing";
     let badgeStyle = "bg-indigo-100 text-indigo-800 border-indigo-300";
 
@@ -7661,9 +7727,8 @@ function renderSubjectQuotaTray(classId) {
     }
 
     const card = document.createElement("div");
-    card.className = `p-2.5 rounded-xl border-2 shadow-sm transition flex items-center justify-between gap-3 select-none ${cardStyle}`;
+    card.className = `p-2.5 rounded-xl border-2 shadow-sm transition flex items-center justify-between gap-3 select-none mb-1.5 ${cardStyle}`;
 
-    // 🔴 Click කළ විට කාලසටහන තුළ Highlight වීම
     card.addEventListener("click", () => {
       if (typeof toggleSubjectHighlight === "function") {
         toggleSubjectHighlight(comb.name);
@@ -7763,11 +7828,9 @@ function renderSubjectQuotaTray(classId) {
   finalTrayQuotas.forEach(q => {
     const isCompleted = q.allocated >= q.maxWeekly;
 
-    // 🔴 Highlight වී ඇත්දැයි බැලීම
     const isHighlighted = window.activeHighlightedSubject && typeof isMatchingSubjectName === "function" 
       && isMatchingSubjectName(q.subject, window.activeHighlightedSubject);
 
-    // 🎨 වර්ණ තීරණය කිරීම (Completed -> Emerald | Highlighted -> Sky Blue)
     let cardStyle = "bg-white border-slate-200 text-slate-800 hover:border-indigo-400";
     let badgeStyle = "bg-indigo-50 text-indigo-700 border-indigo-200";
 
@@ -7796,11 +7859,10 @@ function renderSubjectQuotaTray(classId) {
     }
 
     const card = document.createElement("div");
-    card.className = `p-2.5 rounded-xl border shadow-sm transition flex items-center justify-between gap-3 select-none ${cardStyle} ${
+    card.className = `p-2.5 rounded-xl border shadow-sm transition flex items-center justify-between gap-3 select-none mb-1.5 ${cardStyle} ${
       q.remaining > 0 ? "cursor-grab active:cursor-grabbing hover:shadow-md" : "cursor-pointer"
     }`;
 
-    // 🔴 Click කළ විට කාලසටහන තුළ Highlight වීම
     card.addEventListener("click", () => {
       if (typeof toggleSubjectHighlight === "function") {
         toggleSubjectHighlight(q.subject);
@@ -7848,7 +7910,6 @@ function renderSubjectQuotaTray(classId) {
 }
 
 window.renderSubjectQuotaTray = renderSubjectQuotaTray;
-    
 
 // =========================================================================
 // INTELLIGENT AUTO-FILL ENGINE WITH PRIORITY & CONSTRAINTS
