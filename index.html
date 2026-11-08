@@ -77,7 +77,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය F2050
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය F1526
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -5193,7 +5193,7 @@ window.triggerWholeSchoolAutoFill = triggerWholeSchoolAutoFill;
     
     // 3. කාලසටහනේ දින 5ම Render කිරීම සහ Drop Zones සැකසීම
 
-
+// 🔴 Combined සහ සාමාන්‍ය විෂයන් දෙකෙහිම ගුරු ගැටුම් රතු පැහැයෙන් පෙන්වන යාවත්කාලීන ශ්‍රිතය
 function renderClassTimetableGrid() {
   if (typeof populateClassTimetableDropdown === "function") {
     populateClassTimetableDropdown();
@@ -5244,6 +5244,56 @@ function renderClassTimetableGrid() {
 
   let isScheduleDirty = false;
 
+  // -------------------------------------------------------------------------
+  // සහායක ශ්‍රිත (Slot එකකින් ගුරුවරුන් ලබාගැනීම සහ Group සසඳනය)
+  // -------------------------------------------------------------------------
+  function getTeachersFromSlotObj(s) {
+    const list = new Set();
+    if (s.teacherId && s.teacherId !== "NONE" && s.teacherId !== "EXCLUDED") {
+      list.add(String(s.teacherId).trim().toLowerCase());
+    }
+    if (Array.isArray(s.basketItems)) {
+      s.basketItems.forEach(b => {
+        if (b.teacherId && b.teacherId !== "NONE" && b.teacherId !== "EXCLUDED") {
+          list.add(String(b.teacherId).trim().toLowerCase());
+        }
+      });
+    } else if (s.basketItems && typeof s.basketItems === "object") {
+      Object.values(s.basketItems).forEach(b => {
+        if (b.teacherId && b.teacherId !== "NONE" && b.teacherId !== "EXCLUDED") {
+          list.add(String(b.teacherId).trim().toLowerCase());
+        }
+      });
+    }
+    if (Array.isArray(s.teachers)) {
+      s.teachers.forEach(t => {
+        const tid = typeof t === "object" ? t.id : t;
+        if (tid && tid !== "NONE" && tid !== "EXCLUDED") list.add(String(tid).trim().toLowerCase());
+      });
+    }
+    return Array.from(list);
+  }
+
+  function checkSameGroup(s1, s2) {
+    if (typeof areSlotsInSameGroup === "function") {
+      return areSlotsInSameGroup(s1, s2);
+    }
+    if (!s1 || !s2) return false;
+    if (s1 === s2) return true;
+
+    const g1 = s1.grade || parseInt(s1.classId);
+    const g2 = s2.grade || parseInt(s2.classId);
+    if (g1 && g2 && g1 !== g2) return false;
+
+    if (s1.combinedGroupId && s2.combinedGroupId && s1.combinedGroupId === s2.combinedGroupId) return true;
+    if (s1.groupId && s2.groupId && s1.groupId === s2.groupId) return true;
+
+    return false;
+  }
+
+  // -------------------------------------------------------------------------
+  // කාලසටහන ඇඳීමේ ප්‍රධාන ලූපය
+  // -------------------------------------------------------------------------
   days.forEach((d, dayIndex) => {
     let rowHtml = `<tr class="hover:bg-slate-50/60 transition border-b border-slate-200">`;
     
@@ -5278,11 +5328,10 @@ function renderClassTimetableGrid() {
         const isCombinedOrBasket = !!(slot.isCombined || slot.isBasket || slot.combinedSubjectId);
         const isLocked = Boolean(slot.isLocked);
 
-        // 🔴 1. ගුරුවරයා Settings සමඟ Dynamic Sync කිරීම (ගුරුවරයා අස්වී හෝ ඉවත් කර ඇත්නම් null/empty වේ)
+        // 🔴 1. ගුරුවරයා Settings සමඟ Dynamic Sync කිරීම
         const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(slot.subject) : String(slot.subject || '').trim().toLowerCase();
         if (!isCombinedOrBasket && cls && cls.subjectTeachers) {
           const configuredTid = cls.subjectTeachers[subKey];
-          // Settings වල හිස් නම් හෝ NONE නම් ගුරුවරයා නැත ලෙස සලකයි
           const cleanTid = (configuredTid && configuredTid !== "NONE") ? configuredTid : null;
           if (slot.teacherId !== cleanTid) {
             slot.teacherId = cleanTid;
@@ -5290,63 +5339,62 @@ function renderClassTimetableGrid() {
           }
         }
 
-        // 🔴 2. ගුරු ගැටුම් (Clash Detection) - ගුරුවරයෙකු සිටින විට පමණක් පරීක්ෂා කෙර
-    
-        // 🔴 2. ගුරු ගැටුම් (Clash Detection) සහ අදාළ පන්ති ලැයිස්තුව ලබා ගැනීම
+        // 🔴 2. සර්ව සම්පූර්ණ ගුරු ගැටුම් පරීක්ෂාව (Combined සහ Single දෙකටම)
         let hasClash = false;
         let clashingClassNames = [];
+        let clashingTeacherNames = [];
+        let clashingTeacherIds = new Set();
         let clashTipText = "";
 
-        const validTeacherId = slot.teacherId && String(slot.teacherId).trim() !== "" && slot.teacherId !== "NONE" && slot.teacherId !== "EXCLUDED";
+        const slotTeachers = getTeachersFromSlotObj(slot);
 
-        if (!isCombinedOrBasket && validTeacherId) {
-          const clashes = (masterSchedule || []).filter(s => 
-            s.teacherId && String(s.teacherId).trim().toLowerCase() === String(slot.teacherId).trim().toLowerCase() &&
+        if (slotTeachers.length > 0) {
+          // එම දිනයේ සහ වේලාවේ පවතින අනෙකුත් සියලුම slots ලබා ගැනීම
+          const otherSlotsAtTime = (masterSchedule || []).filter(s => 
+            s !== slot &&
             (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, d.id) : Number(s.day) === Number(d.id)) &&
             Number(s.period) === Number(p)
           );
 
-          if (clashes.length > 1) {
-            hasClash = true;
+          slotTeachers.forEach(tid => {
+            otherSlotsAtTime.forEach(os => {
+              const osTeachers = getTeachersFromSlotObj(os);
+              if (osTeachers.includes(tid)) {
+                // 🔴 එකම Group එකේ සාමාජිකයන් නොවේ නම් පමණක් ගැටුමකි!
+                const isLegitSameGroup = checkSameGroup(slot, os);
 
-            // ගැටුමට අදාළ සියලුම පන්තිවල නම් (Name) නිවැරදිව සොයා ගැනීම
-            const classNames = clashes.map(cs => {
-              const matchedCls = (schoolClasses || []).find(c => 
-                String(c.id).trim().toLowerCase() === String(cs.classId).trim().toLowerCase() ||
-                String(c.name).trim().toLowerCase() === String(cs.classId).trim().toLowerCase()
-              );
-              return matchedCls ? (matchedCls.name || matchedCls.id) : cs.classId;
+                if (!isLegitSameGroup) {
+                  hasClash = true;
+                  clashingTeacherIds.add(tid);
+
+                  // පන්තියේ නම සොයා ගැනීම
+                  const matchedCls = (schoolClasses || []).find(c => 
+                    String(c.id).trim().toLowerCase() === String(os.classId).trim().toLowerCase() ||
+                    String(c.name).trim().toLowerCase() === String(os.classId).trim().toLowerCase()
+                  );
+                  const cName = matchedCls ? (matchedCls.name || matchedCls.id) : os.classId;
+                  clashingClassNames.push(cName);
+
+                  // ගුරුවරයාගේ නම සොයා ගැනීම
+                  const tObj = (teachers || []).find(t => String(t.id).trim().toLowerCase() === tid);
+                  clashingTeacherNames.push(tObj ? tObj.name : tid);
+                }
+              }
             });
+          });
 
-            // එකම පන්තියේ නම දෙවරක් නොපෙනෙන සේ Unique කරගැනීම
-            clashingClassNames = [...new Set(classNames)];
+          if (hasClash) {
+            clashingClassNames = [...new Set(clashingClassNames)];
+            clashingTeacherNames = [...new Set(clashingTeacherNames)];
 
-            // ගුරුවරයාගේ නම ලබා ගැනීම
-            const clashingTeacher = (teachers || []).find(t => String(t.id).trim().toLowerCase() === String(slot.teacherId).trim().toLowerCase());
-            const tName = clashingTeacher ? clashingTeacher.name : "මෙම ගුරුභවතා";
-
-            // Tooltip (Tip) එකෙහි දිස්වන සම්පූර්ණ විස්තරය
             clashTipText = `⚠️ අවවාදයයි: ගුරු ගැටුමකි!\n` +
-                           `• ගුරුභවතා: ${tName}\n` +
+                           `• ගුරුභවතා: ${clashingTeacherNames.join(", ")}\n` +
                            `• ගැටුම පවතින පන්ති: ${clashingClassNames.join(" සහ ")} අතර ගැටුමක් ඇති වී තිබේ.\n` +
                            `• කාලය: ${d.short} - ${p} වන කාලච්ඡේදය`;
           }
         }
-        /*     let hasClash = false;
-        const validTeacherId = slot.teacherId && String(slot.teacherId).trim() !== "" && slot.teacherId !== "NONE" && slot.teacherId !== "EXCLUDED";
 
-        if (!isCombinedOrBasket && validTeacherId) {
-          const clashes = (masterSchedule || []).filter(s => 
-            s.teacherId && String(s.teacherId).trim().toLowerCase() === String(slot.teacherId).trim().toLowerCase() &&
-            (typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, d.id) : Number(s.day) === Number(d.id)) &&
-            Number(s.period) === Number(p)
-          );
-          if (clashes.length > 1) {
-            hasClash = true;
-          }
-        }
-*/
-        // පසුබිම් වර්ණ තීරණය කිරීම
+        // 🔴 3. පසුබිම් වර්ණ තීරණය කිරීම (ගැටුමක් ඇති විට Combined වුවද රතු පැහැ ගනී)
         let bgClass = "bg-indigo-50/40 hover:bg-indigo-100/60 border-r border-slate-200";
         if (hasClash) {
           bgClass = "bg-rose-50/95 hover:bg-rose-100 border-r border-rose-400 text-rose-950 ring-2 ring-rose-400 shadow-sm";
@@ -5358,23 +5406,28 @@ function renderClassTimetableGrid() {
 
         const leftPaddingClass = isLocked ? "pl-5" : "";
 
-        // 🔴 3. BASKET සහ CLASS SPECIFIC විෂයන් කුඩාවට (COMPACT) සැකසීම
+        // 🔴 4. BASKET සහ CLASS SPECIFIC අන්තර්ගතය සැකසීම
         if (isCombinedOrBasket) {
           let items = [];
           if (Array.isArray(slot.basketItems)) items = slot.basketItems;
           else if (slot.basketItems && typeof slot.basketItems === "object") items = Object.values(slot.basketItems);
 
-          // Basket items තුළ එක් එක් විෂය සහ ගුරුවරයා කුඩාවට පෙළගැස්වීම
           const miniList = items.map(it => {
             const itKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(it.subject) : String(it.subject || '').trim().toLowerCase();
             if (cls && cls.subjectTeachers && cls.subjectTeachers[itKey] !== undefined) {
               it.teacherId = cls.subjectTeachers[itKey] === "NONE" ? null : cls.subjectTeachers[itKey];
             }
             const t = (teachers || []).find(tch => String(tch.id).trim().toLowerCase() === String(it.teacherId).trim().toLowerCase());
-            const tName = t ? t.name : '<span class="text-amber-600 font-bold">නැත</span>';
+            let tName = t ? t.name : '<span class="text-amber-600 font-bold">නැත</span>';
+
+            // යම් Basket Item එකක ගුරුවරයෙකු ගැටුමට ලක්ව ඇත්නම් එය විශේෂයෙන් රතු පැහැයෙන් පෙන්වීම
+            const isThisTeacherClashing = it.teacherId && clashingTeacherIds.has(String(it.teacherId).trim().toLowerCase());
+            if (isThisTeacherClashing) {
+              tName = `<span class="text-rose-600 font-extrabold flex items-center gap-0.5"><i class="fa-solid fa-triangle-exclamation text-[7px]"></i>${t ? t.name : it.teacherId}</span>`;
+            }
 
             return `
-              <div class="flex items-center justify-between text-[8.5px] py-0.5 border-b border-indigo-100/60 last:border-0 leading-tight">
+              <div class="flex items-center justify-between text-[8.5px] py-0.5 border-b border-indigo-100/60 last:border-0 leading-tight ${isThisTeacherClashing ? 'bg-rose-100/70 rounded px-1' : ''}">
                 <span class="font-bold text-indigo-950 truncate max-w-[55%]">${it.subject}</span>
                 <span class="text-slate-600 truncate max-w-[45%] text-right font-medium">${tName}</span>
               </div>
@@ -5393,8 +5446,10 @@ function renderClassTimetableGrid() {
             </div>
           `;
         } else {
-          // 🔴 CLASS SPECIFIC (සාමාන්‍ය තනි විෂය) - විෂය සමග ගුරුවරයා කුඩාවට
+          // සාමාන්‍ය තනි විෂය
           let teacherBadge = '';
+          const validTeacherId = slot.teacherId && String(slot.teacherId).trim() !== "" && slot.teacherId !== "NONE" && slot.teacherId !== "EXCLUDED";
+          
           if (validTeacherId) {
             const tch = (teachers || []).find(t => String(t.id).trim().toLowerCase() === String(slot.teacherId).trim().toLowerCase());
             const no = tch && tch.schoolNo ? `[${tch.schoolNo}]` : "";
@@ -5406,7 +5461,6 @@ function renderClassTimetableGrid() {
               </div>
             `;
           } else {
-            // ගුරුවරයා තෝරා නැති විට / ඉවත්ව ගිය විට පෙන්වන ලාංඡනය
             teacherBadge = `
               <div class="mt-1 inline-flex items-center gap-1 text-[8.5px] font-bold text-amber-700 bg-amber-100/80 border border-amber-300/80 rounded px-1.5 py-0.5">
                 <i class="fa-solid fa-circle-exclamation text-[8px] text-amber-600"></i> ගුරුවරයෙකු නැත
@@ -5424,8 +5478,7 @@ function renderClassTimetableGrid() {
           `;
         }
 
-        // Clash අනතුරු ඇඟවීමේ ලාංඡනය
-// 🔴 ගුරු ගැටුම පෙන්වන Badge එක (Tooltip එක සහ පන්ති නම් සහිතව)
+        // 🔴 5. Clash අනතුරු ඇඟවීමේ Badge එක (Combined හෝ Single ඕනෑම ගැටුමකට යෙදේ)
         if (hasClash) {
           const classListStr = clashingClassNames.join(" සහ ");
           slotContentHtml += `
@@ -5451,7 +5504,7 @@ function renderClassTimetableGrid() {
               onclick="openTimetableSlotModal('${selectedClassId}', ${d.id}, ${p})" 
               class="p-1.5 cursor-pointer transition relative group select-none min-w-[105px] align-top ${bgClass}">
             
-            <!-- Locked විට පමණක් වම් පසින් පෙනෙන Lock Icon එක -->
+            <!-- Lock Icon -->
             ${isLocked ? `
               <button type="button"
                       onclick="event.stopPropagation(); toggleSlotLock('${selectedClassId}', ${d.id}, ${p})"
@@ -5461,7 +5514,7 @@ function renderClassTimetableGrid() {
               </button>
             ` : ''}
 
-            <!-- Mouse Hover කළ විට මතුවන බොත්තම් දෙක -->
+            <!-- Action Buttons on Hover -->
             <div class="absolute top-1 right-1 flex items-center gap-1 z-10 opacity-0 group-hover:opacity-100 transition">
               <button type="button"
                       onclick="event.stopPropagation(); toggleSlotLock('${selectedClassId}', ${d.id}, ${p})"
@@ -5508,6 +5561,9 @@ function renderClassTimetableGrid() {
     saveAllToStorage();
   }
 }
+
+window.renderClassTimetableGrid = renderClassTimetableGrid;
+
 
 function removeSingleClassSlot(classId, day, period, combinedSubjectId, subjectName) {
   const cleanCid = String(classId).trim().toLowerCase();
