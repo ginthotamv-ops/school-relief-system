@@ -77,7 +77,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය F4986
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය F2023
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -5822,8 +5822,10 @@ function handleSlotDragLeave(e) {
     }
 */
 
-
-// ⚡ Pairwise Group Verification මඟින් Group 1 සහ Group 2 වෙන් කර හඳුනාගන්නා Clash Resolver
+// =========================================================================
+// ⚡ COMBINED & CROSS-GRADE SAFE CLASH RESOLVER
+// (Grade 6 සහ Grade 10 වෙනම පාලනය කරන සහ Atomic Block Swap සහිත ඇල්ගොරිතමය)
+// =========================================================================
 function autoResolveScheduleClashes() {
   let scheduleList = (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) 
     ? masterSchedule 
@@ -5834,76 +5836,113 @@ function autoResolveScheduleClashes() {
     return;
   }
 
-  const days = [0, 1, 2, 3, 4];
+  const days = [0, 1, 2, 3, 4]; // සඳුදා - සිකුරාදා
   const periods = [1, 2, 3, 4, 5, 6, 7, 8];
   let resolvedCount = 0;
   let unresolvedCount = 0;
   let skippedLockedCount = 0;
 
   // -------------------------------------------------------------------------
-  // 1. දිනය නිවැරදිව සසඳන විශ්වීය ශ්‍රිතය (Universal Day Matcher)
+  // 1. සහායක ශ්‍රිත (Universal Helpers)
   // -------------------------------------------------------------------------
+
+  // A. දිනය නිවැරදිව සසඳන ශ්‍රිතය (Number හෝ Sinhala String)
   function isSameDay(d1, d2) {
     if (typeof isSlotMatchingDay === "function") return isSlotMatchingDay(d1, d2);
-    if (d1 === d2) return true;
-    if (String(d1).trim() === String(d2).trim()) return true;
-
+    if (d1 === d2 || String(d1).trim() === String(d2).trim()) return true;
     const sinhalaDays = ["සඳුදා", "අඟහරුවාදා", "බදාදා", "බ්‍රහස්පතින්දා", "සිකුරාදා"];
-    const d1Str = String(d1).trim();
-    const d2Str = String(d2).trim();
-
-    const idx1 = sinhalaDays.indexOf(d1Str) !== -1 ? sinhalaDays.indexOf(d1Str) : Number(d1);
-    const idx2 = sinhalaDays.indexOf(d2Str) !== -1 ? sinhalaDays.indexOf(d2Str) : Number(d2);
-
+    const idx1 = sinhalaDays.indexOf(String(d1).trim()) !== -1 ? sinhalaDays.indexOf(String(d1).trim()) : Number(d1);
+    const idx2 = sinhalaDays.indexOf(String(d2).trim()) !== -1 ? sinhalaDays.indexOf(String(d2).trim()) : Number(d2);
     return !isNaN(idx1) && !isNaN(idx2) && idx1 === idx2;
   }
 
+  // B. පන්තියකින් ශ්‍රේණිය (Grade Number) නිශ්චිතව වෙන්කර ගැනීම
+  function extractGrade(slot) {
+    if (!slot) return null;
+    if (slot.grade && !isNaN(parseInt(slot.grade))) return parseInt(slot.grade, 10);
+    const match = String(slot.classId || '').match(/\d+/);
+    return match ? parseInt(match[0], 10) : null;
+  }
+
+  // C. Slot එකකින් සියලු ගුරු හැඳුනුම් (Teacher IDs) ලබාගැනීම
+  function extractTeachersFromSlot(slot) {
+    const tids = new Set();
+    if (slot.teacherId && slot.teacherId !== "NONE" && slot.teacherId !== "EXCLUDED") {
+      tids.add(String(slot.teacherId).trim().toLowerCase());
+    }
+    if (Array.isArray(slot.basketItems)) {
+      slot.basketItems.forEach(b => {
+        if (b.teacherId && b.teacherId !== "NONE") tids.add(String(b.teacherId).trim().toLowerCase());
+      });
+    }
+    if (Array.isArray(slot.teachers)) {
+      slot.teachers.forEach(t => {
+        const tid = typeof t === "object" ? t.id : t;
+        if (tid && tid !== "NONE") tids.add(String(tid).trim().toLowerCase());
+      });
+    }
+    return Array.from(tids);
+  }
+
   // -------------------------------------------------------------------------
-  // 2. පන්ති දෙකක් සැබවින්ම එකම Group එකක සාමාජිකයන්දැයි පරීක්ෂාව
+  // 🔴 2. ශ්‍රේණිය ආරක්ෂා කරන GROUP ID GENERATOR (Cross-Grade Protection)
+  // 6A සහ 10A ට එකම නම තිබුණද GR6_ සහ GR10_ ලෙස වෙන් කරයි!
   // -------------------------------------------------------------------------
+  function getSafeSlotGroupId(slot) {
+    if (!slot) return null;
+    const grade = extractGrade(slot);
+    const cleanCid = String(slot.classId || '').trim().toLowerCase();
+    const cleanSub = String(slot.subject || '').trim().toLowerCase();
+
+    // 1. window.combinedCurriculumSubjects DB එකෙන් සෙවීම
+    const configs = window.combinedCurriculumSubjects || window.combinedSubjects || [];
+    for (let i = 0; i < configs.length; i++) {
+      const cfg = configs[i];
+      const cfgClasses = (cfg.classes || cfg.applicableClasses || []).map(c => String(c).trim().toLowerCase());
+      
+      if (cfgClasses.includes(cleanCid)) {
+        const cfgId = cfg.id || cfg.groupId || `CFG_${i}_${cfg.name || ''}`;
+        return `GR${grade || 'X'}_${cfgId}`;
+      }
+    }
+
+    // 2. Slot එක තුළ සෘජුව ඇති Group ID එකක් නම් ශ්‍රේණිය මුලට එක් කිරීම
+    if (slot.combinedGroupId || slot.groupId) {
+      const rawGid = slot.combinedGroupId || slot.groupId;
+      return `GR${grade || 'X'}_${rawGid}`;
+    }
+
+    // 3. Combined Flag එකක් ඇති නමුත් ID නැතිනම්
+    if (slot.isCombined || slot.isBasket) {
+      return `GR${grade || 'X'}_COMB_${cleanSub}`;
+    }
+
+    // සාමාන්‍ය තනි පන්තියක විෂයක්
+    return null;
+  }
+
+  // 🔴 පන්ති දෙකක් සැබවින්ම එකම Group එකකදැයි තහවුරු කිරීම
   function areSlotsInSameGroup(s1, s2) {
     if (!s1 || !s2) return false;
     if (s1 === s2) return true;
 
-    const c1 = String(s1.classId || '').trim().toLowerCase();
-    const c2 = String(s2.classId || '').trim().toLowerCase();
-    if (c1 === c2) return true; // එකම පන්තිය
+    // ශ්‍රේණි දෙක වෙනස් නම් කිසිසේත්ම එකම Group එකක් විය නොහැක!
+    const g1 = extractGrade(s1);
+    const g2 = extractGrade(s2);
+    if (g1 !== null && g2 !== null && g1 !== g2) return false;
 
-    // 1. සෘජුවම එකම Combined ID එකක් තිබේදැයි බැලීම
-    if (s1.combinedGroupId && s2.combinedGroupId && s1.combinedGroupId === s2.combinedGroupId) return true;
-    if (s1.combinedSubjectId && s2.combinedSubjectId && s1.combinedSubjectId === s2.combinedSubjectId) return true;
-    if (s1.groupId && s2.groupId && s1.groupId === s2.groupId) return true;
+    const gid1 = getSafeSlotGroupId(s1);
+    const gid2 = getSafeSlotGroupId(s2);
 
-    // 2. Combined DB එක පරීක්ෂා කර පන්ති දෙකම එකම Config එකේ ඇත්දැයි බැලීම
-    const configs = window.combinedCurriculumSubjects || window.combinedSubjects || [];
-    for (let cfg of configs) {
-      const classes = (cfg.classes || cfg.applicableClasses || []).map(c => String(c).trim().toLowerCase());
-      
-      // 🔴 පන්ති දෙකම (c1 සහ c2) මෙම එකම Group ලැයිස්තුවේ තිබිය යුතුය!
-      if (classes.includes(c1) && classes.includes(c2)) {
-        const sub1 = String(s1.subject || '').trim().toLowerCase();
-        const sub2 = String(s2.subject || '').trim().toLowerCase();
-        const cfgSubs = (cfg.subjects || []).map(s => String(s).trim().toLowerCase());
-        const cfgName = String(cfg.name || '').trim().toLowerCase();
-
-        const s1Ok = cfgSubs.length === 0 || cfgSubs.some(s => sub1.includes(s) || s.includes(sub1)) || (cfgName && sub1.includes(cfgName));
-        const s2Ok = cfgSubs.length === 0 || cfgSubs.some(s => sub2.includes(s) || s.includes(sub2)) || (cfgName && sub2.includes(cfgName));
-
-        if (s1Ok && s2Ok) {
-          return true; // 6-A සහ 6-B එකම group එකක
-        }
-      }
-    }
-
-    // පන්ති දෙක එකම group ලැයිස්තුවක නැත (උදා: 6-A සහ 6-C)
-    return false;
+    if (!gid1 || !gid2) return false; // එකක් හෝ සාමාන්‍ය තනි පන්තියක් නම් Group එකක් නොවේ
+    return gid1 === gid2;
   }
 
   // -------------------------------------------------------------------------
-  // 3. සහායක ශ්‍රිත (Free Checks)
+  // 3. නිදහස්දැයි පරීක්ෂා කිරීමේ ශ්‍රිත (Free Checks)
   // -------------------------------------------------------------------------
-  function isTeacherFreeForBlock(teacherId, day, period, currentBlockSlots = []) {
-    if (!teacherId || teacherId === "NONE" || teacherId === "EXCLUDED") return true;
+  function isTeacherFree(teacherId, day, period, currentBlockSlots = []) {
+    if (!teacherId) return true;
     const tid = String(teacherId).trim().toLowerCase();
     const excludes = Array.isArray(currentBlockSlots) ? currentBlockSlots : [currentBlockSlots];
 
@@ -5911,19 +5950,16 @@ function autoResolveScheduleClashes() {
       if (excludes.includes(s)) return false;
       if (!isSameDay(s.day, day) || Number(s.period) !== Number(period)) return false;
 
-      const sTeacher = String(s.teacherId || '').trim().toLowerCase();
-      if (sTeacher !== tid) return false;
+      const tList = extractTeachersFromSlot(s);
+      if (!tList.includes(tid)) return false;
 
-      // මෙම slot එක දැනට මාරු වන block එකේ කිසියම් slot එකක් සමඟ එකම group එකක ඇත්නම් -> no clash
-      const isPart = currentBlockSlots.some(bs => areSlotsInSameGroup(bs, s));
-      if (isPart) return false;
-
-      // වෙනත් group එකක හෝ වෙනත් පන්තියක සිටී නම් -> CLASH
-      return true;
+      // එකම Group එකේ සාමාජිකයෙක් නම් ගැටුමක් නොවේ:
+      const isPartOfSameGroup = currentBlockSlots.some(bs => areSlotsInSameGroup(bs, s));
+      return !isPartOfSameGroup;
     });
   }
 
-  function isClassFree(classId, day, period, excludeSlots = []) {
+  function isClassSlotFree(classId, day, period, excludeSlots = []) {
     const cleanCid = String(classId).trim().toLowerCase();
     const excludes = Array.isArray(excludeSlots) ? excludeSlots : [excludeSlots];
 
@@ -5934,7 +5970,7 @@ function autoResolveScheduleClashes() {
   }
 
   // -------------------------------------------------------------------------
-  // 4. ප්‍රධාන ගැටුම් නිරාකරණ ලූපය
+  // 4. ප්‍රධාන ගැටුම් නිරාකරණ ලූපය (Clash Resolution Engine)
   // -------------------------------------------------------------------------
   let clashesFound = true;
   let iteration = 0;
@@ -5946,26 +5982,24 @@ function autoResolveScheduleClashes() {
 
     for (let day of days) {
       for (let period of periods) {
-        // එම දින සහ වේලාවේ සියලු slots
-        const slotsAtTime = scheduleList.filter(s => 
-          s.teacherId && String(s.teacherId).trim() !== "" && s.teacherId !== "NONE" && s.teacherId !== "EXCLUDED" &&
-          isSameDay(s.day, day) && Number(s.period) === Number(period)
-        );
+        const slotsAtTime = scheduleList.filter(s => isSameDay(s.day, day) && Number(s.period) === Number(period));
 
-        // ගුරුවරුන් අනුව වර්ග කිරීම
+        // අදාළ වේලාවේ සිටින සියලුම ගුරුවරුන් සිතියම්ගත කිරීම
         const teacherMap = {};
         slotsAtTime.forEach(s => {
-          const tid = String(s.teacherId).trim().toLowerCase();
-          if (!teacherMap[tid]) teacherMap[tid] = [];
-          teacherMap[tid].push(s);
+          const tList = extractTeachersFromSlot(s);
+          tList.forEach(tid => {
+            if (!teacherMap[tid]) teacherMap[tid] = [];
+            teacherMap[tid].push(s);
+          });
         });
 
         for (let tid in teacherMap) {
           const slots = teacherMap[tid];
           if (slots.length <= 1) continue;
 
-          // 🔴 Pairwise ගැටුම් පරීක්ෂාව:
-          // කිසියම් slots යුගලයක් එකම Group එකට අයත් නොවේ නම් එය අනිවාර්ය සැබෑ ගැටුමකි!
+          // 🔴 Pairwise Clash Detection:
+          // එකම ගුරුවරයා සිටින slots දෙකක් එකම Group එකට අයත් නොවේ නම් (හෝ ශ්‍රේණි දෙකක නම්) -> HARD CLASH!
           let conflictingPair = null;
           for (let i = 0; i < slots.length; i++) {
             for (let j = i + 1; j < slots.length; j++) {
@@ -5979,39 +6013,43 @@ function autoResolveScheduleClashes() {
 
           if (conflictingPair) {
             clashesFound = true;
-            console.warn(`🚨 සැබෑ ගැටුමක් හමුවිය [ගුරු ID: ${tid} | දින: ${day} | වේලාව: ${period}]:`, 
-              `${conflictingPair[0].classId} (${conflictingPair[0].subject}) සහ ${conflictingPair[1].classId} (${conflictingPair[1].subject}) වෙනස් Groups වල පවතී!`);
+            const slotA = conflictingPair[0];
+            const slotB = conflictingPair[1];
 
-            // චලනය කිරීමට Unlocked slot එකක් තෝරා ගැනීම
-            const slotToMove = (!conflictingPair[1].isLocked) ? conflictingPair[1] : 
-                               ((!conflictingPair[0].isLocked) ? conflictingPair[0] : null);
+            console.warn(`🚨 සැබෑ ගුරු ගැටුමක් හමු විය! [ගුරු ID: ${tid} | දින: ${day} | වේලාව: ${period}]`,
+              `-> ${slotA.classId} (Grade ${extractGrade(slotA)}) සහ ${slotB.classId} (Grade ${extractGrade(slotB)}) එකවර උගන්වයි!`);
+
+            // චලනය කිරීමට සුදුසු Unlocked slot එකක් තෝරා ගැනීම
+            const slotToMove = (!slotB.isLocked) ? slotB : ((!slotA.isLocked) ? slotA : null);
 
             if (!slotToMove) {
               skippedLockedCount++;
               continue;
             }
 
-            // මෙම slot එකට අයත් සම්පූර්ණ Group එකම සොයා ගැනීම (උදා: 6-C සමඟ ඇති 6-D, 6-E)
+            // 🔴 තෝරාගත් slot එක අයත් සම්පූර්ණ කාණ්ඩයම (Whole Atomic Macro-Block) ලබා ගැනීම
             const groupBlockSlots = scheduleList.filter(s => 
               isSameDay(s.day, day) && 
               Number(s.period) === Number(period) &&
-              areSlotsInSameGroup(s, slotToMove)
+              (s === slotToMove || areSlotsInSameGroup(s, slotToMove))
             );
 
             const groupClasses = Array.from(new Set(groupBlockSlots.map(s => String(s.classId).trim().toLowerCase())));
-            const groupTeachers = Array.from(new Set(groupBlockSlots.map(s => String(s.teacherId).trim().toLowerCase())));
+            const groupTeachers = new Set();
+            groupBlockSlots.forEach(s => extractTeachersFromSlot(s).forEach(t => groupTeachers.add(t)));
+            const groupTeachersList = Array.from(groupTeachers);
 
             let moved = false;
 
             // -------------------------------------------------------------
-            // ක්‍රමය 1: හිස් කාලච්ඡේදයක් තිබේදැයි බැලීම
+            // ක්‍රමය 1: සම්පූර්ණ Group එකටම හිස් පොදු කාලච්ඡේදයක් සෙවීම
             // -------------------------------------------------------------
             for (let candDay of days) {
               for (let candPeriod of periods) {
                 if (isSameDay(candDay, day) && candPeriod === period) continue;
 
-                const classesFree = groupClasses.every(cid => isClassFree(cid, candDay, candPeriod, groupBlockSlots));
-                const teachersFree = groupTeachers.every(t => isTeacherFreeForBlock(t, candDay, candPeriod, groupBlockSlots));
+                const classesFree = groupClasses.every(cid => isClassSlotFree(cid, candDay, candPeriod, groupBlockSlots));
+                const teachersFree = groupTeachersList.every(t => isTeacherFree(t, candDay, candPeriod, groupBlockSlots));
 
                 if (classesFree && teachersFree) {
                   groupBlockSlots.forEach(s => {
@@ -6027,20 +6065,22 @@ function autoResolveScheduleClashes() {
             }
 
             // -------------------------------------------------------------
-            // ක්‍රමය 2: පන්ති පිරී ඇත්නම් Multi-Class Group Swap
+            // 🔴 ක්‍රමය 2: පන්ති පිරී ඇත්නම් -> MULTI-CLASS SYNCHRONIZED SWAP
+            // (අදාළ පන්තිවල සාමාන්‍ය තනි විෂයන් සමඟ මුළු Group එකම එකවර හුවමාරුව)
             // -------------------------------------------------------------
             if (!moved) {
               for (let candDay of days) {
                 for (let candPeriod of periods) {
                   if (isSameDay(candDay, day) && candPeriod === period) continue;
 
-                  const teachersFreeAtTarget = groupTeachers.every(t => 
-                    isTeacherFreeForBlock(t, candDay, candPeriod, groupBlockSlots)
+                  // නව වේලාවේදී මෙම Group එකේ සියලු ගුරුවරුන් නිදහස්ද?
+                  const teachersFreeAtTarget = groupTeachersList.every(t => 
+                    isTeacherFree(t, candDay, candPeriod, groupBlockSlots)
                   );
                   if (!teachersFreeAtTarget) continue;
 
                   const targetSlots = [];
-                  let canSwap = true;
+                  let canSwapAll = true;
 
                   for (let cid of groupClasses) {
                     const existing = scheduleList.find(s => 
@@ -6049,22 +6089,25 @@ function autoResolveScheduleClashes() {
                       Number(s.period) === candPeriod
                     );
 
-                    // අදාළ slot එක Unlocked සහ වෙනත් කිසිදු Group එකකට අයත් නොවන තනි විෂයක් විය යුතුය
-                    if (!existing || existing.isLocked) {
-                      canSwap = false;
+                    // හුවමාරු වන අනෙක් විෂය Unlocked සහ වෙනත් Group එකකට අයත් නොවන තනි විෂයක් විය යුතුය
+                    if (!existing || existing.isLocked || getSafeSlotGroupId(existing) !== null) {
+                      canSwapAll = false;
                       break;
                     }
 
-                    // එම තනි ගුරුවරයාට පැරණි වේලාවට ඒමට හැකිද?
-                    if (!isTeacherFreeForBlock(existing.teacherId, day, period, [existing, ...groupBlockSlots])) {
-                      canSwap = false;
+                    // එම තනි ගුරුවරයා Group එක තිබූ පැරණි වේලාවට නිදහස්ද?
+                    const exTeachers = extractTeachersFromSlot(existing);
+                    const canExCome = exTeachers.every(et => isTeacherFree(et, day, period, [existing, ...groupBlockSlots]));
+                    if (!canExCome) {
+                      canSwapAll = false;
                       break;
                     }
 
                     targetSlots.push(existing);
                   }
 
-                  if (canSwap && targetSlots.length === groupClasses.length) {
+                  // පන්ති සියල්ලේම විෂයන් ගැටුමකින් තොරව හුවමාරු කළ හැකි නම්:
+                  if (canSwapAll && targetSlots.length === groupClasses.length) {
                     groupBlockSlots.forEach(s => {
                       s.day = candDay;
                       s.period = candPeriod;
@@ -6102,11 +6145,11 @@ function autoResolveScheduleClashes() {
   if (typeof renderLabTimetableGrid === "function") renderLabTimetableGrid();
 
   if (resolvedCount > 0 && unresolvedCount === 0) {
-    alert(`🎉 සාර්ථකයි! Cross-Group ගුරු ගැටුම් ${resolvedCount} ක් සම්පූර්ණයෙන්ම විසඳන ලදී.`);
+    alert(`🎉 සාර්ථකයි! Combined සහ Cross-Grade ගුරු ගැටුම් ${resolvedCount} ක් සාර්ථකව හුවමාරු කර (Group Swapped) නිරාකරණය කරන ලදී.`);
   } else if (resolvedCount > 0 && unresolvedCount > 0) {
-    alert(`⚠️ ගැටුම් ${resolvedCount} ක් විසඳන ලදී. තවත් ගැටුම් ${unresolvedCount} ක් සඳහා සුදුසු සමමුහුර්ත වේලාවන් නොමැති බැවින් අතින් සකස් කළ යුතුය.`);
+    alert(`⚠️ ගැටුම් ${resolvedCount} ක් විසඳන ලදී. තවත් ගැටුම් ${unresolvedCount} ක් සඳහා සුදුසු පොදු විවේක නොමැති බැවින් අතින් සකස් කළ යුතුය.`);
   } else if (unresolvedCount > 0) {
-    alert(`⚠️ Group 1 සහ Group 2 අතර ගුරු ගැටුම් ${unresolvedCount} ක් හමු වූ නමුත්, කාණ්ඩයම මාරු කිරීමට සුදුසු පොදු විවේක නොමැති බැවින් එක් කාලච්ඡේදයක් අතින් මාරු කරන්න.`);
+    alert(`⚠️ Groups අතර ගැටුම් ${unresolvedCount} ක් හමු වූ නමුත්, කාණ්ඩයේ සියලු ගුරුවරුන් එකවර නිදහස් වන පොදු කාලච්ඡේද නොමැති බැවින් එක් කාලච්ඡේදයක් අතින් මාරු කරන්න.`);
   } else if (skippedLockedCount > 0) {
     alert(`⛔ ගැටුම් ඇති කොටස් අගුළු ලා (Locked) ඇති බැවින් මාරු කළ නොහැකි විය.`);
   } else {
@@ -6115,6 +6158,9 @@ function autoResolveScheduleClashes() {
 }
 
 window.autoResolveScheduleClashes = autoResolveScheduleClashes;
+
+    
+
     
     // 4. විෂය පේළියක් එක් කිරීම (එම ශ්‍රේණියේ විෂයන් පමණක් Dropdown එකේ ඇත, ගුරු තේරීමක් නැත)
     function addBasketSubjectRow(selectedSubjectName = "") {
