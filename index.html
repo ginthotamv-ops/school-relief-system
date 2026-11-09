@@ -4811,9 +4811,8 @@ window.getPedagogicalScore = getPedagogicalScore;
 // =========================================================================
 // 5. වලංගුතා පරීක්ෂාව (INTERVAL, CLASH, RELIGIOUS & CONSECUTIVE VALIDATION)
 // =========================================================================
-
 // =========================================================================
-// 🛡️ නව LAB, INTERVAL සහ BASKET සමමුහුර්ත නීති සහිත ISPLACEMENTVALID ශ්‍රිතය
+// 🛡️ CONTIGUOUS (අනිවාර්ය එක ළඟ) සහ LAB/INTERVAL නීති සහිත ISPLACEMENTVALID
 // =========================================================================
 function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = false) {
   const chunkSize = Number(task.chunkSize) || 1;
@@ -4824,7 +4823,7 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
   const cfg = window.timetableConfig || {};
 
   // -----------------------------------------------------------------------
-  // 1. විවේකයේ නීතිය (4 සහ 5 යා වීම වැළැක්වීම) සහ කාලච්ඡේද සීමා
+  // 1. විවේකයේ නීතිය (4 සහ 5 යා වීම වැළැක්වීම) සහ කාලච්ඡේද සීමා (1-8)
   // -----------------------------------------------------------------------
   if (startPeriod + chunkSize - 1 > 8) return false;
 
@@ -4873,7 +4872,6 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
         if (Number(s.day) === Number(day) && Number(s.period) === Number(p) && s.labId === targetLab.id) {
           const sCid = String(s.classId).trim().toLowerCase();
           
-          // එකම Basket එකට අයත් පන්ති එකම Lab එකේ සිටීම ගැටුමක් නොවේ
           const isSameBasketSession = task.isBasket && s.isCombined && (
             (s.combinedSubjectId && s.combinedSubjectId === task.combinedSubjectId) ||
             (s.subject === task.subject)
@@ -4892,14 +4890,52 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
   }
 
   // -----------------------------------------------------------------------
-  // 5. BASKET / COMBINED පරීක්ෂාව (සමමුහුර්තකරණය සහ සියලු ගුරුවරුන් පරීක්ෂාව)
+  // 🔴 5. අනිවාර්ය යාබද (CONTIGUOUS) නීතිය සහ උපරිම 2 සීමාව (දිනකට 3ක් වැළැක්වීම)
+  // -----------------------------------------------------------------------
+  const linkedClasses = (task.isBasket && task.linkedClassIds && task.linkedClassIds.length > 0)
+    ? task.linkedClassIds
+    : [task.classId];
+
+  // අදාළ දිනයේ මෙම විෂය දැනටමත් පවතින කාලච්ඡේද අංක සොයා ගැනීම
+  const existingPeriodsToday = [];
+  scheduleList.forEach(s => {
+    if (!s || !s.subject) return;
+    const matchCls = task.isBasket
+      ? linkedClasses.some(cid => String(cid).trim().toLowerCase() === String(s.classId).trim().toLowerCase())
+      : (String(s.classId).trim().toLowerCase() === cleanCid);
+
+    if (!matchCls || Number(s.day) !== Number(day)) return;
+
+    const isMatch = task.isBasket
+      ? (s.isCombined && ((task.combinedSubjectId && s.combinedSubjectId === task.combinedSubjectId) || s.subject === task.subject))
+      : (!s.isCombined && (typeof cleanSubjectKey === "function" ? cleanSubjectKey(s.subject) : s.subject.trim().toLowerCase()) === subKey);
+
+    if (isMatch) {
+      existingPeriodsToday.push(Number(s.period));
+    }
+  });
+
+  // 🛑 නීතිය A: දිනකට උපරිම කාලච්ඡේද 2 පමණි! කිසි විටකත් 3ක් නොවිය යුතුය.
+  if (existingPeriodsToday.length + chunkSize > 2) {
+    return false;
+  }
+
+  // 🛑 නීතිය B: දිනක කාලච්ඡේද 2ක් ඇත්නම් අනිවාර්යයෙන්ම එක ළඟ (Adjacent) විය යුතුය!
+  // (දැනටමත් 1ක් තිබියදී දෙවැන්න දමන විට එය යාබද නොවේ නම් හෝ විවේකය හරහා යන්නේ නම් ප්‍රතික්ෂේප කරයි)
+  if (existingPeriodsToday.length === 1 && chunkSize === 1) {
+    const existingP = existingPeriodsToday[0];
+    const isAdjacent = Math.abs(startPeriod - existingP) === 1;
+    const isCrossingInterval = (startPeriod === 4 && existingP === 5) || (startPeriod === 5 && existingP === 4);
+
+    if (!isAdjacent || isCrossingInterval) {
+      return false; // ❌ උදේ 1 සහ සවස 5 වැනි වෙන් වූ කාලච්ඡේද සම්පූර්ණයෙන්ම වළකයි!
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // 6. BASKET / COMBINED පන්ති සහ ගුරුවරුන් පරීක්ෂාව
   // -----------------------------------------------------------------------
   if (task.isBasket) {
-    // 🔴 Single Class වුවද Basket එකක් නම් අනුබද්ධ සියලුම පන්ති (6A, 6B) නිදහස් විය යුතුය
-    const linkedClasses = (task.linkedClassIds && task.linkedClassIds.length > 0)
-      ? task.linkedClassIds
-      : [task.classId];
-
     for (let cid of linkedClasses) {
       const cleanLinkedCid = String(cid).trim().toLowerCase();
 
@@ -4917,7 +4953,7 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
         }
       }
 
-      // 🔴 Basket ගුරුවරුන් පරීක්ෂාව (Single හෝ Basket Items දෙකෙහිම ගුරුවරුන් පරීක්ෂා කරයි)
+      // Basket ගුරුවරුන් පරීක්ෂාව
       const clsObj = (window.schoolClasses || []).find(c => String(c.id).trim().toLowerCase() === cleanLinkedCid);
       if (clsObj && clsObj.subjectTeachers) {
         for (let sub of (task.basketSubjects || [])) {
@@ -4930,7 +4966,6 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
               const teacherBusy = scheduleList.some(s => {
                 if (Number(s.day) !== Number(day) || Number(s.period) !== Number(p)) return false;
 
-                // මෙම ගුරුවරයා වෙනත් සාමාන්‍ය විෂයක හෝ වෙනත් Basket එකක උගන්වන්නේද?
                 let hasThisTeacher = false;
                 if (s.teacherId && String(s.teacherId).trim().toLowerCase() === cleanTid) hasThisTeacher = true;
                 if (Array.isArray(s.basketItems) && s.basketItems.some(b => b.teacherId && String(b.teacherId).trim().toLowerCase() === cleanTid)) {
@@ -4939,7 +4974,6 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
 
                 if (!hasThisTeacher) return false;
 
-                // එම වේලාවේම පැවැත්වෙන අපේම Basket Session එකක් නම් ගැටුමක් නොවේ
                 const isSameBasketEvent = s.isCombined && (
                   (s.combinedSubjectId && s.combinedSubjectId === task.combinedSubjectId) ||
                   (s.subject === task.subject)
@@ -4949,7 +4983,6 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
 
               if (teacherBusy) return false;
 
-              // ගුරු Blackouts පරීක්ෂාව
               if (cfg.teacherBlackouts && cfg.teacherBlackouts[cleanTid]) {
                 const isBlocked = cfg.teacherBlackouts[cleanTid].some(b => Number(b.day) === Number(day) && Number(b.period) === Number(p));
                 if (isBlocked) return false;
@@ -4959,23 +4992,11 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
         }
       }
     }
-
-    // 🔴 Basket විෂය සඳහාද දිනකට උපරිම කාලච්ඡේද 2 සීමාව පරීක්ෂා කිරීම (උදේ/හවස විසිරී යාම වැළැක්වීම)
-    const existingBasketTodayCount = scheduleList.filter(s => {
-      const matchCls = linkedClasses.some(cid => String(cid).trim().toLowerCase() === String(s.classId).trim().toLowerCase());
-      const matchSub = (s.combinedSubjectId && s.combinedSubjectId === task.combinedSubjectId) || (s.subject === task.subject);
-      return matchCls && Number(s.day) === Number(day) && matchSub;
-    }).length / linkedClasses.length;
-
-    if (existingBasketTodayCount + chunkSize > 2) {
-      return false;
-    }
-
     return true;
   }
 
   // -----------------------------------------------------------------------
-  // 6. සාමාන්‍ය තනි විෂයන් පරීක්ෂාව
+  // 7. සාමාන්‍ය තනි විෂයන් පරීක්ෂාව
   // -----------------------------------------------------------------------
   for (let p of targetPeriods) {
     const isOccupied = scheduleList.some(s => 
@@ -5008,19 +5029,9 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
     }
   }
 
-  // දිනකට උපරිම කාලච්ඡේද 2 සීමාව
-  const existingTodayCount = scheduleList.filter(s => {
-    const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(s.subject) : (s.subject || '').trim().toLowerCase();
-    return String(s.classId).trim().toLowerCase() === cleanCid &&
-           Number(s.day) === Number(day) &&
-           sKey === subKey;
-  }).length;
-
-  if (existingTodayCount + chunkSize > 2) {
-    return false;
-  }
-
-  // ගුරු විඩාව පාලනය (උපරිම අඛණ්ඩ කාලච්ඡේද 4)
+  // -----------------------------------------------------------------------
+  // 8. ගුරු විඩාව පාලනය (උපරිම අඛණ්ඩ කාලච්ඡේද 4)
+  // -----------------------------------------------------------------------
   if (validTid) {
     const teacherPeriodsToday = scheduleList
       .filter(s => {
@@ -5053,6 +5064,8 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
 }
 
 window.isPlacementValid = isPlacementValid;
+
+
 // =========================================================================
 // 7. ප්‍රධාන AUTO-FILL එන්ජිම (BOUNDED CSP BACKTRACKING)
 // =========================================================================
@@ -5277,6 +5290,10 @@ window.runAutomatedTimetableGenerator = runAutomatedTimetableGenerator;
  // =========================================================================
 // 📋 ACCURATE & SYNCHRONIZED TIMETABLE TASK QUEUE BUILDER (BUG-FIXED)
 // =========================================================================
+
+// =========================================================================
+// 📋 PEDAGOGICALLY BALANCED TASK QUEUE BUILDER (BUG-FIXED & OPTIMIZED)
+// =========================================================================
 function buildTimetableTaskQueue(targetClasses, workingSchedule) {
   const taskQueue = [];
   const handledCombinedKeys = new Set();
@@ -5307,16 +5324,13 @@ function buildTimetableTaskQueue(targetClasses, workingSchedule) {
 
     relevantCombined.forEach(comb => {
       const combKey = `${comb.id || comb.name}_GR${currentGrade}`;
-      
-      // මුළු පාසලම හෝ පන්ති කිහිපයක් එකවර කරන විට Duplicate Task නොහැදීමට
       if (handledCombinedKeys.has(combKey)) return;
       handledCombinedKeys.add(combKey);
 
-      // 🔴 1. නියමිත කාලච්ඡේද ගණන (Default එක 5 ලෙස ලබා ගැනීම)
+      // නියමිත කාලච්ඡේද ගණන (Default = 5)
       const max = Number(comb.maxWeekly || comb.weeklyPeriods || comb.periods) || 5;
 
-      // 🔴 2. සැබෑ ලෙස පිරවූ අනන්‍ය කාලච්ඡේද (Unique Slots Set) පමණක් ගණනය කිරීම
-      // (එකම කොටුවේ basket items කිහිපයක් තිබුණද ගණනය වන්නේ 1ක් ලෙසය)
+      // දැනටමත් පිරවූ අනන්‍ය කාලච්ඡේද (Unique Slots Set)
       const allocatedSlots = new Set();
       (workingSchedule || []).forEach(s => {
         if (!s || !s.subject) return;
@@ -5324,31 +5338,32 @@ function buildTimetableTaskQueue(targetClasses, workingSchedule) {
           String(s.classId).trim().toLowerCase() === String(cid).trim().toLowerCase()
         );
         const matchSub = (s.subject === comb.name || s.combinedSubjectId === comb.id || s.isCombined);
-        
         if (matchCls && matchSub) {
           allocatedSlots.add(`${s.day}_${s.period}`);
         }
       });
 
-      const allocatedCount = allocatedSlots.size;
-      const remaining = Math.max(0, max - allocatedCount);
+      const remaining = Math.max(0, max - allocatedSlots.size);
 
       if (remaining > 0) {
-        // 🔴 3. කාලච්ඡේද 5 හෝ ඉතිරි ප්‍රමාණය Double (2) සහ Singles (1) වලට නිවැරදිව කැඩීම
         let chunks = [];
         let tempRem = remaining;
 
-        // සතියට 1 Double Period (2) එකක් සහ ඉතිරිවා Single (1) කාලච්ඡේද ලෙස වෙන් කිරීම
-        if (tempRem >= 2 && comb.type !== "single_only") {
+        // 🔴 විශේෂයෙන්ම "double" ලෙස සකසා ඇත්නම් පමණක් 1 Double Period (2) සාදයි
+        // නැතහොත් පෙරනිමියෙන් දිනකට 1 බැගින් Single (1, 1, 1, 1, 1) ලෙස බෙදයි
+        const explicitlyWantsDouble = (comb.type === "double" || comb.isPractical === true);
+
+        if (explicitlyWantsDouble && tempRem >= 2) {
           chunks.push(2);
           tempRem -= 2;
         }
+
+        // ඉතිරි සියල්ල Single Chunks (1) ලෙස Queue එකට යවයි
         while (tempRem > 0) {
           chunks.push(1);
           tempRem -= 1;
         }
 
-        // අනුබද්ධ සියලුම පන්ති ලැයිස්තුව
         const linkedClasses = (comb.targetClassIds && comb.targetClassIds.length > 0)
           ? comb.targetClassIds
           : (comb.classes || [cleanClassId]);
@@ -5360,7 +5375,6 @@ function buildTimetableTaskQueue(targetClasses, workingSchedule) {
             subject: comb.name,
             teacherId: null,
             chunkSize: chunkSize,
-            // Double Basket එකට ඉහළම ප්‍රමුඛතාව (240), Single Basket වලට (220)
             priority: 220 + (chunkSize === 2 ? 30 : 0) - idx,
             isBasket: true,
             isCombined: true,
@@ -5380,14 +5394,13 @@ function buildTimetableTaskQueue(targetClasses, workingSchedule) {
 
     const filteredQuotas = rawQuotas.filter(q => {
       const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(q.subject) : q.subject.trim().toLowerCase();
-      return !suppressedSubjects.has(sKey);
+      if (suppressedSubjects.has(sKey)) return false;
+      if (typeof isSubjectExcludedForClass === "function" && isSubjectExcludedForClass(cleanClassId, q.subject)) return false;
+      return true;
     });
 
     const finalQuotas = filteredQuotas.filter(q => {
       const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(q.subject) : q.subject.trim().toLowerCase();
-
-      if (typeof isSubjectExcludedForClass === "function" && isSubjectExcludedForClass(cleanClassId, q.subject)) return false;
-
       const assignedTid = typeof getAssignedTeacherIdForClass === "function"
         ? getAssignedTeacherIdForClass(cls, q.subject)
         : (cls && cls.subjectTeachers ? cls.subjectTeachers[sKey] : null);
@@ -5412,7 +5425,6 @@ function buildTimetableTaskQueue(targetClasses, workingSchedule) {
     finalQuotas.forEach(q => {
       const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(q.subject) : q.subject.trim().toLowerCase();
 
-      // 🔴 තනි විෂයන් සඳහාද Unique Slots Set භාවිතයෙන් නිවැරදිව ගණනය කිරීම
       const allocatedSlots = new Set();
       (workingSchedule || []).forEach(s => {
         if (!s || !s.subject) return;
@@ -5442,32 +5454,31 @@ function buildTimetableTaskQueue(targetClasses, workingSchedule) {
       }
       if (teacherId === "NONE" || teacherId === "EXCLUDED") teacherId = null;
 
-      // Chunks කැඩීම
       let chunks = [];
       let tempRem = remaining;
 
-      // විද්‍යාව, ගණිතය වැනි විෂයන්ට 1 Double Period එකක් සහ ඉතිරිවා Single ලෙස වෙන් කිරීම
-      const isLabOrPractical = ["විද්‍යාව", "science", "තොරතුරු තාක්ෂණය", "ict", "චිත්‍ර", "art"].some(k => q.subject.toLowerCase().includes(k));
-      const wantsDouble = (periodType === "double" || isLabOrPractical) && tempRem >= 2;
+      // 🔴 විද්‍යාගාර ප්‍රායෝගික විෂයන්ට පමණක් Double period එකක් අවශ්‍ය නම් ලබා දෙයි
+      const isLabPractical = ["විද්‍යාව", "science", "තොරතුරු තාක්ෂණය", "ict"].some(k => q.subject.toLowerCase().includes(k));
+      const explicitlyWantsDouble = (periodType === "double" || isLabPractical);
 
-      if (wantsDouble) {
+      if (explicitlyWantsDouble && tempRem >= 2) {
         chunks.push(2);
         tempRem -= 2;
       }
+
       while (tempRem > 0) {
         chunks.push(1);
         tempRem -= 1;
       }
 
       chunks.forEach((chunkSize, idx) => {
-        // Double කාලච්ඡේද (2) Singles (1) වලට පෙර පිරවීමට ඉහළ ලකුණු
         let priorityWeight = chunkSize === 2 ? 90 : 30;
 
         if (teacherId && (typeof timetableConfig !== "undefined" && (timetableConfig.priorityTeacherIds || []).includes(teacherId))) {
           priorityWeight += 40;
         }
         if (typeof isReligiousSubject === "function" && isReligiousSubject(q.subject)) {
-          priorityWeight += 35; // ආගමික විෂයන් සඳහා විශේෂ ප්‍රමුඛතාව
+          priorityWeight += 35;
         }
 
         taskQueue.push({
@@ -5483,10 +5494,10 @@ function buildTimetableTaskQueue(targetClasses, workingSchedule) {
     });
   });
 
-  // ඉහළම ප්‍රමුඛතාව අනුව පෙළගැස්වීම: Baskets (Double -> Single) -> Regular Doubles -> Regular Singles
   taskQueue.sort((a, b) => b.priority - a.priority);
   return taskQueue;
 }
+
 
 window.buildTimetableTaskQueue = buildTimetableTaskQueue;
 
