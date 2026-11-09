@@ -14707,36 +14707,62 @@ function isSlotPendingRelief(slot) {
 window.redirectToClassSchedule = redirectToClassSchedule;
 window.isSlotPendingRelief = isSlotPendingRelief;
 
-    // 🧹 6B පන්තියේ Duplicate / Ghost Slots පිරිසිදු කිරීම
-function cleanDuplicateSlotsForClass(classId) {
+   // 🧹 6 B පන්තියේ Duplicate / Ghost Slots ස්ථිරවම පිරිසිදු කිරීම
+function cleanDuplicateSlotsForClass(classId = "6B") {
+  if (!Array.isArray(window.masterSchedule)) {
+    console.error("masterSchedule දත්ත හමු නොවීය!");
+    return;
+  }
+
   const seen = new Set();
   const initialCount = window.masterSchedule.length;
 
+  // සොයන පන්තියේ නමෙන් සියලුම Spaces සහ Hyphens ඉවත් කිරීම (උදා: "6 B" -> "6b")
+  const targetClean = String(classId).trim().toLowerCase().replace(/[\s\-_]/g, '');
+
   window.masterSchedule = window.masterSchedule.filter(s => {
-    const scId = String(s.classId || '').trim().toLowerCase();
-    if (scId !== String(classId).trim().toLowerCase()) return true;
+    if (!s) return false;
 
-    // වලංගු නොවන කාලච්ඡේද ඉවත් කිරීම (1 සිට 8 දක්වා පමණක් තබා ගැනීම)
-    if (Number(s.period) < 1 || Number(s.period) > 8) return false;
+    const scIdClean = String(s.classId || '').trim().toLowerCase().replace(/[\s\-_]/g, '');
 
-    // එකම දිනය සහ කාලච්ඡේදය දෙවරක් පැමිණියහොත් දෙවැන්න ඉවත් කිරීම
-    const key = `${s.day}_${s.period}`;
-    if (seen.has(key)) {
-      console.warn("ඉවත් කරන ලද Duplicate Slot එක:", s);
+    // වෙනත් පන්තියක කොටු නම් එලෙසම තබයි
+    if (scIdClean !== targetClean) return true;
+
+    const p = Number(s.period);
+    const d = Number(s.day);
+
+    // 1. වලංගු නොවන කාලච්ඡේද (1-8) හෝ දින (0-4) සහිත Ghost slots ඉවත් කිරීම
+    if (isNaN(p) || p < 1 || p > 8 || isNaN(d) || d < 0 || d > 4) {
+      console.warn("❌ ඉවත් කළ වලංගු නොවන Slot එක:", s);
       return false;
     }
+
+    // 2. එකම දිනය සහ කාලච්ඡේදය සඳහා දෙවරක් පැමිණෙන Duplicate slot එක ඉවත් කිරීම
+    const key = `${d}_${p}`;
+    if (seen.has(key)) {
+      console.warn("❌ ඉවත් කළ Duplicate Slot එක:", s);
+      return false;
+    }
+
     seen.add(key);
     return true;
   });
 
+  const removedCount = initialCount - window.masterSchedule.length;
+  console.log(`✅ පිරිසිදු කිරීම අවසන්! ඉවත් කළ අමතර කොටු ගණන: ${removedCount}`);
+
+  // දේශීයව සහ Firebase වෙත ස්ථිරවම Save කිරීම
   if (typeof saveAllToStorage === "function") saveAllToStorage();
+  if (typeof syncToFirebase === "function") syncToFirebase();
+  if (typeof syncMasterScheduleToFirebase === "function") syncMasterScheduleToFirebase();
+
+  // UI යාවත්කාලීන කිරීම
   if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
   if (typeof renderGradeTimetableGrid === "function") renderGradeTimetableGrid();
-  
-  console.log(`පිරිසිදු කිරීම අවසන්! ඉවත් කළ අමතර කොටු ගණන: ${initialCount - window.masterSchedule.length}`);
+  if (typeof refreshAllUI === "function") refreshAllUI();
 }
 
-// 6B සඳහා ක්‍රියාත්මක කරන්න:
+// 6 B සඳහා ක්‍රියාත්මක කරන්න (Space තිබුණද නැතද හඳුනා ගනී)
 cleanDuplicateSlotsForClass("6B");
 
     // =========================================================================
