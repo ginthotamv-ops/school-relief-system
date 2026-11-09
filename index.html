@@ -4814,9 +4814,9 @@ window.getPedagogicalScore = getPedagogicalScore;
 // =========================================================================
 
 // =========================================================================
-// 🛡️ DEADLOCK-FREE ISPLACEMENTVALID (BASKET COUNT & LAB BALANCED)
+// 🛡️ ZERO-DAY AWARE & CONTIGUOUS PLACEMENT VALIDATOR
 // =========================================================================
-function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = false, mode = "PEDAGOGICAL") {
+function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = false) {
   const chunkSize = Number(task.chunkSize) || 1;
   const cleanCid = String(task.classId || '').trim().toLowerCase();
   const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(task.subject) : String(task.subject || '').trim().toLowerCase();
@@ -4852,8 +4852,8 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
     }
   }
 
-  // 4. විද්‍යාගාර (LAB) - 🔴 Double/Practical සඳහා පමණක් සීමා කෙරේ
-  const targetLab = (typeof getRequiredLabForClassSubject === "function" && (chunkSize >= 2 || task.isPractical || task.requiresLab))
+  // 4. විද්‍යාගාර (LAB) - ද්විත්ව/ප්‍රායෝගික සඳහා පමණි
+  const targetLab = (typeof getRequiredLabForClassSubject === "function" && (chunkSize >= 2 || task.isPractical))
     ? getRequiredLabForClassSubject(task.subject, task.grade)
     : null;
 
@@ -4878,12 +4878,11 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
   }
 
   // -----------------------------------------------------------------------
-  // 🔴 5. දිනක කාලච්ඡේද සීමා (පන්තියට අදාළව පමණක් Unique Periods ගණනය කිරීම)
+  // 🔴 5. එම දිනයේ මෙම විෂය දැනටමත් තිබේදැයි නිවැරදිව පරීක්ෂා කිරීම
   // -----------------------------------------------------------------------
   const existingPeriodsToday = new Set();
   scheduleList.forEach(s => {
     if (!s || !s.subject) return;
-    // වෙනත් පන්තිවල කොටු මෙහිදී එකතු නොවේ (cleanCid පමණක් පරීක්ෂා කරයි)
     if (String(s.classId || '').trim().toLowerCase() !== cleanCid) return;
     if (Number(s.day) !== Number(day)) return;
 
@@ -4903,14 +4902,14 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
     return false;
   }
 
-  // 🛑 නීතිය B: දිනක 2ක් ඇත්නම් PEDAGOGICAL මාදිලියේදී අනිවාර්යයෙන්ම එක ළඟ (Adjacent) විය යුතුය
-  if (existingCount === 1 && chunkSize === 1 && mode === "PEDAGOGICAL") {
+  // 🛑 නීතිය B: දිනක 2ක් ඇත්නම් අනිවාර්යයෙන්ම එක ළඟ (Adjacent) විය යුතුය
+  if (existingCount === 1 && chunkSize === 1) {
     const existingP = Array.from(existingPeriodsToday)[0];
     const isAdjacent = Math.abs(startPeriod - existingP) === 1;
     const isCrossingInterval = (startPeriod === 4 && existingP === 5) || (startPeriod === 5 && existingP === 4);
 
     if (!isAdjacent || isCrossingInterval) {
-      return false; // Pedagogical මාදිලියේදී වෙන්වූ තැන් සම්පූර්ණයෙන්ම නවතයි
+      return false; // ❌ 1 සහ 5 වැනි වෙන් වූ කාලච්ඡේද තහනම්!
     }
   }
 
@@ -5005,12 +5004,14 @@ function isPlacementValid(scheduleList, task, day, startPeriod, isSingleClass = 
 window.isPlacementValid = isPlacementValid;
 
 
+
+
 // =========================================================================
 // 7. ප්‍රධාන AUTO-FILL එන්ජිම (BOUNDED CSP BACKTRACKING)
 // =========================================================================
 
 // =========================================================================
-// 🚀 ROBUST SYNCHRONIZED AUTOMATED TIMETABLE GENERATOR
+// 🚀 ZERO-DAY PRIORITY ENFORCED AUTOMATED GENERATOR
 // =========================================================================
 async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassId = null) {
   let scheduleList = (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) 
@@ -5045,7 +5046,6 @@ async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassI
       return;
     }
   } else {
-    // මුළු පාසලම නම් ඉහළ ශ්‍රේණිවල සිට පහළට (11 -> 6)
     targetClasses.sort((a, b) => {
       const gradeA = parseInt(a.name) || parseInt(a.id) || 0;
       const gradeB = parseInt(b.name) || parseInt(b.id) || 0;
@@ -5076,26 +5076,50 @@ async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassI
       if (taskIndex >= taskQueue.length) return true;
 
       const task = taskQueue[taskIndex];
+      const cleanTaskCid = String(task.classId || '').trim().toLowerCase();
+      const taskSubKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(task.subject) : String(task.subject || '').trim().toLowerCase();
+
       let candidateSlots = [];
 
       for (let d of days) {
+        // 🔴 පරීක්ෂාව: මෙම දිනයේ අදාළ පන්තියට මෙම විෂය දැනටමත් තිබේද?
+        const hasSubjectToday = tempSchedule.some(s => {
+          if (!s || !s.subject) return false;
+          if (String(s.classId || '').trim().toLowerCase() !== cleanTaskCid) return false;
+          if (Number(s.day) !== Number(d)) return false;
+
+          return task.isBasket
+            ? (s.isCombined && ((task.combinedSubjectId && s.combinedSubjectId === task.combinedSubjectId) || s.subject === task.subject))
+            : (!s.isCombined && (typeof cleanSubjectKey === "function" ? cleanSubjectKey(s.subject) : s.subject.trim().toLowerCase()) === taskSubKey);
+        });
+
         for (let p of periods) {
-          // 🔴 mode එක isPlacementValid වෙත ලබා දීම (Fallback වලදී ලිහිල් වීමට)
-          if (isPlacementValid(tempSchedule, task, d, p, isSingleClass, currentMode)) {
+          if (isPlacementValid(tempSchedule, task, d, p, isSingleClass)) {
             let score = 0;
+
             if (currentMode === "PEDAGOGICAL") {
-              const currentClassSlots = tempSchedule.filter(s => String(s.classId).toLowerCase() === String(task.classId).toLowerCase());
+              const currentClassSlots = tempSchedule.filter(s => String(s.classId).toLowerCase() === cleanTaskCid);
               score = getPedagogicalScore(task, d, p, currentClassSlots, tempSchedule);
             } else {
               score = Math.random() * 100;
             }
 
+            // 🌟🌟🌟 රන් නීතිය (GOLDEN RULE): 
+            // එම දිනයේ මෙම විෂය කිසිසේත්ම නැතිනම් (Zero-Day) +1000 ක ඉහළම ප්‍රමුඛතාවක් දෙයි!
+            if (!hasSubjectToday) {
+              score += 1000; 
+            } else {
+              // එම දිනයේ දැනටමත් තිබේ නම් ලකුණු අඩු කර එය අවසාන විකල්පය (Fallback) කරයි
+              score -= 300; 
+            }
+
+            // Basket Snap Bonus
             if (task.isBasket) {
               const matchesExisting = tempSchedule.some(s => 
                 s.isCombined && (s.combinedSubjectId === task.combinedSubjectId || s.subject === task.subject) &&
                 Number(s.day) === Number(d) && Number(s.period) === Number(p)
               );
-              if (matchesExisting) score += 500;
+              if (matchesExisting) score += 400;
             }
 
             candidateSlots.push({ day: d, period: p, score: score });
@@ -5104,6 +5128,8 @@ async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassI
       }
 
       if (candidateSlots.length === 0) return false;
+
+      // ලකුණු වැඩිම (විෂය නැති දින - Zero Day Slots) මුලට ගැනීම
       candidateSlots.sort((a, b) => b.score - a.score);
 
       for (let slot of candidateSlots) {
@@ -5131,7 +5157,6 @@ async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassI
             });
 
             for (let offset = 0; offset < task.chunkSize; offset++) {
-              // 🔴 දැනටමත් පවතින Slot එකක් නම් අලුතින් Duplicate නොකරයි
               const alreadyExists = tempSchedule.some(s => 
                 String(s.classId).trim().toLowerCase() === String(cid).trim().toLowerCase() &&
                 Number(s.day) === Number(slot.day) &&
@@ -5193,7 +5218,7 @@ async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassI
   // 4. මුලින් PEDAGOGICAL ක්‍රමයට උත්සාහ කිරීම
   let outcome = executeSolver(mode);
 
-  // 5. තදබද වුවහොත් ස්වයංක්‍රීයව SHUFFLE (Relaxed) මඟින් විසඳුමක් ලබා ගැනීම
+  // 5. තදබද වුවහොත් SHUFFLE මඟින් උත්සාහ කිරීම
   if (!outcome.success && mode === "PEDAGOGICAL") {
     console.warn("Pedagogical mode සිරවිය. Shuffle Fallback මඟින් උත්සාහ කරයි...");
     outcome = executeSolver("SHUFFLE");
@@ -5217,7 +5242,7 @@ async function runAutomatedTimetableGenerator(mode = "PEDAGOGICAL", targetClassI
     if (typeof refreshAllUI === "function") refreshAllUI();
 
     const scopeTitle = isSingleClass ? `තෝරාගත් පන්තිය` : `මුළු පාසලේම සියලු පන්ති`;
-    alert(`🎉 සාර්ථකයි! [${scopeTitle}] සඳහා Combined විෂයන් සහ කාලසටහන 100% ක් සාර්ථකව සකසා සුරකින ලදී.`);
+    alert(`🎉 සාර්ථකයි! [${scopeTitle}] සඳහා විෂයන් සතිය පුරා දිනකට එක බැගින් (Zero-Day Distribution) සාර්ථකව සකසා සුරකින ලදී.`);
   } else {
     alert("⚠️ කාලසටහන සම්පූර්ණ කිරීමට නොහැකි විය. පන්තිවලට පවරා ඇති ගුරු ගැටුම්, විද්‍යාගාර සීමා හෝ අගුළු ලූ (Locked) විෂයන් නිසා ඉඩකඩ ප්‍රමාණවත් නොවේ.");
   }
