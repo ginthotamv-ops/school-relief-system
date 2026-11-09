@@ -6319,11 +6319,9 @@ function handleSlotDragLeave(e) {
     }
 
    
-
-
 // =========================================================================
-// ⚡ BIDIRECTIONAL SMART GROUP SWAP CLASH RESOLVER
-// (Group එක වෙනත් තැනකට යවා තනි විෂයන් 2ක් මෙහාට හුවමාරු කිරීමේ පහසුකම සහිතයි)
+// ⚡ PEDAGOGICAL BIDIRECTIONAL SMART GROUP SWAP CLASH RESOLVER (AI ENHANCED)
+// (Zero-Day -> Contiguous Double Period -> User Confirmation Logic ඇතුළත් කර ඇත)
 // =========================================================================
 function autoResolveScheduleClashes() {
   let scheduleList = (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) 
@@ -6337,10 +6335,14 @@ function autoResolveScheduleClashes() {
 
   const days = [0, 1, 2, 3, 4]; // සඳුදා - සිකුරාදා
   const periods = [1, 2, 3, 4, 5, 6, 7, 8];
+  const sinhalaDayNames = ["සඳුදා", "අඟහරුවාදා", "බදාදා", "බ්‍රහස්පතින්දා", "සිකුරාදා"];
+
   let totalResolved = 0;
   let skippedLockedCount = 0;
 
+  // -------------------------------------------------------------------------
   // 1. සහායක ශ්‍රිත (Helpers)
+  // -------------------------------------------------------------------------
   function isSameDay(d1, d2) {
     if (typeof isSlotMatchingDay === "function") return isSlotMatchingDay(d1, d2);
     if (d1 === d2 || String(d1).trim() === String(d2).trim()) return true;
@@ -6348,6 +6350,13 @@ function autoResolveScheduleClashes() {
     const idx1 = sinhalaDays.indexOf(String(d1).trim()) !== -1 ? sinhalaDays.indexOf(String(d1).trim()) : Number(d1);
     const idx2 = sinhalaDays.indexOf(String(d2).trim()) !== -1 ? sinhalaDays.indexOf(String(d2).trim()) : Number(d2);
     return !isNaN(idx1) && !isNaN(idx2) && idx1 === idx2;
+  }
+
+  function isClassMatch(c1, c2) {
+    if (!c1 || !c2) return false;
+    const str1 = String(typeof c1 === 'object' ? (c1.id || c1.name) : c1).trim().toLowerCase().replace(/[\s\-_]/g, '');
+    const str2 = String(typeof c2 === 'object' ? (c2.id || c2.name) : c2).trim().toLowerCase().replace(/[\s\-_]/g, '');
+    return str1 === str2;
   }
 
   function extractGrade(slot) {
@@ -6444,34 +6453,86 @@ function autoResolveScheduleClashes() {
   }
 
   function isClassSlotFree(classId, day, period, excludeSlots = []) {
-    const cleanCid = String(classId).trim().toLowerCase();
     const excludes = Array.isArray(excludeSlots) ? excludeSlots : [excludeSlots];
-
     return !scheduleList.some(s => {
       if (excludes.includes(s)) return false;
-      return String(s.classId).trim().toLowerCase() === cleanCid && isSameDay(s.day, day) && Number(s.period) === Number(period);
+      return isClassMatch(s.classId, classId) && isSameDay(s.day, day) && Number(s.period) === Number(period);
     });
   }
 
   // -------------------------------------------------------------------------
-  // 🔴 2. තනි Slot එකක් හෝ සම්පූර්ණ Group එකක් සාර්ථකව මාරු කරන ප්‍රධාන එන්ජිම
+  // 🎓 2. අධ්‍යාපනික ප්‍රමුඛතා පරීක්ෂාව (Zero-Day -> Double Period -> Split)
+  // -------------------------------------------------------------------------
+  function evaluatePedagogicalPlacement(classId, targetDay, targetPeriod, subject, excludeSlots = []) {
+    const excludes = Array.isArray(excludeSlots) ? excludeSlots : [excludeSlots];
+    const cleanSub = String(subject || '').trim().toLowerCase();
+
+    // අදාළ පන්තියේ targetDay දින දැනට පවතින මෙම විෂයේ කාලච්ඡේද සොයා ගැනීම
+    const existingPeriods = [];
+    scheduleList.forEach(s => {
+      if (excludes.includes(s)) return;
+      if (!s || !s.subject) return;
+      if (!isClassMatch(s.classId, classId) || !isSameDay(s.day, targetDay)) return;
+
+      const sSub = String(s.subject).trim().toLowerCase();
+      if (sSub === cleanSub) {
+        existingPeriods.push(Number(s.period));
+      } else if (Array.isArray(s.basketItems) && s.basketItems.some(b => String(b.subject || '').trim().toLowerCase() === cleanSub)) {
+        existingPeriods.push(Number(s.period));
+      }
+    });
+
+    // 🌟 Tier 1: අදාළ දිනයේ මෙම විෂය කිසිසේත්ම නැත (Zero-Day Distribution)
+    if (existingPeriods.length === 0) {
+      return { tier: 1, score: 100, label: "Zero-Day (නව දිනයක්)", existingPeriods };
+    }
+
+    // 🌟 Tier 2: දැනටමත් 1ක් ඇති අතර, ඊට යාබදව ද්විත්ව කාලච්ඡේදයක් සාදයි
+    if (existingPeriods.length === 1) {
+      const adj = existingPeriods[0];
+      const isAdjacent = Math.abs(Number(targetPeriod) - adj) === 1;
+      
+      // 🛑 විවේකය (Interval: 4 සහ 5 අතර) හරහා ද්විත්ව කාලච්ඡේද නොසෑදීම
+      const isCrossingInterval = (Number(targetPeriod) === 4 && adj === 5) || (Number(targetPeriod) === 5 && adj === 4);
+
+      if (isAdjacent && !isCrossingInterval) {
+        return { tier: 2, score: 80, label: "Double Period (ද්විත්ව කාලච්ඡේදය)", pairedWith: adj, existingPeriods };
+      }
+    }
+
+    // ⚠️ Tier 3: එකම දිනයේ වෙන්වූ කාලච්ඡේද (උදා: 1 සහ 5) හෝ කාලච්ඡේද 3ක් එකතු වීම
+    return { tier: 3, score: 20, label: "Split/Isolated (වෙන් වූ කාලච්ඡේද)", existingPeriods };
+  }
+
+  // -------------------------------------------------------------------------
+  // 🔴 3. තනි Slot එකක් හෝ Group එකක් බුද්ධිමත්ව මාරු කරන ප්‍රධාන එන්ජිම
   // -------------------------------------------------------------------------
   function tryMoveBlock(targetSlot, day, period) {
     if (!targetSlot || targetSlot.isLocked) return false;
 
-    // මෙම slot එක අයත් සම්පූර්ණ Block එක (Group එකක් නම් පන්ති 2-3ම, තනි විෂයක් නම් එම slot එක පමණි)
     const blockSlots = scheduleList.filter(s => 
       isSameDay(s.day, day) && 
       Number(s.period) === Number(period) &&
       (s === targetSlot || areSlotsInSameGroup(s, targetSlot))
     );
 
+    // Block එකේ කිසියම් කොටසක් Locked නම් මාරු නොකරයි
+    if (blockSlots.some(s => s.isLocked)) {
+      skippedLockedCount++;
+      return false;
+    }
+
     const blockClasses = Array.from(new Set(blockSlots.map(s => String(s.classId).trim().toLowerCase())));
     const blockTeachers = new Set();
     blockSlots.forEach(s => extractTeachersFromSlot(s).forEach(t => blockTeachers.add(t)));
     const blockTeachersList = Array.from(blockTeachers);
 
-    // ක්‍රමය A: හිස් කාලච්ඡේදයක් සෙවීම
+    // සියලුම සුදුසු අපේක්ෂිත ස්ථාන (Candidates) ලැයිස්තුගත කර ලකුණු ලබා දීම
+    const candidateMoves = [];
+
+    // -----------------------------------------------------------------------
+    // ක්‍රමය A: හිස් කාලච්ඡේදයක් (Empty Slot) වෙත මාරු කිරීමේ හැකියාවන් සෙවීම
+    // -----------------------------------------------------------------------
     for (let candDay of days) {
       for (let candPeriod of periods) {
         if (isSameDay(candDay, day) && candPeriod === period) continue;
@@ -6480,22 +6541,38 @@ function autoResolveScheduleClashes() {
         const teachersFree = blockTeachersList.every(t => isTeacherFree(t, candDay, candPeriod, blockSlots));
 
         if (classesFree && teachersFree) {
-          blockSlots.forEach(s => {
-            s.day = candDay;
-            s.period = candPeriod;
+          // Block එකේ පන්ති සඳහා අධ්‍යාපනික ගැලපීම බැලීම
+          let worstTier = 1;
+          let totalScore = 0;
+          let sampleFit = null;
+
+          blockSlots.forEach(bs => {
+            const fit = evaluatePedagogicalPlacement(bs.classId, candDay, candPeriod, bs.subject, blockSlots);
+            if (fit.tier > worstTier) worstTier = fit.tier;
+            totalScore += fit.score;
+            sampleFit = fit;
           });
-          return true;
+
+          candidateMoves.push({
+            type: "EMPTY",
+            candDay,
+            candPeriod,
+            tier: worstTier,
+            score: totalScore / blockSlots.length,
+            fit: sampleFit,
+            blockSlots
+          });
         }
       }
     }
 
-    // 🔴 ක්‍රමය B: Multi-Class Synchronized Group Swap
-    // (Group එක candDay, candPeriod වෙත යවා එම පන්තිවල තනි විෂයන් මෙහාට ගෙන ඒම)
+    // -----------------------------------------------------------------------
+    // ක්‍රමය B: Multi-Class Synchronized Group Swap (අනෙක් Unlocked විෂයන් සමඟ හුවමාරුව)
+    // -----------------------------------------------------------------------
     for (let candDay of days) {
       for (let candPeriod of periods) {
         if (isSameDay(candDay, day) && candPeriod === period) continue;
 
-        // Group එකේ ගුරුවරුන්ට නව වේලාව ගැළපේද?
         const teachersFreeAtTarget = blockTeachersList.every(t => 
           isTeacherFree(t, candDay, candPeriod, blockSlots)
         );
@@ -6506,12 +6583,12 @@ function autoResolveScheduleClashes() {
 
         for (let cid of blockClasses) {
           const existing = scheduleList.find(s => 
-            String(s.classId).trim().toLowerCase() === cid &&
+            isClassMatch(s.classId, cid) &&
             isSameDay(s.day, candDay) &&
             Number(s.period) === candPeriod
           );
 
-          // හුවමාරු වන අනෙක් විෂය Unlocked සහ වෙනත් කිසිදු Group එකකට අයත් නොවන තනි විෂයක් විය යුතුය
+          // හුවමාරු වන අනෙක් විෂය Unlocked සහ වෙනත් Group එකකට අයත් නොවන තනි විෂයක් විය යුතුය
           if (!existing || existing.isLocked || getSafeSlotGroupId(existing) !== null) {
             canSwapAll = false;
             break;
@@ -6528,26 +6605,101 @@ function autoResolveScheduleClashes() {
           targetSlotsToSwap.push(existing);
         }
 
-        // සියලු පන්තිවල තනි විෂයන් සහ Group එක සාර්ථකව හුවමාරු කිරීම!
         if (canSwapAll && targetSlotsToSwap.length === blockClasses.length) {
-          blockSlots.forEach(s => {
-            s.day = candDay;
-            s.period = candPeriod;
+          // 🔴 දෙපාර්ශවයටම අධ්‍යාපනික නීති පරීක්ෂා කිරීම:
+          // 1. අපේ Block එක candDay, candPeriod වෙත යනවිට
+          let worstTier = 1;
+          let totalScore = 0;
+          let sampleFit = null;
+
+          blockSlots.forEach(bs => {
+            const fit = evaluatePedagogicalPlacement(bs.classId, candDay, candPeriod, bs.subject, blockSlots);
+            if (fit.tier > worstTier) worstTier = fit.tier;
+            totalScore += fit.score;
+            sampleFit = fit;
           });
+
+          // 2. මෙහාට Swap වී එන Unlocked විෂයයන්ට (day, period) හිදී සිදුවන බලපෑම
           targetSlotsToSwap.forEach(ts => {
-            ts.day = day;
-            ts.period = period;
+            const fitSwap = evaluatePedagogicalPlacement(ts.classId, day, period, ts.subject, [ts]);
+            if (fitSwap.tier > worstTier) worstTier = fitSwap.tier;
+            totalScore += fitSwap.score;
           });
-          return true;
+
+          const avgScore = totalScore / (blockSlots.length + targetSlotsToSwap.length);
+
+          candidateMoves.push({
+            type: "SWAP",
+            candDay,
+            candPeriod,
+            targetSlotsToSwap,
+            tier: worstTier,
+            score: avgScore - 2, // Empty slot වලට සුළු වැඩි ප්‍රමුඛතාවයක් ලබා දීමට
+            fit: sampleFit,
+            blockSlots
+          });
         }
       }
+    }
+
+    if (candidateMoves.length === 0) return false;
+
+    // ලකුණු වැඩිම (හොඳම අධ්‍යාපනික ගැලපීම ඇති) අපේක්ෂකයන් මුලට ගැනීම
+    candidateMoves.sort((a, b) => b.score - a.score);
+
+    const bestMove = candidateMoves[0];
+
+    // -----------------------------------------------------------------------
+    // 🌟 ක්‍රියාත්මක කිරීමේ තීරණය (Execution Decision):
+    // -----------------------------------------------------------------------
+    // 1. Tier 1 (Zero-Day) හෝ Tier 2 (Double Period) නම් -> ස්වයංක්‍රීයව මාරු කරයි!
+    if (bestMove.tier <= 2) {
+      applyMove(bestMove, day, period);
+      return true;
+    }
+
+    // 2. Tier 3 (Isolated Period - උදා: 1 සහ 5 වෙන් වූ කාලච්ඡේද) නම් -> පරිශීලකයාගෙන් විමසයි!
+    const candDayName = sinhalaDayNames[bestMove.candDay] || `දින ${bestMove.candDay}`;
+    const mainSlot = blockSlots[0];
+    const existingStr = (bestMove.fit && bestMove.fit.existingPeriods) ? bestMove.fit.existingPeriods.join(', ') : 'වෙනත්';
+
+    const confirmMsg = 
+      `⚠️ කාලසටහන් විමසීමකි (AI Clash Resolver):\n\n` +
+      `[${mainSlot.classId}] පන්තියේ '${mainSlot.subject}' විෂය සඳහා වෙනත් දිනයක් (Zero-Day) හෝ යාබද ද්විත්ව කාලච්ඡේදයක් හමු නොවීය.\n\n` +
+      `දැනට හමුවූ එකම විසඳුම වන්නේ ${candDayName} දින ${bestMove.candPeriod} වන කාලයට මාරු කිරීමයි.\n` +
+      `(නමුත් එම දිනයේ දැනටමත් ${existingStr} වන කාලච්ඡේදයේ මෙම විෂය පවතී - වෙන් වූ කාලච්ඡේද 2ක් වේ)\n\n` +
+      `ඔබ මෙම වෙනස්කමට එකඟද?`;
+
+    const userAgreed = confirm(confirmMsg);
+    if (userAgreed) {
+      applyMove(bestMove, day, period);
+      return true;
     }
 
     return false;
   }
 
+  // දත්ත ගබඩාවේ මාරු කිරීම සැබෑ ලෙස සිදු කිරීම
+  function applyMove(moveObj, origDay, origPeriod) {
+    if (moveObj.type === "EMPTY") {
+      moveObj.blockSlots.forEach(s => {
+        s.day = moveObj.candDay;
+        s.period = moveObj.candPeriod;
+      });
+    } else if (moveObj.type === "SWAP") {
+      moveObj.blockSlots.forEach(s => {
+        s.day = moveObj.candDay;
+        s.period = moveObj.candPeriod;
+      });
+      moveObj.targetSlotsToSwap.forEach(ts => {
+        ts.day = origDay;
+        ts.period = origPeriod;
+      });
+    }
+  }
+
   // -------------------------------------------------------------------------
-  // 3. ප්‍රධාන ගැටුම් නිරාකරණ ලූපය (Bidirectional Checking)
+  // 4. ප්‍රධාන ගැටුම් නිරාකරණ ලූපය (Bidirectional Checking)
   // -------------------------------------------------------------------------
   const maxPasses = 15;
   let remainingClashes = [];
@@ -6556,6 +6708,7 @@ function autoResolveScheduleClashes() {
     let resolvedInThisPass = 0;
     remainingClashes = [];
 
+    
     for (let day of days) {
       for (let period of periods) {
         const slotsAtTime = scheduleList.filter(s => isSameDay(s.day, day) && Number(s.period) === Number(period));
@@ -6590,26 +6743,23 @@ function autoResolveScheduleClashes() {
 
             let moved = false;
 
-            // 🔴 ද්වි-පාර්ශවික උත්සාහය (Bidirectional Strategy):
-            // 1. තනි විෂයයන් Group විෂයයන්ට වඩා පහසුවෙන් Swap කළ හැකි බැවින්, තනි විෂයක් ඇත්නම් එය පළමුව උත්සාහ කරයි.
             const isAGroup = getSafeSlotGroupId(slotA) !== null;
             const isBGroup = getSafeSlotGroupId(slotB) !== null;
 
             let firstCandidate = slotB;
             let secondCandidate = slotA;
 
-            // slotA තනි විෂයක් නම් සහ slotB Group එකක් නම්, slotA පළමුව උත්සාහ කරයි
             if (!isAGroup && isBGroup) {
               firstCandidate = slotA;
               secondCandidate = slotB;
             }
 
-            // උත්සාහය 1: පළමු පාර්ශවය (First Candidate) මාරු කිරීම
+            // උත්සාහය 1: පළමු පාර්ශවය මාරු කිරීම
             if (!firstCandidate.isLocked) {
               moved = tryMoveBlock(firstCandidate, day, period);
             }
 
-            // උත්සාහය 2: පළමු පාර්ශවය සිරවී ඇත්නම්, දෙවන පාර්ශවය (Second Candidate) මාරු කිරීම!
+            // උත්සාහය 2: දෙවන පාර්ශවය මාරු කිරීම
             if (!moved && !secondCandidate.isLocked) {
               moved = tryMoveBlock(secondCandidate, day, period);
             }
@@ -6631,11 +6781,15 @@ function autoResolveScheduleClashes() {
     if (resolvedInThisPass === 0) break;
   }
 
-  // 4. සුරැකීම සහ අතුරුමුහුණත යාවත්කාලීන කිරීම
+  // -------------------------------------------------------------------------
+  // 5. සුරැකීම සහ අතුරුමුහුණත යාවත්කාලීන කිරීම
+  // -------------------------------------------------------------------------
   if (typeof masterSchedule !== "undefined") masterSchedule = scheduleList;
   window.masterSchedule = scheduleList;
 
   if (typeof saveAllToStorage === "function") saveAllToStorage();
+  if (typeof syncToFirebase === "function") syncToFirebase();
+  if (typeof renderGradeTimetableGrid === "function") renderGradeTimetableGrid();
   if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
   if (typeof renderLabTimetableGrid === "function") renderLabTimetableGrid();
 
@@ -6649,17 +6803,15 @@ function autoResolveScheduleClashes() {
     }
   });
 
-  const sinhalaDayNames = ["සඳුදා", "අඟහරුවාදා", "බදාදා", "බ්‍රහස්පතින්දා", "සිකුරාදා"];
-
   if (totalResolved > 0 && uniqueUnresolved.length === 0) {
-    alert(`🎉 සාර්ථකයි! Combined Group විෂයන් සහ සාමාන්‍ය ගුරු ගැටුම් සියල්ලම ස්වයංක්‍රීයව හුවමාරු කර (Smart Group Swap) 100% ක් නිරාකරණය කරන ලදී.`);
+    alert(`🎉 සාර්ථකයි! ගුරු ගැටුම් ${totalResolved} ක් අධ්‍යාපනික ප්‍රමුඛතා අනුව (Zero-Day සහ Double Periods මූලධර්ම භාවිතයෙන්) සාර්ථකව නිරාකරණය කරන ලදී.`);
   } else if (uniqueUnresolved.length > 0) {
     let msg = `⚠️ විසඳිය නොහැකි වූ ගුරු ගැටුම් ${uniqueUnresolved.length} ක් හමු විය:\n\n`;
     uniqueUnresolved.forEach((c, i) => {
       const dName = sinhalaDayNames[c.day] || `දින ${c.day}`;
       msg += `${i + 1}. ගුරු [${c.teacher}]: ${c.desc} (${dName} - ${c.period} වන කාලච්ඡේදය)\n`;
     });
-    msg += `\nමෙම කොටස් Locked කර ඇත්දැයි පරීක්ෂා කරන්න, නැතහොත් එක් කාලච්ඡේදයක් අතින් මාරු කරන්න.`;
+    msg += `\nමෙම කොටස් Locked කර ඇත්දැයි පරීක්ෂා කරන්න, නැතහොත් වෙනත් හිස් කාලච්ඡේද නොමැති නම් අතින් (Manual) සුදුසු කාලච්ඡේදයක් තෝරන්න.`;
     alert(msg);
   } else if (skippedLockedCount > 0) {
     alert(`⛔ ගැටුම් ඇති කොටස් Locked කර ඇති බැවින් මාරු කළ නොහැකි විය.`);
@@ -6669,6 +6821,8 @@ function autoResolveScheduleClashes() {
 }
 
 window.autoResolveScheduleClashes = autoResolveScheduleClashes;
+
+
     
     // 4. විෂය පේළියක් එක් කිරීම (එම ශ්‍රේණියේ විෂයන් පමණක් Dropdown එකේ ඇත, ගුරු තේරීමක් නැත)
     function addBasketSubjectRow(selectedSubjectName = "") {
