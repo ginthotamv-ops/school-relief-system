@@ -7680,14 +7680,22 @@ function renderGradeTimetableGrid() {
   const statusFilterEl = document.getElementById("gradeReliefStatusFilter");
   const statusFilter = statusFilterEl ? statusFilterEl.value : "ALL";
 
-  if (statusFilter === "INCOMPLETE") {
+if (statusFilter === "INCOMPLETE") {
     targetClasses = targetClasses.filter(cls => {
-      const allocated = (window.masterSchedule || []).filter(s => {
-        return isClassMatch(s.classId, cls) && s.subject && String(s.subject).trim() !== "";
-      }).length;
-      return allocated < 40;
+      const allocatedSlots = new Set();
+      (window.masterSchedule || []).forEach(s => {
+        if (s && isClassMatch(s.classId, cls) && s.subject && String(s.subject).trim() !== "") {
+          const d = Number(s.day);
+          const p = Number(s.period);
+          if (!isNaN(d) && d >= 0 && d <= 4 && !isNaN(p) && p >= 1 && p <= 8) {
+            allocatedSlots.add(`${d}_${p}`);
+          }
+        }
+      });
+      return allocatedSlots.size < 40;
     });
-  } else if (statusFilter === "NO_TEACHER") {
+  }
+  else if (statusFilter === "NO_TEACHER") {
     targetClasses = targetClasses.filter(cls => {
       return (window.masterSchedule || []).some(s => {
         if (!isClassMatch(s.classId, cls)) return false;
@@ -7839,10 +7847,20 @@ function renderGradeTimetableGrid() {
     const cId = String(cls.id || cls.name || '').trim();
     const className = String(cls.name || cls.id || cId);
 
-    // මෙම පන්තියේ සැබෑ ලෙස පිරවූ කාලච්ඡේද ගණන
-    const allocated = (window.masterSchedule || []).filter(s => {
-      return isClassMatch(s.classId, cls) && s.subject && String(s.subject).trim() !== "";
-    }).length;
+ // 🔴 මෙම පන්තියේ සැබෑ ලෙස පිරවූ අනන්‍ය කාලච්ඡේද (Unique Slots) පමණක් ගණනය කිරීම
+    const allocatedSlots = new Set();
+    (window.masterSchedule || []).forEach(s => {
+      if (s && isClassMatch(s.classId, cls) && s.subject && String(s.subject).trim() !== "") {
+        const d = Number(s.day);
+        const p = Number(s.period);
+        if (!isNaN(d) && d >= 0 && d <= 4 && !isNaN(p) && p >= 1 && p <= 8) {
+          allocatedSlots.add(`${d}_${p}`);
+        }
+      }
+    });
+    const allocated = allocatedSlots.size;
+
+    const isDone = allocated >= 40;
 
     const isDone = allocated >= 40;
 
