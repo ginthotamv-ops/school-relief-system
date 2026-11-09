@@ -3882,43 +3882,126 @@ window.schoolLabs = schoolLabs;
       }, 500);
     }
 
-    function renderIndividualTeacherSchedule() {
-      const select = document.getElementById("printTeacherSelect");
-      if (select && select.options.length === 0) {
-        teachers.forEach(t => { select.innerHTML += `<option value="${t.id}">${t.name} (${t.subject})</option>`; });
+// =========================================================================
+// 👨‍🏫 ආරක්‍ෂිත INDIVIDUAL TEACHER SCHEDULE RENDERER (CRASH-PROOF)
+// =========================================================================
+function renderIndividualTeacherSchedule() {
+  const select = document.getElementById("printTeacherSelect");
+  const teacherList = window.teachers || [];
+  const scheduleData = window.masterSchedule || [];
+
+  // Dropdown එක පිරවීම
+  if (select && select.options.length === 0 && teacherList.length > 0) {
+    let optionsHtml = '<option value="">-- ගුරුභවතෙකු තෝරන්න --</option>';
+    teacherList.forEach(t => {
+      if (t) {
+        optionsHtml += `<option value="${t.id}">${t.name || t.id} (${t.subject || 'සාමාන්‍ය'})</option>`;
       }
-      const tId = select ? select.value : null;
-      if (!tId) return;
+    });
+    select.innerHTML = optionsHtml;
+  }
 
-      const teacher = teachers.find(t => t.id === tId);
-      const totalLoad = calculateTeacherWeeklyWorkload(tId);
+  const tId = select ? select.value : null;
+  const tbody = document.getElementById("individualTeacherGridBody");
 
-      document.getElementById("slipTeacherName").innerText = teacher.name;
-      document.getElementById("slipTeacherSection").innerText = (teacher.sections || []).join(', ');
-      document.getElementById("slipTeacherSubject").innerText = teacher.subject;
-      document.getElementById("slipTeacherTotalLoad").innerText = `${totalLoad} / 35`;
+  // ගුරුවරයෙකු තෝරා නොමැති නම් ආරක්ෂිතව හිස් කිරීම
+  if (!tId) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="p-6 text-center text-slate-400 font-bold">කරුණාකර ගුරුභවතෙකු තෝරන්න.</td></tr>';
+    const slipName = document.getElementById("slipTeacherName");
+    if (slipName) slipName.innerText = "-";
+    return;
+  }
 
-      const tbody = document.getElementById("individualTeacherGridBody");
-      tbody.innerHTML = "";
+  // 🔴 1. ගුරු Object එක ආරක්ෂිතව සෙවීම (Case/Type Insensitive)
+  const teacher = teacherList.find(t => t && String(t.id).trim().toLowerCase() === String(tId).trim().toLowerCase());
 
-      DAYS.forEach(day => {
-        let dailyCount = 0;
-        let rowHtml = `<tr class="border-b border-slate-300"><td class="p-2 border border-slate-300 font-bold bg-slate-50 text-left">${DAY_LABELS[day]}</td>`;
-        for (let p = 1; p <= 8; p++) {
-          let cellContent = "-"; let isOccupied = false;
-          const slot = masterSchedule.find(s => s.day === day && s.period === p && ((!s.isBasket && s.teacherId === tId) || (s.isBasket && s.basketItems && s.basketItems.some(b => b.teacherId === tId))));
-          if (slot) {
-            isOccupied = true; dailyCount += 1;
-            const allClasses = slot.isCombined && slot.combinedWithClasses ? [slot.classId, ...slot.combinedWithClasses].join('+') : slot.classId;
-            if (!slot.isBasket) cellContent = `<div class="font-bold text-indigo-900">${allClasses}</div><div class="text-[10px] text-slate-600">${slot.subject}</div>`;
-            else { const bItem = slot.basketItems.find(x => x.teacherId === tId); cellContent = `<div class="font-bold text-purple-900">${allClasses} <span class="text-[9px] font-normal">(Basket)</span></div><div class="text-[10px] text-slate-600">${bItem ? bItem.subject : ''}</div>`; }
-          }
-          rowHtml += `<td class="p-2 border border-slate-300 ${isOccupied ? 'bg-indigo-50/40' : 'text-slate-300'}">${cellContent}</td>`;
+  // ගුරුවරයා හමු නොවූවත් Crash නොවී තබා ගැනීම
+  const teacherName = teacher ? (teacher.name || teacher.id) : tId;
+  const teacherSections = teacher && Array.isArray(teacher.sections) ? teacher.sections.join(', ') : '-';
+  const teacherSubject = teacher ? (teacher.subject || '-') : '-';
+
+  // Workload ගණනය කිරීම
+  const totalLoad = typeof calculateTeacherWeeklyWorkload === "function" ? calculateTeacherWeeklyWorkload(tId) : 0;
+
+  // 🔴 2. DOM Elements පරීක්ෂා කර ආරක්ෂිතව අගයන් ලබා දීම
+  const elName = document.getElementById("slipTeacherName");
+  const elSec = document.getElementById("slipTeacherSection");
+  const elSub = document.getElementById("slipTeacherSubject");
+  const elLoad = document.getElementById("slipTeacherTotalLoad");
+
+  if (elName) elName.innerText = teacherName;
+  if (elSec) elSec.innerText = teacherSections;
+  if (elSub) elSub.innerText = teacherSubject;
+  if (elLoad) elLoad.innerText = `${totalLoad} / 35`;
+
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  const daysList = (typeof DAYS !== "undefined" && Array.isArray(DAYS)) ? DAYS : [0, 1, 2, 3, 4];
+  const dayLabels = (typeof DAY_LABELS !== "undefined" && DAY_LABELS) ? DAY_LABELS : {
+    0: "සඳුදා", 1: "අඟහරුවාදා", 2: "බදාදා", 3: "බ්‍රහස්පතින්දා", 4: "සිකුරාදා"
+  };
+
+  daysList.forEach(day => {
+    let dailyCount = 0;
+    const label = dayLabels[day] || `දින ${day}`;
+    let rowHtml = `<tr class="border-b border-slate-300"><td class="p-2 border border-slate-300 font-bold bg-slate-50 text-left text-xs">${label}</td>`;
+
+    for (let p = 1; p <= 8; p++) {
+      let cellContent = "-";
+      let isOccupied = false;
+
+      // Slot එක සෙවීම
+      const slot = scheduleData.find(s => {
+        if (!s) return false;
+        const matchDay = typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, day) : Number(s.day) === Number(day);
+        if (!matchDay || Number(s.period) !== Number(p)) return false;
+
+        const sTid = String(s.teacherId || '').trim().toLowerCase();
+        const targetId = String(tId).trim().toLowerCase();
+
+        if (!s.isBasket && sTid === targetId) return true;
+
+        if (s.isBasket && Array.isArray(s.basketItems)) {
+          return s.basketItems.some(b => b && String(b.teacherId || '').trim().toLowerCase() === targetId);
         }
-        rowHtml += `<td class="p-2 border border-slate-300 font-bold bg-slate-50 text-indigo-800">${dailyCount}</td></tr>`;
-        tbody.innerHTML += rowHtml;
+        return false;
       });
+
+      if (slot) {
+        isOccupied = true;
+        dailyCount += 1;
+
+        const allClasses = slot.isCombined && Array.isArray(slot.combinedWithClasses) 
+          ? [slot.classId, ...slot.combinedWithClasses].join('+') 
+          : (slot.classId || '-');
+
+        if (!slot.isBasket) {
+          cellContent = `
+            <div class="font-bold text-indigo-900 text-xs">${allClasses}</div>
+            <div class="text-[10px] text-slate-600 truncate">${slot.subject || ''}</div>
+          `;
+        } else {
+          const bItem = Array.isArray(slot.basketItems) 
+            ? slot.basketItems.find(x => x && String(x.teacherId || '').trim().toLowerCase() === String(tId).trim().toLowerCase()) 
+            : null;
+
+          cellContent = `
+            <div class="font-bold text-purple-900 text-xs">${allClasses} <span class="text-[9px] font-normal text-purple-600">(Basket)</span></div>
+            <div class="text-[10px] text-slate-600 truncate">${bItem ? bItem.subject : (slot.subject || '')}</div>
+          `;
+        }
+      }
+
+      rowHtml += `<td class="p-1.5 border border-slate-300 text-center ${isOccupied ? 'bg-indigo-50/50 font-bold' : 'text-slate-300'}">${cellContent}</td>`;
     }
+
+    rowHtml += `<td class="p-2 border border-slate-300 font-bold bg-slate-50 text-indigo-800 text-center text-xs">${dailyCount}</td></tr>`;
+    tbody.innerHTML += rowHtml;
+  });
+}
+
+window.renderIndividualTeacherSchedule = renderIndividualTeacherSchedule;
 
     function openReshuffleModal() {
       document.getElementById("reshuffleClassLabel").innerText = activeClass;
