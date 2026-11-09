@@ -6,7 +6,8 @@
   <title>පාසල් පූර්ණ කාලසටහන් හා සහන කළමනාකරණ පද්ධතිය R1</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdnjs.cloudflare.comrenderGradeTimetableGrid/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- නිවැරදි කළ html2pdf CDN Script එක -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -7433,19 +7434,30 @@ function getFilteredClassesForGradeView() {
 // 🔴 ප්‍රධාන GRADE / MASTER TIMETABLE RENDERER
 // =========================================================================
 
-// =========================================================================
-// 🌐 GRADE & MASTER TIMETABLE RENDERER (SELF-CONTAINED & BUG-FIXED)
+
+    // =========================================================================
+// 🌐 GRADE & MASTER TIMETABLE RENDERER (FULLY FIXED & ROBUST)
 // =========================================================================
 function renderGradeTimetableGrid() {
   const thead = document.getElementById("gradeTimetableHead");
   const tbody = document.getElementById("gradeTimetableBody");
   if (!thead || !tbody) return;
 
-  let targetClasses = typeof getFilteredClassesForGradeView === "function" 
+  // 🛡️ 1. පන්ති ලැයිස්තුව ආරක්ෂිතව ලබාගැනීම සහ Normalize කිරීම (Cannot read properties of undefined වැළැක්වීම)
+  let rawClasses = typeof getFilteredClassesForGradeView === "function" 
     ? getFilteredClassesForGradeView() 
     : (window.schoolClasses || []);
 
-  if (!targetClasses || targetClasses.length === 0) {
+  if (!Array.isArray(rawClasses)) rawClasses = [];
+
+  let targetClasses = rawClasses
+    .filter(c => c !== null && c !== undefined && c !== "")
+    .map(c => {
+      if (typeof c === "object") return c;
+      return { id: String(c), name: String(c) };
+    });
+
+  if (targetClasses.length === 0) {
     thead.innerHTML = "";
     tbody.innerHTML = `<tr><td class="p-8 text-center text-slate-400 font-bold">පන්ති හමු නොවීය.</td></tr>`;
     return;
@@ -7460,82 +7472,149 @@ function renderGradeTimetableGrid() {
   ];
 
   // -------------------------------------------------------------------------
-  // 🔍 1. ස්වයංක්‍රීය ගුරු හිඟ පරීක්ෂාව (Self-contained Missing Teacher Check)
+  // 🔗 2. පන්ති නම් නිවැරදිව සැසඳීමේ සහායක ශ්‍රිතය (6B, 6-B, 6 B සියල්ල ගළපයි)
   // -------------------------------------------------------------------------
-  function checkSlotHasNoTeacher(slot, cls) {
-    if (!slot || !slot.subject || String(slot.subject).trim() === "") return false;
+  function isClassMatch(slotClassId, cls) {
+    if (!slotClassId || !cls) return false;
+    const sCls = String(slotClassId).trim().toLowerCase().replace(/[\s\-_]/g, '');
+    const cId = String(cls.id || '').trim().toLowerCase().replace(/[\s\-_]/g, '');
+    const cName = String(cls.name || '').trim().toLowerCase().replace(/[\s\-_]/g, '');
+    return (cId && sCls === cId) || (cName && sCls === cName);
+  }
+
+  function isValidTeacherId(tid) {
+    if (!tid) return false;
+    const s = String(tid).trim().toUpperCase();
+    return s !== "" && s !== "NONE" && s !== "EXCLUDED" && s !== "NO_TEACHER" && s !== "NULL" && s !== "UNDEFINED" && s !== "-";
+  }
+
+  // -------------------------------------------------------------------------
+  // 🔍 3. තනි සහ Combined විෂයන්හි ගුරු තොරතුරු එකම තැනකින් පරීක්ෂා කිරීම
+  // -------------------------------------------------------------------------
+  function inspectSlotTeacher(slot, cls) {
+    if (!slot || !slot.subject || String(slot.subject).trim() === "") {
+      return { hasSubject: false, hasTeacher: false, text: "-", isRelief: false, isPendingRelief: false };
+    }
 
     const isComb = Boolean(slot.isCombined || slot.isBasket || slot.combinedSubjectId);
+    const isRelief = Boolean(
+      slot.isRelief || 
+      slot.reliefTeacherId || 
+      slot.isSubstituted || 
+      (slot.originalTeacherId && slot.teacherId !== slot.originalTeacherId)
+    );
+    const isPendingRelief = typeof isSlotPendingRelief === "function" ? isSlotPendingRelief(slot) : false;
 
-    // A. Combined / Basket විෂයන් පරීක්ෂාව
+    // A. ආදේශක ගුරුවරයෙකු සිටී නම්
+    if (isValidTeacherId(slot.reliefTeacherId)) {
+      const rt = (window.teachers || []).find(t => t && String(t.id).toLowerCase() === String(slot.reliefTeacherId).toLowerCase());
+      const rNo = rt && rt.schoolNo ? `[${rt.schoolNo}]` : "";
+      return {
+        hasSubject: true,
+        hasTeacher: true,
+        text: (rt ? rt.name : slot.reliefTeacherId) + " " + rNo,
+        isRelief: true,
+        isPendingRelief: false
+      };
+    }
+
+    // B. Combined / Basket විෂයන් පරීක්ෂාව
     if (isComb) {
       let items = [];
       if (Array.isArray(slot.basketItems)) items = slot.basketItems;
       else if (slot.basketItems && typeof slot.basketItems === "object") items = Object.values(slot.basketItems);
 
       if (items.length > 0) {
-        return items.some(b => {
+        const teacherTokens = [];
+        let hasAnyMissingTeacherInBasket = false;
+
+        items.forEach(b => {
           let bTid = b.teacherId;
           const bSubKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(b.subject) : String(b.subject || '').trim().toLowerCase();
-          if ((!bTid || String(bTid).toUpperCase() === "NONE") && cls && cls.subjectTeachers && cls.subjectTeachers[bSubKey]) {
+          if (!isValidTeacherId(bTid) && cls && cls.subjectTeachers && cls.subjectTeachers[bSubKey]) {
             bTid = cls.subjectTeachers[bSubKey];
           }
-          if (!bTid) return true;
-          const cleanVal = String(bTid).trim().toUpperCase();
-          return cleanVal === "" || cleanVal === "NONE" || cleanVal === "EXCLUDED" || cleanVal === "NO_TEACHER" || cleanVal === "NULL" || cleanVal === "UNDEFINED";
+
+          if (isValidTeacherId(bTid)) {
+            const t = (window.teachers || []).find(tch => tch && String(tch.id).toLowerCase() === String(bTid).toLowerCase());
+            if (t && t.schoolNo) {
+              teacherTokens.push(`[${t.schoolNo}]`);
+            } else if (t) {
+              teacherTokens.push(t.name.split(' ')[0] || t.name);
+            } else {
+              teacherTokens.push(bTid);
+            }
+          } else {
+            hasAnyMissingTeacherInBasket = true;
+          }
         });
+
+        const displayTxt = teacherTokens.length > 0 ? [...new Set(teacherTokens)].join(' ') : (slot.groupCode ? `[${slot.groupCode}]` : "ගුරු නැත");
+        return {
+          hasSubject: true,
+          hasTeacher: !hasAnyMissingTeacherInBasket && teacherTokens.length > 0,
+          text: displayTxt,
+          isRelief,
+          isPendingRelief
+        };
       }
-      
-      const tid = slot.teacherId;
-      if (!tid) return true;
-      const cleanVal = String(tid).trim().toUpperCase();
-      return cleanVal === "" || cleanVal === "NONE" || cleanVal === "EXCLUDED" || cleanVal === "NO_TEACHER" || cleanVal === "NULL" || cleanVal === "UNDEFINED";
     }
 
-    // B. සාමාන්‍ය තනි විෂයන් පරීක්ෂාව
+    // C. සාමාන්‍ය තනි විෂය පරීක්ෂාව
     const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(slot.subject) : String(slot.subject || '').trim().toLowerCase();
     let tid = slot.teacherId;
 
-    if ((!tid || String(tid).toUpperCase() === "NONE") && cls && cls.subjectTeachers && cls.subjectTeachers[subKey]) {
+    if (!isValidTeacherId(tid) && cls && cls.subjectTeachers && cls.subjectTeachers[subKey]) {
       tid = cls.subjectTeachers[subKey];
     }
 
-    if (!tid) return true;
-    const cleanVal = String(tid).trim().toUpperCase();
-    return cleanVal === "" || cleanVal === "NONE" || cleanVal === "EXCLUDED" || cleanVal === "NO_TEACHER" || cleanVal === "NULL" || cleanVal === "UNDEFINED";
+    if (isValidTeacherId(tid)) {
+      const tObj = (window.teachers || []).find(t => t && String(t.id).toLowerCase() === String(tid).toLowerCase());
+      const no = tObj && tObj.schoolNo ? `[${tObj.schoolNo}]` : "";
+      const name = tObj ? tObj.name : tid;
+      return {
+        hasSubject: true,
+        hasTeacher: true,
+        text: `${name} ${no}`.trim(),
+        isRelief,
+        isPendingRelief
+      };
+    }
+
+    // D. ගුරුවරයෙකු නැති බව තහවුරු වූ විට
+    return {
+      hasSubject: true,
+      hasTeacher: false,
+      text: slot.groupCode ? `[${slot.groupCode}]` : "ගුරු නැත",
+      isRelief,
+      isPendingRelief
+    };
   }
 
   // -------------------------------------------------------------------------
-  // 🔴 2. පන්ති තත්ත්ව පෙරහන (Filter: INCOMPLETE < 40 | NO_TEACHER | ALL)
+  // 🔴 4. පන්ති තත්ත්ව පෙරහන (Filter: INCOMPLETE < 40 | NO_TEACHER | ALL)
   // -------------------------------------------------------------------------
   const statusFilterEl = document.getElementById("gradeReliefStatusFilter");
   const statusFilter = statusFilterEl ? statusFilterEl.value : "ALL";
 
   if (statusFilter === "INCOMPLETE") {
-    // කාලච්ඡේද 40 සම්පූර්ණ නොවූ (< 40) පන්ති පමණක් පෙරීම (39/40 ද ඇතුළත් වේ)
     targetClasses = targetClasses.filter(cls => {
-      const cId = String(cls.id || cls.name).trim().toLowerCase();
       const allocated = (window.masterSchedule || []).filter(s => {
-        const scId = String(s.classId || '').trim().toLowerCase();
-        const matchCls = (scId === cId || scId === String(cls.name || '').toLowerCase());
-        return matchCls && s.subject && String(s.subject).trim() !== "";
+        return isClassMatch(s.classId, cls) && s.subject && String(s.subject).trim() !== "";
       }).length;
-
       return allocated < 40;
     });
   } else if (statusFilter === "NO_TEACHER") {
-    // ගුරුවරයෙකු නොමැති අවම වශයෙන් 1 කාලච්ඡේදයක් හෝ ඇති පන්ති පමණක් පෙරීම
     targetClasses = targetClasses.filter(cls => {
-      const cId = String(cls.id || cls.name).trim().toLowerCase();
       return (window.masterSchedule || []).some(s => {
-        const scId = String(s.classId || '').trim().toLowerCase();
-        const matchCls = (scId === cId || scId === String(cls.name || '').toLowerCase());
-        return matchCls && checkSlotHasNoTeacher(s, cls);
+        if (!isClassMatch(s.classId, cls)) return false;
+        const info = inspectSlotTeacher(s, cls);
+        return info.hasSubject && !info.hasTeacher;
       });
     });
   }
 
-  // පෙරහනට අදාළ පන්ති නොමැති විට පණිවිඩය
+  // කිසිදු පන්තියක් නොමැති විට පණිවිඩය
   if (targetClasses.length === 0) {
     thead.innerHTML = "";
     let emptyMsg = "තෝරාගත් නිර්ණායකයට අදාළ පන්ති හමු නොවීය.";
@@ -7551,7 +7630,7 @@ function renderGradeTimetableGrid() {
   let totalHighlightMatchCount = 0;
 
   // -------------------------------------------------------------------------
-  // 3. විෂය වර්ණ පද්ධතිය (Pastel Palette)
+  // 5. විෂය වර්ණ පද්ධතිය (Pastel Palette)
   // -------------------------------------------------------------------------
   const SUBJECT_COLOR_MAP = {
     "ගණිතය":            { bg: "#e0f2fe", border: "#7dd3fc", text: "#0369a1" },
@@ -7619,7 +7698,7 @@ function renderGradeTimetableGrid() {
     if (tids.length === 0) return false;
 
     return (window.masterSchedule || []).some(os => {
-      if (os === slot) return false;
+      if (!os || os === slot) return false;
       const matchDay = typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(os.day, dayId) : Number(os.day) === dayId;
       if (!matchDay || Number(os.period) !== period) return false;
 
@@ -7634,66 +7713,8 @@ function renderGradeTimetableGrid() {
     });
   }
 
-  function getSlotTeacherDisplayInfo(slot, cls) {
-    const isRelief = Boolean(
-      slot.isRelief || 
-      slot.reliefTeacherId || 
-      slot.isSubstituted || 
-      (slot.originalTeacherId && slot.teacherId !== slot.originalTeacherId)
-    );
-
-    const isPendingRelief = typeof isSlotPendingRelief === "function" ? isSlotPendingRelief(slot) : false;
-
-    if (slot.reliefTeacherId && slot.reliefTeacherId !== "NONE") {
-      const rt = (window.teachers || []).find(t => String(t.id).toLowerCase() === String(slot.reliefTeacherId).toLowerCase());
-      const rNo = rt && rt.schoolNo ? `[${rt.schoolNo}]` : "";
-      return { text: (rt ? rt.name : slot.reliefTeacherId) + " " + rNo, isRelief: true, isPendingRelief: false };
-    }
-
-    const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(slot.subject) : String(slot.subject || '').trim().toLowerCase();
-    let tid = slot.teacherId;
-
-    if ((!tid || String(tid).toUpperCase() === "NONE") && cls && cls.subjectTeachers && cls.subjectTeachers[subKey] && cls.subjectTeachers[subKey] !== "NONE") {
-      tid = cls.subjectTeachers[subKey];
-    }
-
-    if (tid && tid !== "NONE" && tid !== "EXCLUDED") {
-      const tObj = (window.teachers || []).find(t => String(t.id).toLowerCase() === String(tid).toLowerCase());
-      const no = tObj && tObj.schoolNo ? `[${tObj.schoolNo}]` : "";
-      const name = tObj ? tObj.name : tid;
-      return { text: `${name} ${no}`.trim(), isRelief, isPendingRelief };
-    }
-
-    if (Array.isArray(slot.basketItems) && slot.basketItems.length > 0) {
-      const teacherTokens = [];
-      slot.basketItems.forEach(b => {
-        let bTid = b.teacherId;
-        const bSubKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(b.subject) : String(b.subject || '').trim().toLowerCase();
-        if ((!bTid || String(bTid).toUpperCase() === "NONE") && cls && cls.subjectTeachers && cls.subjectTeachers[bSubKey]) {
-          bTid = cls.subjectTeachers[bSubKey];
-        }
-        if (bTid && bTid !== "NONE" && bTid !== "EXCLUDED") {
-          const t = (window.teachers || []).find(tch => String(tch.id).toLowerCase() === String(bTid).toLowerCase());
-          if (t && t.schoolNo) {
-            teacherTokens.push(`[${t.schoolNo}]`);
-          } else if (t) {
-            teacherTokens.push(t.name.split(' ')[0] || t.name);
-          } else {
-            teacherTokens.push(bTid);
-          }
-        }
-      });
-
-      if (teacherTokens.length > 0) {
-        return { text: [...new Set(teacherTokens)].join(' '), isRelief, isPendingRelief };
-      }
-    }
-
-    return { text: slot.groupCode ? `[${slot.groupCode}]` : "ගුරු නැත", isRelief, isPendingRelief };
-  }
-
   // -------------------------------------------------------------------------
-  // 4. HEADER පේළි 2 සකස් කිරීම
+  // 6. HEADER පේළි 2 සකස් කිරීම
   // -------------------------------------------------------------------------
   let headHtml = `
     <tr>
@@ -7725,16 +7746,19 @@ function renderGradeTimetableGrid() {
   thead.innerHTML = headHtml;
 
   // -------------------------------------------------------------------------
-  // 5. BODY සකස් කිරීම
+  // 7. BODY සකස් කිරීම
   // -------------------------------------------------------------------------
   let bodyHtml = "";
 
   targetClasses.forEach(cls => {
-    const cId = String(cls.id || cls.name).trim();
+    if (!cls) return;
 
+    const cId = String(cls.id || cls.name || '').trim();
+    const className = String(cls.name || cls.id || cId);
+
+    // මෙම පන්තියේ සැබෑ ලෙස පිරවූ කාලච්ඡේද ගණන
     const allocated = (window.masterSchedule || []).filter(s => {
-      const scId = String(s.classId || '').trim().toLowerCase();
-      return (scId === cId.toLowerCase() || scId === String(cls.name || '').toLowerCase()) && s.subject && String(s.subject).trim() !== "";
+      return isClassMatch(s.classId, cls) && s.subject && String(s.subject).trim() !== "";
     }).length;
 
     const isDone = allocated >= 40;
@@ -7745,10 +7769,10 @@ function renderGradeTimetableGrid() {
     rowHtml += `
       <td class="sticky left-0 z-20 bg-slate-50 hover:bg-indigo-50 border-r border-slate-300 p-2 text-center select-none shadow-xs min-w-[135px] max-w-[135px] cursor-pointer transition group"
           onclick="redirectToClassSchedule('${cId}')"
-          title="ක්ලික් කරන්න: ${cls.name || cId} පන්ති කාලසටහන වෙත කෙළින්ම යන්න">
+          title="ක්ලික් කරන්න: ${className} පන්ති කාලසටහන වෙත කෙළින්ම යන්න">
         
         <div class="font-black text-xs text-indigo-950 group-hover:text-indigo-600 flex items-center justify-center gap-1">
-          <span class="truncate">${cls.name || cls.id}</span>
+          <span class="truncate">${className}</span>
           <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-0 group-hover:opacity-100 transition"></i>
         </div>
 
@@ -7764,16 +7788,17 @@ function renderGradeTimetableGrid() {
     days.forEach(d => {
       for (let p = 1; p <= 8; p++) {
         const slot = (window.masterSchedule || []).find(s => {
-          const scId = String(s.classId || '').trim().toLowerCase();
-          const matchClass = (scId === cId.toLowerCase() || scId === String(cls.name || '').toLowerCase());
+          const matchClass = isClassMatch(s.classId, cls);
           const matchDay = typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(s.day, d.id) : Number(s.day) === d.id;
           return matchClass && matchDay && Number(s.period) === p;
         });
 
-        // 🔴 NO_TEACHER මාදිලියේදී: ගුරුවරයෙකු නොමැති කොටු පමණක් පෙන්වයි
+        const teacherInfo = inspectSlotTeacher(slot, cls);
+        const isMissingTeacher = teacherInfo.hasSubject && !teacherInfo.hasTeacher;
+
+        // 🔴 NO_TEACHER පෙරහන සක්‍රිය නම් ගුරුවරුන් සිටින කොටු සඟවයි (Audit Mode)
         let shouldRenderSlot = Boolean(slot && slot.subject);
         if (shouldRenderSlot && statusFilter === "NO_TEACHER") {
-          const isMissingTeacher = checkSlotHasNoTeacher(slot, cls);
           if (!isMissingTeacher) shouldRenderSlot = false;
         }
 
@@ -7782,10 +7807,8 @@ function renderGradeTimetableGrid() {
           const isComb = Boolean(slot.isCombined || slot.isBasket || slot.combinedSubjectId);
           const hasClash = checkSlotHasClash(slot, d.id, p);
 
-          const teacherInfo = getSlotTeacherDisplayInfo(slot, cls);
           const isReliefSlot = teacherInfo.isRelief;
           const isPendingReliefSlot = teacherInfo.isPendingRelief;
-          const isMissingTeacher = checkSlotHasNoTeacher(slot, cls);
 
           // Highlighter පරීක්ෂාව
           let isHighlighted = false;
@@ -7807,7 +7830,7 @@ function renderGradeTimetableGrid() {
 
           if (isHighlighted) totalHighlightMatchCount++;
 
-          // වර්ණ තීරණය කිරීම (Clash > Highlight > Missing Teacher > Relief > Gradient > Pastel)
+          // වර්ණ තීරණය කිරීම (Clash > Highlight > Missing Teacher > Pending Relief > Relief > Gradient > Pastel)
           let cellInlineStyle = "";
           let cellClassNames = "p-1 border-r text-center relative group select-none transition min-w-[70px] max-w-[85px] h-[52px] align-middle";
 
@@ -7897,7 +7920,7 @@ function renderGradeTimetableGrid() {
           rowHtml += `
             <td class="p-1 border-r border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-center text-slate-300 text-[10px] font-bold cursor-pointer transition select-none min-w-[70px] max-w-[85px] h-[52px]"
                 onclick="redirectToClassSchedule('${cId}')"
-                title="විෂයන් ඇතුළත් කිරීමට ${cls.name || cId} පන්ති කාලසටහන වෙත යන්න">
+                title="විෂයන් ඇතුළත් කිරීමට ${className} පන්ති කාලසටහන වෙත යන්න">
               -
             </td>
           `;
@@ -7925,7 +7948,6 @@ function renderGradeTimetableGrid() {
 }
 
 window.renderGradeTimetableGrid = renderGradeTimetableGrid;
-    
     
 // 6. Slot එකක් ඉවත් කිරීම (Delete Logic with Lock Protection)
 function handleGradeSlotDelete(classId, day, period, isLocked) {
