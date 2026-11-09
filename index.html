@@ -5573,43 +5573,64 @@ function renderClassTimetableGrid() {
     return Array.from(list);
   }
 
-  function isLegitimateSameGroupSession(s1, s2) {
-    if (!s1 || !s2) return false;
-    if (s1 === s2) return true;
+// =========================================================================
+// 🛡️ GLOBAL COMBINED GROUP VALIDATOR & RELIEF CHECKER
+// =========================================================================
 
-    const isComb1 = Boolean(s1.isCombined || s1.isBasket || s1.combinedSubjectId || s1.groupCode);
-    const isComb2 = Boolean(s2.isCombined || s2.isBasket || s2.combinedSubjectId || s2.groupCode);
-    if (!isComb1 || !isComb2) return false;
+// ශ්‍රේණි අංකය නිස්සාරණය කිරීම
+function extractGradeNumGlobal(slot) {
+  if (!slot) return null;
+  if (slot.grade && !isNaN(parseInt(slot.grade))) return parseInt(slot.grade, 10);
+  const match = String(slot.classId || '').match(/\d+/);
+  return match ? parseInt(match[0], 10) : null;
+}
 
-    const g1 = extractGradeNum(s1);
-    const g2 = extractGradeNum(s2);
-    if (g1 !== null && g2 !== null && g1 !== g2) return false;
+// එකම Group එකක්දැයි (GR1 -> 6A, 6B) නිවැරදිව පරීක්ෂා කිරීම
+function isLegitimateSameGroupSession(s1, s2) {
+  if (!s1 || !s2) return false;
+  if (s1 === s2) return true;
 
-    const grp1 = String(s1.groupCode || s1.groupId || s1.combinedGroupId || '').trim().toLowerCase();
-    const grp2 = String(s2.groupCode || s2.groupId || s2.combinedGroupId || '').trim().toLowerCase();
-    if (grp1 && grp2 && grp1 !== grp2) return false;
+  const isComb1 = Boolean(s1.isCombined || s1.isBasket || s1.combinedSubjectId || s1.groupCode);
+  const isComb2 = Boolean(s2.isCombined || s2.isBasket || s2.combinedSubjectId || s2.groupCode);
+  if (!isComb1 || !isComb2) return false;
 
-    const c1 = String(s1.classId || '').trim().toLowerCase();
-    const c2 = String(s2.classId || '').trim().toLowerCase();
-    const configs = window.combinedCurriculumSubjects || window.combinedSubjects || [];
+  const g1 = extractGradeNumGlobal(s1);
+  const g2 = extractGradeNumGlobal(s2);
+  if (g1 !== null && g2 !== null && g1 !== g2) return false;
 
-    if (Array.isArray(configs) && configs.length > 0) {
-      for (let cfg of configs) {
-        const cfgClasses = (cfg.classes || cfg.applicableClasses || []).map(c => String(c).trim().toLowerCase());
-        if (cfgClasses.includes(c1) && cfgClasses.includes(c2)) {
-          const cfgGrp = String(cfg.groupCode || cfg.groupId || '').trim().toLowerCase();
-          if (!grp1 || !cfgGrp || cfgGrp === grp1) return true;
-        }
+  // Group Code එක සමාන නම් (උදා: GR1 සහ GR1) -> ගැටුමක් නොවේ!
+  const grp1 = String(s1.groupCode || s1.groupId || s1.combinedGroupId || '').trim().toLowerCase();
+  const grp2 = String(s2.groupCode || s2.groupId || s2.combinedGroupId || '').trim().toLowerCase();
+  if (grp1 && grp2 && grp1 === grp2) return true;
+
+  // Combined Configurations (window.combinedCurriculumSubjects) පරීක්ෂාව
+  const c1 = String(s1.classId || '').trim().toLowerCase();
+  const c2 = String(s2.classId || '').trim().toLowerCase();
+  const configs = window.combinedCurriculumSubjects || window.combinedSubjects || [];
+
+  if (Array.isArray(configs) && configs.length > 0) {
+    for (let cfg of configs) {
+      const cfgClasses = (cfg.classes || cfg.applicableClasses || cfg.targetClassIds || []).map(c => String(c).trim().toLowerCase());
+      if (cfgClasses.includes(c1) && cfgClasses.includes(c2)) {
+        const cfgGrp = String(cfg.groupCode || cfg.groupId || '').trim().toLowerCase();
+        if (!grp1 || !cfgGrp || cfgGrp === grp1) return true;
       }
     }
-
-    const sub1 = String(s1.subject || '').trim().toLowerCase();
-    const sub2 = String(s2.subject || '').trim().toLowerCase();
-    if (sub1 === sub2 && grp1 && grp2 && grp1 === grp2) return true;
-
-    return false;
   }
 
+  if (s1.combinedSubjectId && s2.combinedSubjectId && String(s1.combinedSubjectId).trim() === String(s2.combinedSubjectId).trim()) {
+    return true;
+  }
+
+  const sub1 = String(s1.subject || '').trim().toLowerCase();
+  const sub2 = String(s2.subject || '').trim().toLowerCase();
+  if (sub1 === sub2 && g1 !== null && g1 === g2) return true;
+
+  return false;
+}
+
+window.isLegitimateSameGroupSession = isLegitimateSameGroupSession;
+  
   function isMatchingSub(sub1, sub2) {
     if (!sub1 || !sub2) return false;
     const s1 = String(sub1).trim().toLowerCase();
@@ -7396,12 +7417,7 @@ function getFilteredClassesForGradeView() {
 // =========================================================================
 
 // =========================================================================
-// 🌐 GRADE & MASTER TIMETABLE RENDERER
-// (පන්ති සියල්ල පහළට සහ කාලච්ඡේද 40 හරහට සිටින සේ සැකසූ Master Grid)
-// =========================================================================
-// =========================================================================
-// 🌐 GRADE & MASTER TIMETABLE RENDERER
-// (Highlight වන විට තද කොළ පසුබිම සහ සුදු පැහැති අකුරු සහිතයි)
+// 🌐 GRADE & MASTER TIMETABLE RENDERER (FINAL ENHANCED)
 // =========================================================================
 function renderGradeTimetableGrid() {
   const thead = document.getElementById("gradeTimetableHead");
@@ -7426,7 +7442,7 @@ function renderGradeTimetableGrid() {
   let totalHighlightMatchCount = 0;
 
   // -------------------------------------------------------------------------
-  // 1. විෂය වර්ණ පද්ධතිය (Color Palette Engine)
+  // 1. විෂය වර්ණ පද්ධතිය (Pastel Palette)
   // -------------------------------------------------------------------------
   const SUBJECT_COLOR_MAP = {
     "ගණිතය":            { bg: "#e0f2fe", border: "#7dd3fc", text: "#0369a1" },
@@ -7454,8 +7470,7 @@ function renderGradeTimetableGrid() {
     { bg: "#e0e7ff", border: "#818cf8", text: "#3730a3" },
     { bg: "#f3e8ff", border: "#d8b4fe", text: "#6b21a8" },
     { bg: "#ffe4e6", border: "#f43f5e", text: "#9f1239" },
-    { bg: "#ecfeff", border: "#a5f3fc", text: "#155e75" },
-    { bg: "#f7fee7", border: "#d9f99d", text: "#3f6212" }
+    { bg: "#ecfeff", border: "#a5f3fc", text: "#155e75" }
   ];
 
   function getSubjectVisual(subName) {
@@ -7475,9 +7490,9 @@ function renderGradeTimetableGrid() {
   }
 
   // -------------------------------------------------------------------------
-  // 2. සහායක ශ්‍රිත (Slot ගුරු හඳුනාගැනීම & ගැටුම් පරීක්ෂාව)
+  // 2. ගුරුවරුන් ලබාගැනීම සහ ගැටුම් පරීක්ෂාව
   // -------------------------------------------------------------------------
-  function extractTeachers(s) {
+  function extractTeachersFromSlot(s) {
     const list = new Set();
     if (s.teacherId && s.teacherId !== "NONE" && s.teacherId !== "EXCLUDED") {
       list.add(String(s.teacherId).trim().toLowerCase());
@@ -7494,7 +7509,7 @@ function renderGradeTimetableGrid() {
 
   function checkSlotHasClash(slot, dayId, period) {
     if (!slot || !slot.subject) return false;
-    const tids = extractTeachers(slot);
+    const tids = extractTeachersFromSlot(slot);
     if (tids.length === 0) return false;
 
     return (window.masterSchedule || []).some(os => {
@@ -7502,10 +7517,11 @@ function renderGradeTimetableGrid() {
       const matchDay = typeof isSlotMatchingDay === "function" ? isSlotMatchingDay(os.day, dayId) : Number(os.day) === dayId;
       if (!matchDay || Number(os.period) !== period) return false;
 
-      const osTids = extractTeachers(os);
+      const osTids = extractTeachersFromSlot(os);
       const hasCommon = tids.some(t => osTids.includes(t));
       if (!hasCommon) return false;
 
+      // එකම Group Code එකේ (GR1 -> 6A, 6B) නම් ගැටුමක් නොවේ
       if (typeof isLegitimateSameGroupSession === "function") {
         return !isLegitimateSameGroupSession(slot, os);
       }
@@ -7514,7 +7530,71 @@ function renderGradeTimetableGrid() {
   }
 
   // -------------------------------------------------------------------------
-  // 3. HEADER පේළි 2 සකස් කිරීම
+  // 3. Combined/Basket සඳහා ගුරු නම / අංකය නිශ්චිතව හඳුනාගැනීම
+  // -------------------------------------------------------------------------
+  function getSlotTeacherDisplayInfo(slot, cls) {
+    // A. ආදේශක ගුරුවරයා (Relief Teacher)
+    const isRelief = Boolean(
+      slot.isRelief || 
+      slot.reliefTeacherId || 
+      slot.isSubstituted || 
+      (slot.originalTeacherId && slot.teacherId !== slot.originalTeacherId)
+    );
+
+    if (slot.reliefTeacherId) {
+      const rt = (window.teachers || []).find(t => String(t.id).toLowerCase() === String(slot.reliefTeacherId).toLowerCase());
+      const rNo = rt && rt.schoolNo ? `[${rt.schoolNo}]` : "";
+      return { text: (rt ? rt.name : slot.reliefTeacherId) + " " + rNo, isRelief: true };
+    }
+
+    // B. පන්තියේ Class Settings හි අදාළ විෂයට ඇති ගුරුවරයා
+    const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(slot.subject) : String(slot.subject || '').trim().toLowerCase();
+    let tid = slot.teacherId;
+
+    if ((!tid || tid === "NONE") && cls && cls.subjectTeachers && cls.subjectTeachers[subKey] && cls.subjectTeachers[subKey] !== "NONE") {
+      tid = cls.subjectTeachers[subKey];
+    }
+
+    if (tid && tid !== "NONE" && tid !== "EXCLUDED") {
+      const tObj = (window.teachers || []).find(t => String(t.id).toLowerCase() === String(tid).toLowerCase());
+      const no = tObj && tObj.schoolNo ? `[${tObj.schoolNo}]` : "";
+      const name = tObj ? tObj.name : tid;
+      return { text: `${name} ${no}`.trim(), isRelief };
+    }
+
+    // C. Basket Items ඇතුළත ඇති ගුරුවරුන්ගේ අංක/නම් එකතු කිරීම
+    if (Array.isArray(slot.basketItems) && slot.basketItems.length > 0) {
+      const teacherTokens = [];
+      slot.basketItems.forEach(b => {
+        let bTid = b.teacherId;
+        const bSubKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(b.subject) : String(b.subject || '').trim().toLowerCase();
+        if ((!bTid || bTid === "NONE") && cls && cls.subjectTeachers && cls.subjectTeachers[bSubKey]) {
+          bTid = cls.subjectTeachers[bSubKey];
+        }
+        if (bTid && bTid !== "NONE" && bTid !== "EXCLUDED") {
+          const t = (window.teachers || []).find(tch => String(tch.id).toLowerCase() === String(bTid).toLowerCase());
+          if (t && t.schoolNo) {
+            teacherTokens.push(`[${t.schoolNo}]`);
+          } else if (t) {
+            const shortN = t.name.split(' ')[0] || t.name;
+            teacherTokens.push(shortN);
+          } else {
+            teacherTokens.push(bTid);
+          }
+        }
+      });
+
+      if (teacherTokens.length > 0) {
+        return { text: [...new Set(teacherTokens)].join(' '), isRelief };
+      }
+    }
+
+    // D. අංකයක් හෝ Group Code එකක් පෙන්වීම
+    return { text: slot.groupCode ? `[${slot.groupCode}]` : "-", isRelief };
+  }
+
+  // -------------------------------------------------------------------------
+  // 4. HEADER පේළි 2 සකස් කිරීම
   // -------------------------------------------------------------------------
   let headHtml = `
     <tr>
@@ -7546,7 +7626,7 @@ function renderGradeTimetableGrid() {
   thead.innerHTML = headHtml;
 
   // -------------------------------------------------------------------------
-  // 4. BODY සකස් කිරීම
+  // 5. BODY සකස් කිරීම
   // -------------------------------------------------------------------------
   let bodyHtml = "";
 
@@ -7590,6 +7670,10 @@ function renderGradeTimetableGrid() {
           const isComb = Boolean(slot.isCombined || slot.isBasket || slot.combinedSubjectId);
           const hasClash = checkSlotHasClash(slot, d.id, p);
 
+          // ගුරු නම සහ Relief තත්ත්වය ලබා ගැනීම
+          const teacherInfo = getSlotTeacherDisplayInfo(slot, cls);
+          const isReliefSlot = teacherInfo.isRelief;
+
           // Highlighter පරීක්ෂාව
           let isHighlighted = false;
           if (window.gradeViewFilterType === "SUBJECT" && window.gradeViewSelectedValue) {
@@ -7600,7 +7684,9 @@ function renderGradeTimetableGrid() {
             }
           } else if (window.gradeViewFilterType === "TEACHER" && window.gradeViewSelectedValue) {
             const tid = window.gradeViewSelectedValue.toLowerCase();
-            if (String(slot.teacherId).toLowerCase() === tid) isHighlighted = true;
+            if (String(slot.teacherId).toLowerCase() === tid || String(slot.reliefTeacherId).toLowerCase() === tid) {
+              isHighlighted = true;
+            }
             if (Array.isArray(slot.basketItems) && slot.basketItems.some(b => String(b.teacherId).toLowerCase() === tid)) {
               isHighlighted = true;
             }
@@ -7609,7 +7695,7 @@ function renderGradeTimetableGrid() {
           if (isHighlighted) totalHighlightMatchCount++;
 
           // -------------------------------------------------------------------
-          // 🔴 වර්ණ තීරණය කිරීම (Clash > Dark Green Highlight > Gradient > Pastel)
+          // 🔴 වර්ණ තීරණය කිරීම (Clash > Highlight > Relief > Gradient > Pastel)
           // -------------------------------------------------------------------
           let cellInlineStyle = "";
           let cellClassNames = "p-1 border-r text-center relative group select-none transition min-w-[70px] max-w-[85px] h-[52px] align-middle";
@@ -7619,11 +7705,15 @@ function renderGradeTimetableGrid() {
             cellInlineStyle = "background-color: #fff1f2; border-color: #f43f5e; color: #881337;";
             cellClassNames += " ring-2 ring-rose-500 shadow-sm animate-pulse";
           } else if (isHighlighted) {
-           // 🔵 තෝරාගත් අවස්ථාව: තද ලස්සන රාජකීය නිල් (Royal Blue) සහ සුදු අකුරු
+            // 🔵 2. තෝරාගත් අවස්ථාව: තද රාජකීය නිල් (#1e40af) සහ සුදු අකුරු
             cellInlineStyle = "background-color: #1e40af !important; border-color: #2563eb !important; color: #ffffff !important;";
             cellClassNames += " ring-2 ring-sky-400 shadow-md font-black z-10";
+          } else if (isReliefSlot) {
+            // 🟣 3. ආදේශක ගුරුවරයෙක් සිටින විට: ලා දම් පැහැය (Soft Purple)
+            cellInlineStyle = "background-color: #faf5ff; border-color: #c084fc; color: #581c87;";
+            cellClassNames += " ring-2 ring-purple-400 shadow-xs font-bold";
           } else if (isComb) {
-            // 🟣 3. Combined: සාමාන්‍ය අවස්ථාවේ විෂයන් 2ක Linear Gradient එක
+            // 🎨 4. Combined: විෂයන් 2ක Linear Gradient එක
             let subList = [];
             if (Array.isArray(slot.basketItems) && slot.basketItems.length > 0) {
               subList = slot.basketItems.map(b => b.subject).filter(Boolean);
@@ -7648,16 +7738,10 @@ function renderGradeTimetableGrid() {
             }
             cellClassNames += isLocked ? " ring-1 ring-amber-400 shadow-xs" : " shadow-2xs";
           } else {
-            // 🎨 4. Regular Subject: සාමාන්‍ය අවස්ථාවේ අනන්‍ය Pastel වර්ණය
+            // 🟢 5. සාමාන්‍ය තනි විෂය: Pastel වර්ණය
             const singleV = getSubjectVisual(slot.subject);
             cellInlineStyle = `background-color: ${singleV.bg}; border-color: ${singleV.border}; color: ${singleV.text};`;
             cellClassNames += isLocked ? " ring-1 ring-amber-400 shadow-xs" : " shadow-2xs";
-          }
-
-          let tName = "";
-          if (slot.teacherId && slot.teacherId !== "NONE") {
-            const tObj = (window.teachers || []).find(t => String(t.id).toLowerCase() === String(slot.teacherId).toLowerCase());
-            tName = tObj ? tObj.name : slot.teacherId;
           }
 
           const cleanSubEsc = String(slot.subject).replace(/'/g, "\\'");
@@ -7665,8 +7749,8 @@ function renderGradeTimetableGrid() {
           rowHtml += `
             <td style="${cellInlineStyle}"
                 class="${cellClassNames}"
-                onclick="handleGradeCellQuickHighlight('${cleanSubEsc}', '${slot.teacherId || ''}')"
-                title="${hasClash ? '⚠️ ගුරු ගැටුමකි!' : 'ක්ලික් කරන්න: Highlight කිරීමට'} | දින: ${d.name} (${p} වන කාලය)">
+                onclick="handleGradeCellQuickHighlight('${cleanSubEsc}', '${slot.teacherId || slot.reliefTeacherId || ''}')"
+                title="${hasClash ? '⚠️ ගුරු ගැටුමකි!' : (isReliefSlot ? '🔄 ආදේශිත කාලච්ඡේදයකි' : 'ක්ලික් කරන්න: Highlight කිරීමට')} | දින: ${d.name} (${p} වන කාලය)">
               
               <!-- Lock ලාංඡනය -->
               ${isLocked ? `
@@ -7683,14 +7767,17 @@ function renderGradeTimetableGrid() {
                 <i class="fa-solid fa-xmark pointer-events-none"></i>
               </button>
 
-              <!-- විෂය නම (Highlight වූ විට සුදු පැහැයෙන් දිස්වේ) -->
+              <!-- විෂය නම -->
               <div class="text-[10px] font-black leading-tight truncate px-0.5 ${isHighlighted ? 'text-white' : ''}">
                 ${slot.subject}
               </div>
 
-              <!-- ගුරු නම (Highlight වූ විට ලා කොළ පැහැයෙන් පැහැදිලිව දිස්වේ) -->
-              <div class="text-[8.5px] font-semibold truncate mt-0.5 ${isHighlighted ? 'text-blue-100 font-bold' : 'opacity-85'}">
-                ${tName || (isComb ? 'Combined' : '-')}
+              <!-- ගුරු නම / අංකය සහ Relief Badge -->
+              <div class="text-[8.5px] font-semibold truncate mt-0.5 flex items-center justify-center gap-0.5 ${
+                isHighlighted ? 'text-blue-100 font-bold' : (isReliefSlot ? 'text-purple-900 font-extrabold' : 'opacity-85')
+              }">
+                ${isReliefSlot ? '<span class="bg-purple-600 text-white text-[7px] px-1 py-0.1 rounded font-black shrink-0">ආදේශ</span>' : ''}
+                <span class="truncate" title="${teacherInfo.text}">${teacherInfo.text}</span>
               </div>
             </td>
           `;
@@ -7713,12 +7800,12 @@ function renderGradeTimetableGrid() {
 
   tbody.innerHTML = bodyHtml;
 
-  // Highlight Occurrence Count Badge එක තද කොළ පැහැයෙන් යාවත්කාලීන කිරීම
+  // Highlight Occurrence Count Badge එක තද නිල් පැහැයෙන් පෙන්වීම
   const countBadge = document.getElementById("gradeHighlightCountBadge");
   if (countBadge) {
     if (window.gradeViewSelectedValue && totalHighlightMatchCount > 0) {
       countBadge.classList.remove("hidden");
-     countBadge.className = "self-end mb-0.5 text-xs font-black bg-blue-800 text-white border border-blue-600 px-2.5 py-1.5 rounded-xl shadow-xs animate-pulse";
+      countBadge.className = "self-end mb-0.5 text-xs font-black bg-blue-800 text-white border border-blue-600 px-2.5 py-1.5 rounded-xl shadow-xs animate-pulse";
       countBadge.innerHTML = `<i class="fa-solid fa-bullseye mr-1 text-sky-300"></i>හමු වූ වාර ගණන: ${totalHighlightMatchCount}`;
     } else {
       countBadge.classList.add("hidden");
@@ -7727,6 +7814,7 @@ function renderGradeTimetableGrid() {
 }
 
 window.renderGradeTimetableGrid = renderGradeTimetableGrid;
+    
     
 // 6. Slot එකක් ඉවත් කිරීම (Delete Logic with Lock Protection)
 function handleGradeSlotDelete(classId, day, period, isLocked) {
