@@ -533,90 +533,107 @@
     </div>
     
     <!-- TAB 3: GRADE MASTER -->
- <!-- 🔴 ශ්‍රේණි කාලසටහනට පමණක් අදාළ TAB CONTAINER එක -->
+
+<!-- 🔴🔴🔴🔴🔴🔴 ශ්‍රේණි කාලසටහනට පමණක් අදාළ TAB CONTAINER එක -->
 <div id="gradeMasterTab" class="hidden">
-<!-- ශ්‍රේණි කාලසටහන් පාලක තීරුව (Toolbar) -->
-<div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs mb-4 flex flex-wrap items-center justify-between gap-3">
-  
-  <div class="flex flex-wrap items-center gap-2.5">
-    <!-- 1. ශ්‍රේණිය / පාසල තෝරන Dropdown -->
-    <div>
-      <label class="text-[10px] font-extrabold text-slate-500 block mb-0.5">ශ්‍රේණිය තෝරන්න:</label>
-      <select id="gradeSelectFilter" 
-              onfocus="if (typeof populateGradeDropdown === 'function') populateGradeDropdown();"
-              onchange="window.gradeViewActiveGrade = this.value; renderGradeTimetableGrid();"
-              class="text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer">
-        <option value="ALL">සම්පූර්ණ පාසලම (All Classes)</option>
-      </select>
+
+  <!-- ශ්‍රේණි කාලසටහන් පාලක තීරුව (Toolbar) -->
+  <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs mb-4 flex flex-wrap items-center justify-between gap-3">
+    
+    <div class="flex flex-wrap items-center gap-2.5">
+      <!-- 1. ශ්‍රේණිය / පාසල තෝරන Dropdown -->
+      <div>
+        <label class="text-[10px] font-extrabold text-slate-500 block mb-0.5">ශ්‍රේණිය තෝරන්න:</label>
+        <select id="gradeSelectFilter" 
+                onfocus="if (typeof populateGradeDropdown === 'function') populateGradeDropdown();"
+                onchange="window.gradeViewActiveGrade = this.value; renderGradeTimetableGrid();"
+                class="text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer">
+          <option value="ALL">සම්පූර්ණ පාසලම (All Classes)</option>
+        </select>
+      </div>
+
+      <!-- 2. ආදේශන තත්ත්ව පෙරහන (Relief Status Filter) -->
+      <div>
+        <label class="text-[10px] font-extrabold text-slate-500 block mb-0.5">ආදේශන තත්ත්වය:</label>
+        <select id="gradeReliefStatusFilter" 
+                onchange="renderGradeTimetableGrid();"
+                class="text-xs font-bold bg-amber-50 border border-amber-300 text-amber-950 rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-amber-500 outline-none cursor-pointer">
+          <option value="ALL">සියලු පන්ති (All Statuses)</option>
+          <option value="PENDING_RELIEF">⚠️ ආදේශ කර නැති පන්ති පමණක්</option>
+          <option value="NO_TEACHER">❌ ගුරුවරයෙකු නැති පන්ති පමණක්</option>
+        </select>
+      </div>
+
+      <!-- 3. Highlight Mode (Subject / Teacher) -->
+      <div>
+        <label class="text-[10px] font-extrabold text-slate-500 block mb-0.5">Highlighter ක්‍රමය:</label>
+        <select id="gradeHighlightTypeSelect" 
+                onchange="handleGradeFilterTypeChange()"
+                class="text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-sky-500 outline-none cursor-pointer">
+          <option value="NONE">Highlighter අක්‍රියයි</option>
+          <option value="SUBJECT">විෂය අනුව Highlight</option>
+          <option value="TEACHER">ගුරුවරයා අනුව Highlight</option>
+        </select>
+      </div>
+
+      <!-- 4. අදාළ අගය තෝරන Dropdown -->
+      <div>
+        <label class="text-[10px] font-extrabold text-slate-500 block mb-0.5">අගය තෝරන්න:</label>
+        <select id="gradeHighlightValueSelect" 
+                disabled
+                onchange="handleGradeHighlightValueChange()"
+                class="text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-sky-500 outline-none min-w-[150px] cursor-pointer disabled:opacity-50">
+          <option value="">-- තෝරන්න --</option>
+        </select>
+      </div>
+
+      <!-- 5. Highlight Occurrence Count Badge (තද නිල් පැහැයෙන්) -->
+      <div id="gradeHighlightCountBadge" 
+           class="hidden self-end mb-0.5 text-xs font-black bg-blue-800 text-white border border-blue-600 px-2.5 py-1.5 rounded-xl shadow-xs animate-pulse">
+        හමු වූ වාර ගණන: 0
+      </div>
     </div>
 
-    <!-- 2. Highlight Mode (Subject / Teacher) -->
-    <div>
-      <label class="text-[10px] font-extrabold text-slate-500 block mb-0.5">Highlighter ක්‍රමය:</label>
-      <select id="gradeHighlightTypeSelect" 
-              onchange="handleGradeFilterTypeChange()"
-              class="text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-sky-500 outline-none cursor-pointer">
-        <option value="NONE">Highlighter අක්‍රියයි</option>
-        <option value="SUBJECT">විෂය අනුව Highlight</option>
-        <option value="TEACHER">ගුරුවරයා අනුව Highlight</option>
-      </select>
+    <!-- 6. A4 ප්‍රමාණය තෝරා මුද්‍රණය කිරීමේ පාලකය (Dynamic Print Controls) -->
+    <div class="flex flex-wrap items-center gap-2 self-end bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+      <div>
+        <label class="text-[9px] font-black text-slate-500 block leading-tight">A4 පිටුවකට:</label>
+        <select id="printLayoutSelect" 
+                class="text-[11px] font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 outline-none">
+          <option value="1">1 බැගින් (Full Page)</option>
+          <option value="2" selected>2 බැගින් (Half Page)</option>
+          <option value="4">4 බැගින් (Pocket Slip)</option>
+        </select>
+      </div>
+
+      <div class="flex items-center gap-1 mt-2.5">
+        <button onclick="printCustomTimetables('CLASS', document.getElementById('printLayoutSelect').value)" 
+                title="පන්ති කාලසටහන් මුද්‍රණය"
+                class="text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer">
+          <i class="fa-solid fa-print text-[10px]"></i> පන්ති
+        </button>
+
+        <button onclick="printCustomTimetables('TEACHER', document.getElementById('printLayoutSelect').value)" 
+                title="ගුරු කාලසටහන් මුද්‍රණය"
+                class="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer">
+          <i class="fa-solid fa-id-badge text-[10px]"></i> ගුරු
+        </button>
+      </div>
     </div>
 
-    <!-- 3. අදාළ අගය තෝරන Dropdown -->
-    <div>
-      <label class="text-[10px] font-extrabold text-slate-500 block mb-0.5">අගය තෝරන්න:</label>
-      <select id="gradeHighlightValueSelect" 
-              disabled
-              onchange="handleGradeHighlightValueChange()"
-              class="text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-sky-500 outline-none min-w-[150px] cursor-pointer disabled:opacity-50">
-        <option value="">-- තෝරන්න --</option>
-      </select>
-    </div>
-
-    <!-- 4. Highlight Occurrence Count Badge -->
-    <div id="gradeHighlightCountBadge" 
-         class="hidden self-end mb-0.5 text-xs font-black bg-sky-500 text-white px-2.5 py-1.5 rounded-xl shadow-xs animate-pulse">
-      හමු වූ වාර ගණන: 0
-    </div>
   </div>
 
-  <!-- 5. A4 ප්‍රමාණය තෝරා මුද්‍රණය කිරීමේ පාලකය (Dynamic Print Controls) -->
-  <div class="flex flex-wrap items-center gap-2 self-end bg-slate-50 p-1.5 rounded-xl border border-slate-200">
-    <div>
-      <label class="text-[9px] font-black text-slate-500 block leading-tight">A4 පිටුවකට:</label>
-      <select id="printLayoutSelect" 
-              class="text-[11px] font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 outline-none">
-        <option value="1">1 බැගින් (Full Page)</option>
-        <option value="2" selected>2 බැගින් (Half Page)</option>
-        <option value="4">4 බැගින් (Pocket Slip)</option>
-      </select>
-    </div>
-
-    <div class="flex items-center gap-1 mt-2.5">
-      <button onclick="printCustomTimetables('CLASS', document.getElementById('printLayoutSelect').value)" 
-              title="පන්ති කාලසටහන් මුද්‍රණය"
-              class="text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer">
-        <i class="fa-solid fa-print text-[10px]"></i> පන්ති
-      </button>
-
-      <button onclick="printCustomTimetables('TEACHER', document.getElementById('printLayoutSelect').value)" 
-              title="ගුරු කාලසටහන් මුද්‍රණය"
-              class="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer">
-        <i class="fa-solid fa-id-badge text-[10px]"></i> ගුරු
-      </button>
-    </div>
+  <!-- ශ්‍රේණි කාලසටහන් Table Container (තිරස් සහ සිරස් Scroll සහිතයි) -->
+  <div class="w-full overflow-auto bg-white rounded-2xl border border-slate-200 shadow-xs max-h-[78vh]">
+    <table class="w-max min-w-full border-collapse text-left">
+      <thead id="gradeTimetableHead"></thead>
+      <tbody id="gradeTimetableBody"></tbody>
+    </table>
   </div>
 
 </div>
-
-<!-- ශ්‍රේණි කාලසටහන් Table Container (තිරස් සහ සිරස් Scroll සහිතයි) -->
-<div class="w-full overflow-auto bg-white rounded-2xl border border-slate-200 shadow-xs max-h-[78vh]">
-  <table class="w-max min-w-full border-collapse text-left">
-    <thead id="gradeTimetableHead"></thead>
-    <tbody id="gradeTimetableBody"></tbody>
-  </table>
-</div>
-</div>
+    
+    
     <!-- TAB 4: TEACHER SCHEDULES -->
     <div id="teacherScheduleTab" class="hidden space-y-6">
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
@@ -7417,14 +7434,14 @@ function getFilteredClassesForGradeView() {
 // =========================================================================
 
 // =========================================================================
-// 🌐 GRADE & MASTER TIMETABLE RENDERER (FINAL ENHANCED)
+// 🌐 GRADE & MASTER TIMETABLE RENDERER (ALL FEATURES COMBINED)
 // =========================================================================
 function renderGradeTimetableGrid() {
   const thead = document.getElementById("gradeTimetableHead");
   const tbody = document.getElementById("gradeTimetableBody");
   if (!thead || !tbody) return;
 
-  const targetClasses = getFilteredClassesForGradeView();
+  let targetClasses = getFilteredClassesForGradeView();
   if (targetClasses.length === 0) {
     thead.innerHTML = "";
     tbody.innerHTML = `<tr><td class="p-8 text-center text-slate-400 font-bold">පන්ති හමු නොවීය.</td></tr>`;
@@ -7439,10 +7456,42 @@ function renderGradeTimetableGrid() {
     { id: 4, name: "සිකුරාදා" }
   ];
 
+  // -------------------------------------------------------------------------
+  // 1. ආදේශන තත්ත්ව පෙරහන (Relief Filter) අනුව පන්ති පෙරීම
+  // -------------------------------------------------------------------------
+  const reliefFilterEl = document.getElementById("gradeReliefStatusFilter");
+  const reliefFilter = reliefFilterEl ? reliefFilterEl.value : "ALL";
+
+  if (reliefFilter === "PENDING_RELIEF") {
+    targetClasses = targetClasses.filter(cls => {
+      const cId = String(cls.id || cls.name).trim().toLowerCase();
+      return (window.masterSchedule || []).some(s => {
+        const scId = String(s.classId || '').trim().toLowerCase();
+        const matchCls = (scId === cId || scId === String(cls.name || '').toLowerCase());
+        return matchCls && typeof isSlotPendingRelief === "function" && isSlotPendingRelief(s);
+      });
+    });
+  } else if (reliefFilter === "NO_TEACHER") {
+    targetClasses = targetClasses.filter(cls => {
+      const cId = String(cls.id || cls.name).trim().toLowerCase();
+      return (window.masterSchedule || []).some(s => {
+        const scId = String(s.classId || '').trim().toLowerCase();
+        const matchCls = (scId === cId || scId === String(cls.name || '').toLowerCase());
+        return matchCls && s.subject && (!s.teacherId || s.teacherId === "NONE");
+      });
+    });
+  }
+
+  if (targetClasses.length === 0) {
+    thead.innerHTML = "";
+    tbody.innerHTML = `<tr><td class="p-8 text-center text-amber-700 bg-amber-50 font-bold border border-amber-200 rounded-xl">තෝරාගත් ආදේශන නිර්ණායකයට අදාළ පන්ති හමු නොවීය.</td></tr>`;
+    return;
+  }
+
   let totalHighlightMatchCount = 0;
 
   // -------------------------------------------------------------------------
-  // 1. විෂය වර්ණ පද්ධතිය (Pastel Palette)
+  // 2. විෂය වර්ණ පද්ධතිය (Pastel Palette)
   // -------------------------------------------------------------------------
   const SUBJECT_COLOR_MAP = {
     "ගණිතය":            { bg: "#e0f2fe", border: "#7dd3fc", text: "#0369a1" },
@@ -7490,7 +7539,7 @@ function renderGradeTimetableGrid() {
   }
 
   // -------------------------------------------------------------------------
-  // 2. ගුරුවරුන් ලබාගැනීම සහ ගැටුම් පරීක්ෂාව
+  // 3. සහායක ශ්‍රිත (Slot ගුරු තොරතුරු ලබාගැනීම & ගැටුම් පරීක්ෂාව)
   // -------------------------------------------------------------------------
   function extractTeachersFromSlot(s) {
     const list = new Set();
@@ -7521,7 +7570,6 @@ function renderGradeTimetableGrid() {
       const hasCommon = tids.some(t => osTids.includes(t));
       if (!hasCommon) return false;
 
-      // එකම Group Code එකේ (GR1 -> 6A, 6B) නම් ගැටුමක් නොවේ
       if (typeof isLegitimateSameGroupSession === "function") {
         return !isLegitimateSameGroupSession(slot, os);
       }
@@ -7529,11 +7577,7 @@ function renderGradeTimetableGrid() {
     });
   }
 
-  // -------------------------------------------------------------------------
-  // 3. Combined/Basket සඳහා ගුරු නම / අංකය නිශ්චිතව හඳුනාගැනීම
-  // -------------------------------------------------------------------------
   function getSlotTeacherDisplayInfo(slot, cls) {
-    // A. ආදේශක ගුරුවරයා (Relief Teacher)
     const isRelief = Boolean(
       slot.isRelief || 
       slot.reliefTeacherId || 
@@ -7541,13 +7585,14 @@ function renderGradeTimetableGrid() {
       (slot.originalTeacherId && slot.teacherId !== slot.originalTeacherId)
     );
 
-    if (slot.reliefTeacherId) {
+    const isPendingRelief = typeof isSlotPendingRelief === "function" ? isSlotPendingRelief(slot) : false;
+
+    if (slot.reliefTeacherId && slot.reliefTeacherId !== "NONE") {
       const rt = (window.teachers || []).find(t => String(t.id).toLowerCase() === String(slot.reliefTeacherId).toLowerCase());
       const rNo = rt && rt.schoolNo ? `[${rt.schoolNo}]` : "";
-      return { text: (rt ? rt.name : slot.reliefTeacherId) + " " + rNo, isRelief: true };
+      return { text: (rt ? rt.name : slot.reliefTeacherId) + " " + rNo, isRelief: true, isPendingRelief: false };
     }
 
-    // B. පන්තියේ Class Settings හි අදාළ විෂයට ඇති ගුරුවරයා
     const subKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(slot.subject) : String(slot.subject || '').trim().toLowerCase();
     let tid = slot.teacherId;
 
@@ -7559,10 +7604,9 @@ function renderGradeTimetableGrid() {
       const tObj = (window.teachers || []).find(t => String(t.id).toLowerCase() === String(tid).toLowerCase());
       const no = tObj && tObj.schoolNo ? `[${tObj.schoolNo}]` : "";
       const name = tObj ? tObj.name : tid;
-      return { text: `${name} ${no}`.trim(), isRelief };
+      return { text: `${name} ${no}`.trim(), isRelief, isPendingRelief };
     }
 
-    // C. Basket Items ඇතුළත ඇති ගුරුවරුන්ගේ අංක/නම් එකතු කිරීම
     if (Array.isArray(slot.basketItems) && slot.basketItems.length > 0) {
       const teacherTokens = [];
       slot.basketItems.forEach(b => {
@@ -7576,8 +7620,7 @@ function renderGradeTimetableGrid() {
           if (t && t.schoolNo) {
             teacherTokens.push(`[${t.schoolNo}]`);
           } else if (t) {
-            const shortN = t.name.split(' ')[0] || t.name;
-            teacherTokens.push(shortN);
+            teacherTokens.push(t.name.split(' ')[0] || t.name);
           } else {
             teacherTokens.push(bTid);
           }
@@ -7585,12 +7628,11 @@ function renderGradeTimetableGrid() {
       });
 
       if (teacherTokens.length > 0) {
-        return { text: [...new Set(teacherTokens)].join(' '), isRelief };
+        return { text: [...new Set(teacherTokens)].join(' '), isRelief, isPendingRelief };
       }
     }
 
-    // D. අංකයක් හෝ Group Code එකක් පෙන්වීම
-    return { text: slot.groupCode ? `[${slot.groupCode}]` : "-", isRelief };
+    return { text: slot.groupCode ? `[${slot.groupCode}]` : "ගුරු නැත", isRelief, isPendingRelief };
   }
 
   // -------------------------------------------------------------------------
@@ -7598,7 +7640,7 @@ function renderGradeTimetableGrid() {
   // -------------------------------------------------------------------------
   let headHtml = `
     <tr>
-      <th rowspan="2" class="sticky left-0 top-0 z-40 bg-slate-900 text-white p-2 text-xs font-black border-r border-b border-slate-700 min-w-[130px] max-w-[130px] text-center shadow-md">
+      <th rowspan="2" class="sticky left-0 top-0 z-40 bg-slate-900 text-white p-2 text-xs font-black border-r border-b border-slate-700 min-w-[135px] max-w-[135px] text-center shadow-md">
         පන්තිය / ප්‍රගතිය
       </th>
   `;
@@ -7642,11 +7684,17 @@ function renderGradeTimetableGrid() {
 
     let rowHtml = `<tr class="hover:bg-slate-50/70 transition border-b border-slate-200">`;
 
+    // 🔴 වම් පස Sticky තීරුව - CLICKABLE TO REDIRECT TO CLASS TIMETABLE
     rowHtml += `
-      <td class="sticky left-0 z-20 bg-slate-50 border-r border-slate-300 p-2 text-center select-none shadow-xs min-w-[130px] max-w-[130px]">
-        <div class="font-black text-xs text-indigo-950 truncate" title="${cls.name || cls.id}">
-          ${cls.name || cls.id}
+      <td class="sticky left-0 z-20 bg-slate-50 hover:bg-indigo-50 border-r border-slate-300 p-2 text-center select-none shadow-xs min-w-[135px] max-w-[135px] cursor-pointer transition group"
+          onclick="redirectToClassSchedule('${cId}')"
+          title="ක්ලික් කරන්න: ${cls.name || cId} පන්ති කාලසටහන වෙත කෙළින්ම යන්න">
+        
+        <div class="font-black text-xs text-indigo-950 group-hover:text-indigo-600 flex items-center justify-center gap-1">
+          <span class="truncate">${cls.name || cls.id}</span>
+          <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-0 group-hover:opacity-100 transition"></i>
         </div>
+
         <div class="mt-1 inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-md border ${
           isDone ? 'bg-emerald-100 text-emerald-800 border-emerald-300 shadow-2xs' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
         }">
@@ -7670,9 +7718,9 @@ function renderGradeTimetableGrid() {
           const isComb = Boolean(slot.isCombined || slot.isBasket || slot.combinedSubjectId);
           const hasClash = checkSlotHasClash(slot, d.id, p);
 
-          // ගුරු නම සහ Relief තත්ත්වය ලබා ගැනීම
           const teacherInfo = getSlotTeacherDisplayInfo(slot, cls);
           const isReliefSlot = teacherInfo.isRelief;
+          const isPendingReliefSlot = teacherInfo.isPendingRelief;
 
           // Highlighter පරීක්ෂාව
           let isHighlighted = false;
@@ -7695,25 +7743,29 @@ function renderGradeTimetableGrid() {
           if (isHighlighted) totalHighlightMatchCount++;
 
           // -------------------------------------------------------------------
-          // 🔴 වර්ණ තීරණය කිරීම (Clash > Highlight > Relief > Gradient > Pastel)
+          // 🔴 වර්ණ තීරණය කිරීම (Clash > Highlight > Pending Relief > Relief > Gradient > Pastel)
           // -------------------------------------------------------------------
           let cellInlineStyle = "";
           let cellClassNames = "p-1 border-r text-center relative group select-none transition min-w-[70px] max-w-[85px] h-[52px] align-middle";
 
           if (hasClash) {
-            // 🛑 1. Clash: රතු පැහැය
-            cellInlineStyle = "background-color: #fff1f2; border-color: #f43f5e; color: #881337;";
-            cellClassNames += " ring-2 ring-rose-500 shadow-sm animate-pulse";
+            // 🛑 1. Clash: තද රතු සහ සුදු අකුරු
+            cellInlineStyle = "background-color: #b91c1c !important; border-color: #ef4444 !important; color: #ffffff !important;";
+            cellClassNames += " ring-2 ring-rose-400 shadow-md font-black animate-pulse z-10";
           } else if (isHighlighted) {
-            // 🔵 2. තෝරාගත් අවස්ථාව: තද රාජකීය නිල් (#1e40af) සහ සුදු අකුරු
+            // 🔵 2. Highlight: තද රාජකීය නිල් සහ සුදු අකුරු
             cellInlineStyle = "background-color: #1e40af !important; border-color: #2563eb !important; color: #ffffff !important;";
             cellClassNames += " ring-2 ring-sky-400 shadow-md font-black z-10";
+          } else if (isPendingReliefSlot) {
+            // 🟠 3. ආදේශ කර නැති (Pending Relief): කහ/තැඹිලි
+            cellInlineStyle = "background-color: #fef3c7 !important; border-color: #f59e0b !important; color: #78350f !important;";
+            cellClassNames += " ring-2 ring-amber-400 shadow-xs font-bold animate-pulse";
           } else if (isReliefSlot) {
-            // 🟣 3. ආදේශක ගුරුවරයෙක් සිටින විට: ලා දම් පැහැය (Soft Purple)
+            // 🟣 4. සාර්ථකව ආදේශිත: ලා දම් පැහැය
             cellInlineStyle = "background-color: #faf5ff; border-color: #c084fc; color: #581c87;";
             cellClassNames += " ring-2 ring-purple-400 shadow-xs font-bold";
           } else if (isComb) {
-            // 🎨 4. Combined: විෂයන් 2ක Linear Gradient එක
+            // Combined: Linear Gradient
             let subList = [];
             if (Array.isArray(slot.basketItems) && slot.basketItems.length > 0) {
               subList = slot.basketItems.map(b => b.subject).filter(Boolean);
@@ -7738,7 +7790,7 @@ function renderGradeTimetableGrid() {
             }
             cellClassNames += isLocked ? " ring-1 ring-amber-400 shadow-xs" : " shadow-2xs";
           } else {
-            // 🟢 5. සාමාන්‍ය තනි විෂය: Pastel වර්ණය
+            // සාමාන්‍ය තනි විෂය: Pastel වර්ණය
             const singleV = getSubjectVisual(slot.subject);
             cellInlineStyle = `background-color: ${singleV.bg}; border-color: ${singleV.border}; color: ${singleV.text};`;
             cellClassNames += isLocked ? " ring-1 ring-amber-400 shadow-xs" : " shadow-2xs";
@@ -7750,11 +7802,11 @@ function renderGradeTimetableGrid() {
             <td style="${cellInlineStyle}"
                 class="${cellClassNames}"
                 onclick="handleGradeCellQuickHighlight('${cleanSubEsc}', '${slot.teacherId || slot.reliefTeacherId || ''}')"
-                title="${hasClash ? '⚠️ ගුරු ගැටුමකි!' : (isReliefSlot ? '🔄 ආදේශිත කාලච්ඡේදයකි' : 'ක්ලික් කරන්න: Highlight කිරීමට')} | දින: ${d.name} (${p} වන කාලය)">
+                title="${hasClash ? '⚠️ ගුරු ගැටුමකි!' : (isPendingReliefSlot ? '⚠️ ආදේශ කර නැත!' : (isReliefSlot ? '🔄 ආදේශිතයි' : 'ක්ලික් කරන්න: Highlight කිරීමට'))} | දින: ${d.name} (${p} වන කාලය)">
               
               <!-- Lock ලාංඡනය -->
               ${isLocked ? `
-                <span class="absolute top-0.5 left-0.5 ${isHighlighted ? 'text-amber-300 bg-black/30' : 'text-amber-600 bg-amber-100/90'} text-[8px] rounded px-0.5 pointer-events-none">
+                <span class="absolute top-0.5 left-0.5 ${hasClash || isHighlighted ? 'text-amber-300 bg-black/30' : 'text-amber-600 bg-amber-100/90'} text-[8px] rounded px-0.5 pointer-events-none">
                   <i class="fa-solid fa-lock"></i>
                 </span>
               ` : ''}
@@ -7768,15 +7820,16 @@ function renderGradeTimetableGrid() {
               </button>
 
               <!-- විෂය නම -->
-              <div class="text-[10px] font-black leading-tight truncate px-0.5 ${isHighlighted ? 'text-white' : ''}">
+              <div class="text-[10px] font-black leading-tight truncate px-0.5 ${hasClash || isHighlighted ? 'text-white' : ''}">
                 ${slot.subject}
               </div>
 
-              <!-- ගුරු නම / අංකය සහ Relief Badge -->
+              <!-- ගුරු නම / අංකය / Relief Status Badge -->
               <div class="text-[8.5px] font-semibold truncate mt-0.5 flex items-center justify-center gap-0.5 ${
-                isHighlighted ? 'text-blue-100 font-bold' : (isReliefSlot ? 'text-purple-900 font-extrabold' : 'opacity-85')
+                hasClash ? 'text-rose-100 font-bold' : (isHighlighted ? 'text-blue-100 font-bold' : (isPendingReliefSlot ? 'text-amber-900 font-black' : (isReliefSlot ? 'text-purple-900 font-extrabold' : 'opacity-85')))
               }">
-                ${isReliefSlot ? '<span class="bg-purple-600 text-white text-[7px] px-1 py-0.1 rounded font-black shrink-0">ආදේශ</span>' : ''}
+                ${isPendingReliefSlot ? '<span class="bg-amber-500 text-white text-[7px] px-1 py-0.1 rounded font-black shrink-0">ආදේශ නැත</span>' : ''}
+                ${isReliefSlot && !isPendingReliefSlot ? '<span class="bg-purple-600 text-white text-[7px] px-1 py-0.1 rounded font-black shrink-0">ආදේශ</span>' : ''}
                 <span class="truncate" title="${teacherInfo.text}">${teacherInfo.text}</span>
               </div>
             </td>
@@ -7800,7 +7853,7 @@ function renderGradeTimetableGrid() {
 
   tbody.innerHTML = bodyHtml;
 
-  // Highlight Occurrence Count Badge එක තද නිල් පැහැයෙන් පෙන්වීම
+  // Highlight Occurrence Count Badge එක යාවත්කාලීන කිරීම
   const countBadge = document.getElementById("gradeHighlightCountBadge");
   if (countBadge) {
     if (window.gradeViewSelectedValue && totalHighlightMatchCount > 0) {
@@ -14417,6 +14470,63 @@ function printCustomTimetables(type = 'CLASS', layout = '2') {
 
 window.printCustomTimetables = printCustomTimetables;
 
+
+// =========================================================================
+// 🚀 පන්තිය මත ක්ලික් කළ විට පන්ති කාලසටහනට කෙළින්ම මාරු වීම
+// =========================================================================
+function redirectToClassSchedule(classId) {
+  if (!classId) return;
+
+  // 1. පන්ති තෝරන Dropdown එක සොයා අගය ලබා දීම
+  const classSelect = document.getElementById("activeClassSelect") || document.getElementById("classTimetableSelectClass");
+  if (classSelect) {
+    classSelect.value = classId;
+  }
+
+  // 2. Class Timetable Tab එක වෙත මාරු වීම
+  if (typeof switchTab === "function") {
+    switchTab("classTimetableTab");
+  }
+
+  // 3. එම පන්තියේ කාලසටහන Render කිරීම
+  if (typeof renderClassTimetableGrid === "function") {
+    renderClassTimetableGrid();
+  }
+}
+
+// 🔴 ආදේශයක් අවශ්‍ය නමුත් තවමත් ආදේශ කර නැතිදැයි (Pending Relief) පරීක්ෂා කිරීම
+function isSlotPendingRelief(slot) {
+  if (!slot || !slot.subject) return false;
+
+  // A. දැනටමත් ආදේශක ගුරුවරයෙකු සිටී නම් Pending නොවේ
+  if (slot.reliefTeacherId && slot.reliefTeacherId !== "NONE") return false;
+
+  // B. ස්ලොට් එක ආදේශනයක් අවශ්‍ය ලෙස සලකුණු කර ඇත්නම්
+  if (slot.needsRelief || slot.isReliefRequired) return true;
+
+  // C. අදාළ ගුරුවරයා අද දින නිවාඩු ලබා ඇත්නම් (window.absentTeacherIds සමඟ සැසඳීම)
+  if (Array.isArray(window.absentTeacherIds) && window.absentTeacherIds.length > 0) {
+    const tid = String(slot.teacherId || '').trim().toLowerCase();
+    if (tid && tid !== "none" && window.absentTeacherIds.map(a => String(a).toLowerCase()).includes(tid)) {
+      return true;
+    }
+    // Basket Items තුළ සිටින ගුරුවරුන් පරීක්ෂාව
+    if (Array.isArray(slot.basketItems)) {
+      const isAnyBasketTeacherAbsent = slot.basketItems.some(b => {
+        const bTid = String(b.teacherId || '').trim().toLowerCase();
+        return bTid && bTid !== "none" && window.absentTeacherIds.map(a => String(a).toLowerCase()).includes(bTid);
+      });
+      if (isAnyBasketTeacherAbsent) return true;
+    }
+  }
+
+  return false;
+}
+
+window.redirectToClassSchedule = redirectToClassSchedule;
+window.isSlotPendingRelief = isSlotPendingRelief;
+
+    
 
     // =========================================================================
 // 🎯 GRADE VIEW QUICK HIGHLIGHTER (Fixes ReferenceError)
