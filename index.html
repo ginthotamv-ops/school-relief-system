@@ -14584,7 +14584,37 @@ function isSlotPendingRelief(slot) {
 window.redirectToClassSchedule = redirectToClassSchedule;
 window.isSlotPendingRelief = isSlotPendingRelief;
 
-    
+    // 🧹 6B පන්තියේ Duplicate / Ghost Slots පිරිසිදු කිරීම
+function cleanDuplicateSlotsForClass(classId) {
+  const seen = new Set();
+  const initialCount = window.masterSchedule.length;
+
+  window.masterSchedule = window.masterSchedule.filter(s => {
+    const scId = String(s.classId || '').trim().toLowerCase();
+    if (scId !== String(classId).trim().toLowerCase()) return true;
+
+    // වලංගු නොවන කාලච්ඡේද ඉවත් කිරීම (1 සිට 8 දක්වා පමණක් තබා ගැනීම)
+    if (Number(s.period) < 1 || Number(s.period) > 8) return false;
+
+    // එකම දිනය සහ කාලච්ඡේදය දෙවරක් පැමිණියහොත් දෙවැන්න ඉවත් කිරීම
+    const key = `${s.day}_${s.period}`;
+    if (seen.has(key)) {
+      console.warn("ඉවත් කරන ලද Duplicate Slot එක:", s);
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+
+  if (typeof saveAllToStorage === "function") saveAllToStorage();
+  if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+  if (typeof renderGradeTimetableGrid === "function") renderGradeTimetableGrid();
+  
+  console.log(`පිරිසිදු කිරීම අවසන්! ඉවත් කළ අමතර කොටු ගණන: ${initialCount - window.masterSchedule.length}`);
+}
+
+// 6B සඳහා ක්‍රියාත්මක කරන්න:
+cleanDuplicateSlotsForClass("6B");
 
     // =========================================================================
 // 🎯 GRADE VIEW QUICK HIGHLIGHTER (Fixes ReferenceError)
