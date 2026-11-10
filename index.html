@@ -242,271 +242,241 @@
 
     <!-- TAB 2: CLASS TIMETABLE -->
 
-    <!-- Class Timetable: 5-Day Weekly View -->
-    <div id="classTimetableTab" class="hidden space-y-6">
-      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-        
-        <!-- Header & Top Action Bar -->
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center pb-4 border-b border-slate-100 gap-3 no-print">
-          <div>
-            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <i class="fa-solid fa-chalkboard text-indigo-600"></i> පන්තියේ කාලසටහන (සතිපතා දසුන)
-            </h2>
-            <div class="flex items-center gap-3 mt-1 flex-wrap">
-              <span class="text-xs text-slate-500">ඕනෑම කාලච්ඡේදයක් මත ක්ලික් කර විෂය වෙන් කිරීමට හෝ Re-shuffle කිරීමට හැක.</span>
-              <span class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full font-bold border border-indigo-200">
-                පන්තිභාර ගුරුතුමා: <span id="classMasterTeacherName">-</span>
-              </span>
-            </div>
-          </div>
-
-        
-
-          <div class="flex flex-wrap items-center gap-2">
-            <!-- පන්තිය තෝරන Dropdown එක -->
-            <select id="activeClassSelect" onchange="renderClassTimetableGrid()" class="bg-slate-50 border border-slate-300 font-bold text-xs sm:text-sm rounded-lg p-2 outline-none focus:border-indigo-600">
-              <!-- JavaScript මඟින් පන්ති ලැයිස්තුව පිරවේ -->
-            </select>
-
-<!-- 🔴 Auto-Fill Action Toolbar -->
-<div class="flex flex-wrap items-center gap-2.5 p-1.5 bg-slate-50 border border-slate-200 rounded-2xl shadow-2xs">
-
-  <!-- 1. පන්තිය Auto-Fill (Split Button with Quick Dropdown) -->
-  <div class="relative inline-flex items-center rounded-xl shadow-xs group">
+ <!-- Class Timetable: 5-Day Weekly View -->
+<div id="classTimetableTab" class="hidden space-y-4">
+  <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200">
     
-    <!-- ප්‍රධාන බොත්තම: සැකසුම් Modal එක විවෘත කිරීම -->
-    <button type="button" 
-            onclick="openAutoFillConfigModal(document.getElementById('activeClassSelect')?.value || document.getElementById('classTimetableSelectClass')?.value)"
-            title="ගුරුවරුන්, Labs සහ සැකසුම් තෝරා මෙම පන්තිය Auto-Fill කරන්න"
-            class="inline-flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-bold rounded-l-xl transition-all cursor-pointer">
-      <i class="fa-solid fa-wand-magic-sparkles text-indigo-200 text-xs"></i>
-      <span>පන්තිය Auto-Fill</span>
-    </button>
-
-    <!-- Dropdown ඊතලය: ක්ෂණික ක්‍රම තේරීම සඳහා -->
-    <button type="button" 
-            onclick="event.stopPropagation(); document.getElementById('classAutoFillDropdown').classList.toggle('hidden');"
-            title="ක්ෂණික ක්‍රම තෝරන්න (Direct Mode)"
-            class="inline-flex items-center px-2.5 py-2 bg-indigo-700 hover:bg-indigo-800 text-indigo-100 hover:text-white text-xs font-bold rounded-r-xl border-l border-indigo-500/60 transition-all cursor-pointer">
-      <i class="fa-solid fa-chevron-down text-[10px]"></i>
-    </button>
-
-    <!-- Dropdown Menu -->
-    <div id="classAutoFillDropdown" 
-         class="hidden absolute left-0 top-full mt-1.5 w-60 bg-white rounded-xl shadow-xl border border-slate-200 z-50 py-1.5 text-xs transition-all animate-in fade-in slide-in-from-top-1">
+    <!-- ========================================================================= -->
+    <!-- 🔴 පේළිය 1: ශීර්ෂය, පන්තිය තේරීම සහ පන්තිභාර ගුරු (Row 1: Class & Teacher Info) -->
+    <!-- ========================================================================= -->
+    <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100 no-print">
       
-      <div class="px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 mb-1">
-        ක්‍රමය තෝරන්න (Direct Fill)
+      <div class="flex flex-wrap items-center gap-3 sm:gap-4">
+        <!-- ප්‍රධාන මාතෘකාව -->
+        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-chalkboard text-indigo-600"></i>
+          <span>පන්තියේ කාලසටහන</span>
+        </h2>
+
+        <!-- පන්තිය තෝරන Dropdown එක -->
+        <div class="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200 shadow-2xs">
+          <label for="activeClassSelect" class="text-[11px] font-extrabold text-slate-500">පන්තිය:</label>
+          <select id="activeClassSelect" 
+                  onchange="renderClassTimetableGrid()" 
+                  class="bg-transparent font-bold text-xs text-indigo-950 outline-none cursor-pointer">
+            <!-- JavaScript මඟින් පන්ති ලැයිස්තුව පිරවේ -->
+          </select>
+        </div>
+
+        <!-- පන්තිභාර ගුරුතුමාගේ ලාංඡනය (Class Master Badge) -->
+        <div class="inline-flex items-center gap-1.5 text-xs bg-indigo-50 text-indigo-800 px-3 py-1 rounded-xl font-bold border border-indigo-200/80 shadow-2xs">
+          <i class="fa-solid fa-user-tie text-[11px] text-indigo-600"></i>
+          <span>පන්තිභාර ගුරු: <span id="classMasterTeacherName" class="font-black text-indigo-950">-</span></span>
+        </div>
       </div>
 
-      <!-- Option 1: Modal සමඟ -->
-      <button type="button" 
-              onclick="document.getElementById('classAutoFillDropdown').classList.add('hidden'); openAutoFillConfigModal(document.getElementById('activeClassSelect')?.value);" 
-              class="w-full text-left px-3 py-2 hover:bg-indigo-50 text-indigo-950 font-bold flex items-center gap-2.5 transition">
-        <i class="fa-solid fa-sliders text-indigo-600 text-[11px] w-4 text-center"></i>
-        <div>
-          <div>සැකසුම් සහිතව (Settings)</div>
-          <div class="text-[10px] text-slate-400 font-normal">ගුරුවරුන් & Labs තෝරා පිරවීම</div>
-        </div>
-      </button>
-
-      <!-- Option 2: AI මනෝවිද්‍යාත්මක ක්‍රමය -->
-      <button type="button" 
-              onclick="document.getElementById('classAutoFillDropdown').classList.add('hidden'); triggerClassAutoFill('PEDAGOGICAL');" 
-              class="w-full text-left px-3 py-2 hover:bg-indigo-50 text-indigo-950 font-bold flex items-center gap-2.5 transition">
-        <i class="fa-solid fa-brain text-purple-600 text-[11px] w-4 text-center"></i>
-        <div>
-          <div>AI මනෝවිද්‍යාත්මක ක්‍රමය</div>
-          <div class="text-[10px] text-slate-400 font-normal">ක්ෂණිකව සකස් කිරීම</div>
-        </div>
-      </button>
-
-      <!-- Option 3: ස්මාර්ට් ශෆල් -->
-      <button type="button" 
-              onclick="document.getElementById('classAutoFillDropdown').classList.add('hidden'); triggerClassAutoFill('SHUFFLE');" 
-              class="w-full text-left px-3 py-2 hover:bg-slate-50 text-slate-700 font-bold flex items-center gap-2.5 transition">
-        <i class="fa-solid fa-shuffle text-slate-500 text-[11px] w-4 text-center"></i>
-        <div>
-          <div>ස්මාර්ට් ශෆල් (Shuffle)</div>
-          <div class="text-[10px] text-slate-400 font-normal">සසම්භාවී පිරවීම</div>
-        </div>
-      </button>
-    </div>
-  </div>
-
-<!-- 🔴 2. මුළු පාසලම Auto-Fill (Split Button with Dropdown) -->
-<div class="relative inline-flex items-center rounded-xl shadow-xs group">
-  
-  <!-- ප්‍රධාන බොත්තම: මුළු පාසල සඳහා සැකසුම් Modal එක විවෘත කිරීම -->
-  <button type="button" 
-          onclick="openAutoFillConfigModal(null)"
-          title="ගුරුවරුන්, Labs සහ සැකසුම් තෝරා මුළු පාසලේම සියලු පන්ති එකවර Auto-Fill කරන්න"
-          class="inline-flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white text-xs font-bold rounded-l-xl transition-all cursor-pointer">
-    <i class="fa-solid fa-school text-violet-200 text-xs"></i>
-    <span>මුළු පාසලම Auto-Fill</span>
-  </button>
-
-  <!-- Dropdown ඊතලය: ක්ෂණික ක්‍රම තේරීම සඳහා -->
-  <button type="button" 
-          onclick="event.stopPropagation(); document.getElementById('schoolAutoFillDropdown').classList.toggle('hidden');"
-          title="ක්ෂණික ක්‍රම තෝරන්න (Direct Whole-School Mode)"
-          class="inline-flex items-center px-2.5 py-2 bg-purple-800 hover:bg-purple-900 text-purple-100 hover:text-white text-xs font-bold rounded-r-xl border-l border-purple-500/60 transition-all cursor-pointer">
-    <i class="fa-solid fa-chevron-down text-[10px]"></i>
-  </button>
-
-  <!-- Dropdown Menu -->
-  <div id="schoolAutoFillDropdown" 
-       class="hidden absolute left-0 top-full mt-1.5 w-60 bg-white rounded-xl shadow-xl border border-slate-200 z-50 py-1.5 text-xs transition-all animate-in fade-in slide-in-from-top-1">
-    
-    <div class="px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 mb-1">
-      මුළු පාසලම පිරවීමේ ක්‍රමය
+      <!-- උපදෙස් සටහන (Right-aligned hint) -->
+      <span class="text-[11px] text-slate-400 hidden xl:inline-block">
+        💡 ඕනෑම කාලච්ඡේදයක් මත ක්ලික් කර විෂය වෙන් කිරීමට හෝ Re-shuffle කිරීමට හැක.
+      </span>
     </div>
 
-    <!-- Option 1: Modal සමඟ (ප්‍රමුඛතා ගුරුවරුන් & Labs තෝරා) -->
-    <button type="button" 
-            onclick="document.getElementById('schoolAutoFillDropdown').classList.add('hidden'); openAutoFillConfigModal(null);" 
-            class="w-full text-left px-3 py-2 hover:bg-violet-50 text-violet-950 font-bold flex items-center gap-2.5 transition">
-      <i class="fa-solid fa-sliders text-violet-600 text-[11px] w-4 text-center"></i>
-      <div>
-        <div>සැකසුම් සහිතව (Settings)</div>
-        <div class="text-[10px] text-slate-400 font-normal">ගුරුවරුන් & Labs තෝරා පිරවීම</div>
-      </div>
-    </button>
-
-    <!-- Option 2: AI මනෝවිද්‍යාත්මක ක්‍රමය (Direct) -->
-    <button type="button" 
-            onclick="document.getElementById('schoolAutoFillDropdown').classList.add('hidden'); triggerWholeSchoolAutoFill('PEDAGOGICAL');" 
-            class="w-full text-left px-3 py-2 hover:bg-violet-50 text-violet-950 font-bold flex items-center gap-2.5 transition">
-      <i class="fa-solid fa-brain text-purple-600 text-[11px] w-4 text-center"></i>
-      <div>
-        <div>AI මනෝවිද්‍යාත්මක ක්‍රමය</div>
-        <div class="text-[10px] text-slate-400 font-normal">ඉහළ සිට පහළට විධිමත් පිරවීම</div>
-      </div>
-    </button>
-
-    <!-- Option 3: ස්මාර්ට් ශෆල් (Direct) -->
-    <button type="button" 
-            onclick="document.getElementById('schoolAutoFillDropdown').classList.add('hidden'); triggerWholeSchoolAutoFill('SHUFFLE');" 
-            class="w-full text-left px-3 py-2 hover:bg-slate-50 text-slate-700 font-bold flex items-center gap-2.5 transition">
-      <i class="fa-solid fa-shuffle text-slate-500 text-[11px] w-4 text-center"></i>
-      <div>
-        <div>ස්මාර්ට් ශෆල් (Shuffle)</div>
-        <div class="text-[10px] text-slate-400 font-normal">වේගවත් සසම්භාවී පිරවීම</div>
-      </div>
-    </button>
-  </div>
-</div>
-</div>
-              <!-- lab බොත්තම් -->
-            <button type="button" 
-        onclick="switchMainTab('labTimetable')" 
-        id="btnTabLabTimetable"
-        class="tab-btn px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-2 transition text-slate-600 hover:bg-slate-100">
-  <i class="fa-solid fa-flask-vial text-emerald-600"></i>
-  <span>විද්‍යාගාර කාලසටහන</span>
-</button>
-            
-            <!-- Re-shuffle & Print බොත්තම් -->
-            <button type="button" onclick="openReshuffleModal()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow transition flex items-center gap-1.5">
-              <i class="fa-solid fa-shuffle"></i> Periods Re-shuffle
-            </button>
-            <button type="button" onclick="printClassTimetableSlip()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow transition flex items-center gap-1.5">
-              <i class="fa-solid fa-print"></i> පන්තිය Print
-            </button>
-
-
-
-            <!-- 1. පන්තිය Clear කිරීමේ බොත්තම -->
-  <button type="button" 
-          onclick="clearClassTimetable()"
-          title="⚠️ අවවාදයයි: තෝරාගත් පන්තියේ කාලසටහන ඉවත් කරයි.&#10;• Basket (කාණ්ඩ) විෂයන් ඉවත් කිරීමේදී ඊට සම්බන්ධ අනෙක් සියලුම පන්තිවලින්ද එකවර ඉවත් වේ.&#10;• Locked කාලච්ඡේද ඉවත් කරනවාද නැද්ද යන්න ඔබෙන් විමසනු ලැබේ."
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold transition shadow-2xs hover:shadow-xs cursor-pointer">
-    <i class="fa-solid fa-eraser text-[11px] text-amber-600"></i>
-    <span>පන්තිය Clear කරන්න</span>
-  </button>
-
-
-            <!-- කාලසටහන් පාලක පුවරුවට (Toolbar) එක් කළ හැකි බොත්තම -->
-<button type="button" 
-        onclick="autoResolveScheduleClashes()" 
-        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow transition transform active:scale-95 cursor-pointer"
-        title="ගුරු ගැටුම් ස්වයංක්‍රීයව නිරාකරණය කරන්න">
-  <i class="fa-solid fa-wand-magic-sparkles text-[11px]"></i>
-  <span>AI ගැටුම් නිරාකරණය</span>
-</button>
-            
-          </div>
-        </div>
-
-
-       
-
-
-<!-- සතිපතා විෂය සංචිතය සහ ඇද දැමිය හැකි පුවරුව (Draggable Subject Tray & Quotas) -->
-        <div class="my-4 p-4 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm no-print">
-          <div class="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-slate-200">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse"></span>
-              <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                විෂය සංචිතය සහ සතිපතා ප්‍රගතිය (Subject Quotas & Drag Tray)
-              </h3>
-            </div>
-            <span class="text-[11px] text-slate-500 font-medium">
-              💡 ඉතිරි කාලච්ඡේද ඇති විෂය කාඩ්පත <b>Mouse එකෙන් ඇදගෙන ගොස් (Drag)</b> කාලසටහනේ හිස් කොටුවකට දමන්න (Drop).
-            </span>
-           <div class="flex items-center justify-end gap-2 my-2 w-full">
-  <!-- Basket Setup Modal විවෘත කිරීමේ බොත්තම -->
-  <button type="button" 
-          onclick="openCombinedSubjectModal()" 
-          class="bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs py-2 px-3.5 rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer">
-    <i class="fa-solid fa-layer-group"></i> 
-    <span>කාණ්ඩ විෂයයන් / ඒකාබද්ධ පන්ති (Baskets)</span>
-  </button> 
-
-  <!-- 🔵 පන්තියට පමණක් විෂය ඒකාබද්ධය (නිල් පැහැති බොත්තම) -->
-  <button type="button" 
-          onclick="openClassSpecificCombinedModal()" 
-          class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
-          title="තෝරාගත් පන්තිය තුළ පමණක් විෂයන් ඒකාබද්ධ කරන්න (උදා: බුද්ධ / කතෝලික දහම)">
-    <i class="fa-solid fa-code-merge text-[11px]"></i> 
-    <span>පන්ති ඒකාබද්ධය (Class Specific)</span>
-  </button>
-</div>
-          </div>
-
-          <!-- විෂය කාඩ්පත් මෙතැනට Render වේ -->
-          <div id="classSubjectQuotaTray" class="flex flex-wrap gap-2.5 items-center min-h-[50px]">
-            <!-- Dynamic Draggable Subject Badges -->
-          </div>
-        </div>
+    <!-- ========================================================================= -->
+    <!-- 🔴 පේළිය 2: සියලුම පාලක බොත්තම් (Row 2: Unified Action Buttons Toolbar) -->
+    <!-- ========================================================================= -->
+    <div class="flex flex-wrap items-center justify-between gap-2 pt-2.5 pb-1 no-print">
+      
+      <!-- වම් පස කාණ්ඩය: Auto-Fill, AI සහ සංස්කරණ බොත්තම් -->
+      <div class="flex flex-wrap items-center gap-2">
         
-        
-        <!-- නව 5-Day Weekly Timetable Grid Table -->
-        <div class="overflow-x-auto mt-4 border border-slate-200 rounded-xl shadow-sm">
-          <table class="w-full text-xs text-center border-collapse bg-white" id="classTimetableGridTable">
-            <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-              <tr>
-                <th class="p-2.5 w-28 border-r border-slate-200 bg-slate-200/70 text-slate-800">දිනය</th>
-                <th class="p-2.5 min-w-[95px] border-r border-slate-200">1 වන වාරය</th>
-                <th class="p-2.5 min-w-[95px] border-r border-slate-200">2 වන වාරය</th>
-                <th class="p-2.5 min-w-[95px] border-r border-slate-200">3 වන වාරය</th>
-                <th class="p-2.5 min-w-[95px] border-r border-slate-200">4 වන වාරය</th>
-                <!-- විවේකය (Interval Column) -->
-                <th class="p-2.5 w-10 border-r border-slate-200 bg-amber-50 text-amber-800 font-extrabold select-none">විවේකය</th>
-                <th class="p-2.5 min-w-[95px] border-r border-slate-200">5 වන වාරය</th>
-                <th class="p-2.5 min-w-[95px] border-r border-slate-200">6 වන වාරය</th>
-                <th class="p-2.5 min-w-[95px] border-r border-slate-200">7 වන වාරය</th>
-                <th class="p-2.5 min-w-[95px]">8 වන වාරය</th>
-              </tr>
-            </thead>
-            <tbody id="classTimetableGridBody" class="divide-y divide-slate-200 font-medium">
-              <!-- සඳුදා සිට සිකුරාදා දක්වා දින 5 ම මෙතැනට Render වේ -->
-            </tbody>
-          </table>
+        <!-- 1. පන්තිය Auto-Fill Split Button -->
+        <div class="relative inline-flex items-center rounded-xl shadow-2xs group">
+          <button type="button" 
+                  onclick="openAutoFillConfigModal(document.getElementById('activeClassSelect')?.value || document.getElementById('classTimetableSelectClass')?.value)" 
+                  title="ගුරුවරුන්, Labs සහ සැකසුම් තෝරා මෙම පන්තිය Auto-Fill කරන්න"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-bold rounded-l-xl transition cursor-pointer">
+            <i class="fa-solid fa-wand-magic-sparkles text-indigo-200 text-[11px]"></i>
+            <span>පන්තිය Auto-Fill</span>
+          </button>
+          <button type="button" 
+                  onclick="event.stopPropagation(); document.getElementById('classAutoFillDropdown').classList.toggle('hidden');" 
+                  title="ක්ෂණික ක්‍රම තෝරන්න (Direct Mode)"
+                  class="inline-flex items-center px-2 py-1.5 bg-indigo-700 hover:bg-indigo-800 text-indigo-100 hover:text-white text-xs font-bold rounded-r-xl border-l border-indigo-500/60 transition cursor-pointer">
+            <i class="fa-solid fa-chevron-down text-[9px]"></i>
+          </button>
+
+          <!-- Dropdown Menu -->
+          <div id="classAutoFillDropdown" 
+               class="hidden absolute left-0 top-full mt-1.5 w-56 bg-white rounded-xl shadow-xl border border-slate-200 z-50 py-1.5 text-xs">
+            <div class="px-3 py-1 text-[10px] font-extrabold uppercase text-slate-400 border-b border-slate-100 mb-1">ක්‍රමය තෝරන්න (Direct Fill)</div>
+            <button type="button" onclick="document.getElementById('classAutoFillDropdown').classList.add('hidden'); openAutoFillConfigModal(document.getElementById('activeClassSelect')?.value);" class="w-full text-left px-3 py-1.5 hover:bg-indigo-50 text-indigo-950 font-bold flex items-center gap-2 transition">
+              <i class="fa-solid fa-sliders text-indigo-600 text-[11px] w-4 text-center"></i>
+              <div><div>සැකසුම් සහිතව</div><div class="text-[9px] text-slate-400 font-normal">ගුරුවරුන් & Labs තෝරා පිරවීම</div></div>
+            </button>
+            <button type="button" onclick="document.getElementById('classAutoFillDropdown').classList.add('hidden'); triggerClassAutoFill('PEDAGOGICAL');" class="w-full text-left px-3 py-1.5 hover:bg-indigo-50 text-indigo-950 font-bold flex items-center gap-2 transition">
+              <i class="fa-solid fa-brain text-purple-600 text-[11px] w-4 text-center"></i>
+              <div><div>AI මනෝවිද්‍යාත්මක ක්‍රමය</div><div class="text-[9px] text-slate-400 font-normal">ක්ෂණිකව සකස් කිරීම</div></div>
+            </button>
+            <button type="button" onclick="document.getElementById('classAutoFillDropdown').classList.add('hidden'); triggerClassAutoFill('SHUFFLE');" class="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-700 font-bold flex items-center gap-2 transition">
+              <i class="fa-solid fa-shuffle text-slate-500 text-[11px] w-4 text-center"></i>
+              <div><div>ස්මාර්ට් ශෆල් (Shuffle)</div><div class="text-[9px] text-slate-400 font-normal">සසම්භාවී පිරවීම</div></div>
+            </button>
+          </div>
         </div>
 
+        <!-- 2. මුළු පාසලම Auto-Fill Split Button -->
+        <div class="relative inline-flex items-center rounded-xl shadow-2xs group">
+          <button type="button" 
+                  onclick="openAutoFillConfigModal(null)" 
+                  title="මුළු පාසලේම සියලු පන්ති එකවර Auto-Fill කරන්න"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white text-xs font-bold rounded-l-xl transition cursor-pointer">
+            <i class="fa-solid fa-school text-violet-200 text-[11px]"></i>
+            <span>මුළු පාසලම Auto-Fill</span>
+          </button>
+          <button type="button" 
+                  onclick="event.stopPropagation(); document.getElementById('schoolAutoFillDropdown').classList.toggle('hidden');" 
+                  title="ක්ෂණික ක්‍රම තෝරන්න"
+                  class="inline-flex items-center px-2 py-1.5 bg-purple-800 hover:bg-purple-900 text-purple-100 hover:text-white text-xs font-bold rounded-r-xl border-l border-purple-500/60 transition cursor-pointer">
+            <i class="fa-solid fa-chevron-down text-[9px]"></i>
+          </button>
+
+          <!-- Dropdown Menu -->
+          <div id="schoolAutoFillDropdown" 
+               class="hidden absolute left-0 top-full mt-1.5 w-56 bg-white rounded-xl shadow-xl border border-slate-200 z-50 py-1.5 text-xs">
+            <div class="px-3 py-1 text-[10px] font-extrabold uppercase text-slate-400 border-b border-slate-100 mb-1">මුළු පාසලම පිරවීමේ ක්‍රමය</div>
+            <button type="button" onclick="document.getElementById('schoolAutoFillDropdown').classList.add('hidden'); openAutoFillConfigModal(null);" class="w-full text-left px-3 py-1.5 hover:bg-violet-50 text-violet-950 font-bold flex items-center gap-2 transition">
+              <i class="fa-solid fa-sliders text-violet-600 text-[11px] w-4 text-center"></i>
+              <div><div>සැකසුම් සහිතව</div><div class="text-[9px] text-slate-400 font-normal">ගුරුවරුන් & Labs තෝරා පිරවීම</div></div>
+            </button>
+            <button type="button" onclick="document.getElementById('schoolAutoFillDropdown').classList.add('hidden'); triggerWholeSchoolAutoFill('PEDAGOGICAL');" class="w-full text-left px-3 py-1.5 hover:bg-violet-50 text-violet-950 font-bold flex items-center gap-2 transition">
+              <i class="fa-solid fa-brain text-purple-600 text-[11px] w-4 text-center"></i>
+              <div><div>AI මනෝවිද්‍යාත්මක ක්‍රමය</div><div class="text-[9px] text-slate-400 font-normal">ඉහළ සිට පහළට පිරවීම</div></div>
+            </button>
+            <button type="button" onclick="document.getElementById('schoolAutoFillDropdown').classList.add('hidden'); triggerWholeSchoolAutoFill('SHUFFLE');" class="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-700 font-bold flex items-center gap-2 transition">
+              <i class="fa-solid fa-shuffle text-slate-500 text-[11px] w-4 text-center"></i>
+              <div><div>ස්මාර්ට් ශෆල් (Shuffle)</div><div class="text-[9px] text-slate-400 font-normal">වේගවත් සසම්භාවී පිරවීම</div></div>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. AI ගැටුම් නිරාකරණය -->
+        <button type="button" 
+                onclick="autoResolveScheduleClashes()" 
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-2xs transition active:scale-95 cursor-pointer"
+                title="ගුරු ගැටුම් ස්වයංක්‍රීයව නිරාකරණය කරන්න">
+          <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
+          <span>AI ගැටුම් නිරාකරණය</span>
+        </button>
+
+        <!-- 4. Periods Re-shuffle -->
+        <button type="button" 
+                onclick="openReshuffleModal()" 
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-2xs transition cursor-pointer">
+          <i class="fa-solid fa-shuffle text-[10px]"></i>
+          <span>Re-shuffle</span>
+        </button>
+      </div>
+
+      <!-- දකුණු පස කාණ්ඩය: විද්‍යාගාර, මුද්‍රණය සහ Clear -->
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- 5. විද්‍යාගාර බොත්තම -->
+        <button type="button" 
+                onclick="switchMainTab('labTimetable')" 
+                id="btnTabLabTimetable"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold rounded-xl transition shadow-2xs cursor-pointer">
+          <i class="fa-solid fa-flask-vial text-emerald-600 text-[11px]"></i>
+          <span>විද්‍යාගාර</span>
+        </button>
+
+        <!-- 6. Print -->
+        <button type="button" 
+                onclick="printClassTimetableSlip()" 
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-2xs transition cursor-pointer">
+          <i class="fa-solid fa-print text-[11px]"></i>
+          <span>Print</span>
+        </button>
+
+        <!-- 7. පන්තිය Clear කරන්න -->
+        <button type="button" 
+                onclick="clearClassTimetable()"
+                title="තෝරාගත් පන්තියේ කාලසටහන ඉවත් කරයි"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition shadow-2xs cursor-pointer">
+          <i class="fa-solid fa-eraser text-[11px] text-rose-600"></i>
+          <span>Clear</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 🔴 විෂය සංචිතය සහ ප්‍රගති තීරුව (Compact Drag Tray & Subject Quotas) -->
+    <!-- ========================================================================= -->
+    <div class="my-3 p-3 bg-slate-50 rounded-xl border border-slate-200 shadow-2xs no-print">
+      
+      <!-- Compact Header with Inline Basket Buttons -->
+      <div class="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-200/80">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-indigo-600 animate-pulse"></span>
+          <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">
+            විෂය සංචිතය (Drag Tray & Quotas)
+          </h3>
+          <span class="text-[10px] text-slate-400 hidden md:inline-block">
+            (Mouse එකෙන් ඇදගෙන හිස් කොටුවකට Drop කරන්න)
+          </span>
+        </div>
+
+        <!-- Basket Actions (Compact & Inline) -->
+        <div class="flex items-center gap-1.5">
+          <button type="button" 
+                  onclick="openCombinedSubjectModal()" 
+                  class="px-2.5 py-1 bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer">
+            <i class="fa-solid fa-layer-group text-[10px]"></i> 
+            <span>කාණ්ඩ විෂයයන් (Baskets)</span>
+          </button> 
+
+          <button type="button" 
+                  onclick="openClassSpecificCombinedModal()" 
+                  class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                  title="තෝරාගත් පන්තිය තුළ පමණක් විෂයන් ඒකාබද්ධ කරන්න">
+            <i class="fa-solid fa-code-merge text-[10px]"></i> 
+            <span>පන්ති ඒකාබද්ධය</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- විෂය කාඩ්පත් රඳවන තැටිය (Reduced Height & Compact Padding) -->
+      <div id="classSubjectQuotaTray" class="flex flex-wrap gap-1.5 items-center min-h-[36px]">
+        <!-- Dynamic Draggable Subject Badges -->
       </div>
     </div>
+
+    <!-- ========================================================================= -->
+    <!-- 🔴 5-Day Weekly Timetable Grid Table -->
+    <!-- ========================================================================= -->
+    <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-xs">
+      <table class="w-full text-xs text-center border-collapse bg-white" id="classTimetableGridTable">
+        <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+          <tr>
+            <th class="p-2.5 w-28 border-r border-slate-200 bg-slate-200/70 text-slate-800">දිනය</th>
+            <th class="p-2.5 min-w-[95px] border-r border-slate-200">1 වන වාරය</th>
+            <th class="p-2.5 min-w-[95px] border-r border-slate-200">2 වන වාරය</th>
+            <th class="p-2.5 min-w-[95px] border-r border-slate-200">3 වන වාරය</th>
+            <th class="p-2.5 min-w-[95px] border-r border-slate-200">4 වන වාරය</th>
+            <th class="p-2.5 w-10 border-r border-slate-200 bg-amber-50 text-amber-800 font-extrabold select-none">විවේකය</th>
+            <th class="p-2.5 min-w-[95px] border-r border-slate-200">5 වන වාරය</th>
+            <th class="p-2.5 min-w-[95px] border-r border-slate-200">6 වන වාරය</th>
+            <th class="p-2.5 min-w-[95px] border-r border-slate-200">7 වන වාරය</th>
+            <th class="p-2.5 min-w-[95px]">8 වන වාරය</th>
+          </tr>
+        </thead>
+        <tbody id="classTimetableGridBody" class="divide-y divide-slate-200 font-medium">
+          <!-- සඳුදා සිට සිකුරාදා දක්වා දින 5 ම මෙතැනට Render වේ -->
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
     
     <!-- TAB 3: GRADE MASTER -->
 
