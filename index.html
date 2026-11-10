@@ -16970,6 +16970,22 @@ function initAndLoadReliefState() {
  * 2. දත්ත වෙනස් වූ සෑම මොහොතකම LocalStorage වෙත ස්ථිරව සුරැකීම
  */
 
+    // =========================================================================
+// 🛡️ FIREBASE APP එකක් ඇත්තටම සක්‍රියව තිබේදැයි පරීක්ෂා කරන ශ්‍රිතය
+// =========================================================================
+function hasActiveFirebaseApp() {
+  try {
+    return (
+      typeof firebase !== 'undefined' &&
+      firebase.apps &&
+      firebase.apps.length > 0 &&
+      typeof firebase.database === 'function'
+    );
+  } catch (e) {
+    return false;
+  }
+}
+
     // Local Fallback ශ්‍රිතය
 function loadFromLocalFallback(todayStr) {
   try {
@@ -17007,18 +17023,13 @@ initAndLoadReliefState();
 /**
  * 1. දත්ත සුරැකීම (LocalStorage සහ Firebase Cloud දෙකටම)
  */
+// =========================================================================
+// 💾 CRASH-PROOF RELIEF STORAGE ENGINE (SAFE UPDATE)
+// =========================================================================
 function saveReliefStateToStorage() {
   const todayStr = getTodayDateString();
 
-  const payload = {
-    date: todayStr,
-    dailyContext: window.dailyReliefContext,
-    longTermAbsences: window.longTermAbsences || [],
-    dailyAssignments: window.dailyReliefAssignments || [],
-    lastUpdated: new Date().toISOString()
-  };
-
-  // A. LocalStorage වෙත ස්ථිරව සුරැකීම (Offline ආරක්ෂාව සඳහා)
+  // 1. LocalStorage වෙත සුරැකීම (Refresh කළද දත්ත ආරක්ෂා වේ)
   try {
     localStorage.setItem("school_relief_long_term", JSON.stringify(window.longTermAbsences || []));
     localStorage.setItem("school_relief_daily_context", JSON.stringify(window.dailyReliefContext));
@@ -17027,21 +17038,35 @@ function saveReliefStateToStorage() {
     console.error("Local storage save error:", err);
   }
 
-  // B. Firebase Realtime Database වෙත Cloud Sync කිරීම
-  if (typeof firebase !== 'undefined' && firebase.database) {
-    // 1. දීර්ඝකාලීන නිවාඩු Cloud එකට සුරැකීම
-    firebase.database().ref('relief/longTermAbsences').set(window.longTermAbsences || []);
+  // 2. Firebase App එකක් සැබවින්ම Initialize වී ඇත්නම් පමණක් Cloud Sync කිරීම
+  const isFirebaseActive = (
+    typeof firebase !== 'undefined' && 
+    Array.isArray(firebase.apps) && 
+    firebase.apps.length > 0 && 
+    typeof firebase.database === 'function'
+  );
 
-    // 2. අද දිනට අදාළ දෛනික සටහන් අදාළ දිනය යටතේ සුරැකීම
-    firebase.database().ref(`relief/dailyRecords/${todayStr}`).set({
-      dailyContext: window.dailyReliefContext,
-      dailyAssignments: window.dailyReliefAssignments || [],
-      lastUpdated: new Date().toLocaleTimeString()
-    }).then(() => {
-      console.log("☁️ Firebase වෙත සාර්ථකව Sync විය!");
-    }).catch(err => {
-      console.warn("Firebase Sync ප්‍රමාදයක් (Offline විය හැක):", err);
-    });
+  if (isFirebaseActive) {
+    try {
+      const db = firebase.database();
+
+      // දීර්ඝකාලීන නිවාඩු Cloud එකට සුරැකීම
+      db.ref('relief/longTermAbsences').set(window.longTermAbsences || []);
+
+      // දෛනික සටහන් Cloud එකට සුරැකීම
+      db.ref(`relief/dailyRecords/${todayStr}`).set({
+        dailyContext: window.dailyReliefContext,
+        dailyAssignments: window.dailyReliefAssignments || [],
+        lastUpdated: new Date().toLocaleTimeString()
+      }).then(() => {
+        console.log("☁️ Firebase වෙත සාර්ථකව Sync විය!");
+      }).catch(err => {
+        console.warn("Firebase Sync Offline:", err.message);
+      });
+
+    } catch (fbErr) {
+      console.warn("Firebase database access skipped:", fbErr.message);
+    }
   }
 }
 
