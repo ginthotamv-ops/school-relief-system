@@ -1336,6 +1336,71 @@
   </div>
 </div>
 
+
+<!-- 🔴 පන්තියේ කාලසටහන Clear කිරීමේ තහවුරු කිරීමේ සංවාද කොටුව (Custom Modal) -->
+<div id="clearClassConfirmModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+  <div class="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 transform transition-all scale-100">
+    
+    <!-- Header with Warning Icon -->
+    <div class="flex items-start gap-3.5 mb-4">
+      <div class="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-triangle-exclamation text-rose-600 text-lg"></i>
+      </div>
+      <div>
+        <h3 class="text-sm font-bold text-slate-900">පන්තියේ කාලසටහන Clear කිරීම</h3>
+        <p class="text-xs text-slate-500 mt-0.5" id="clearModalClassInfo">තෝරාගත් පන්තියේ දත්ත ඉවත් කිරීමට පෙර තහවුරු කරන්න.</p>
+      </div>
+    </div>
+
+    <!-- Warning Details Card -->
+    <div class="bg-rose-50/70 border border-rose-200/80 rounded-xl p-3 mb-4 space-y-1.5 text-xs text-rose-950 font-medium">
+      <div class="flex items-center gap-2 font-bold text-rose-900">
+        <i class="fa-solid fa-circle-exclamation text-[11px] text-rose-600"></i>
+        <span>අවධානය පිණිසයි:</span>
+      </div>
+      <ul class="list-disc list-inside space-y-1 text-[11px] text-slate-700 ml-1">
+        <li>මෙම පන්තියේ වෙන් කර ඇති සාමාන්‍ය කාලච්ඡේද සියල්ල ඉවත් වේ.</li>
+        <li>Basket (කාණ්ඩ) විෂයයන් පවතී නම්, ඊට සම්බන්ධ <b>අනෙක් පන්තිවලින්ද</b> එම Basket කොටස් එකවර ඉවත් වේ.</li>
+      </ul>
+      <div id="clearModalSlotStats" class="text-[11px] font-bold text-slate-800 pt-1 border-t border-rose-200/60">
+        <!-- කාලච්ඡේද ගණන මෙතැනට පිරවේ -->
+      </div>
+    </div>
+
+    <!-- Checkbox Option (Default: Locked Slots Can't be Deleted) -->
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-5 hover:bg-slate-100/70 transition">
+      <label class="flex items-start gap-2.5 cursor-pointer select-none">
+        <input type="checkbox" 
+               id="chkDeleteLockedSlots" 
+               class="mt-0.5 w-4 h-4 text-rose-600 rounded-md border-slate-300 focus:ring-rose-500 cursor-pointer">
+        <div>
+          <span class="text-xs font-bold text-slate-800 block">අගුළු ලූ (Locked) කාලච්ඡේද ද මකා දමන්න</span>
+          <span class="text-[10px] text-slate-500 block leading-tight mt-0.5">
+            (Tick එක නොදැමුවහොත් Locked කාලච්ඡේද සුරක්ෂිතව තබා ඉතිරි ඒවා පමණක් ඉවත් කරනු ලැබේ)
+          </span>
+        </div>
+      </label>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex items-center justify-end gap-2.5">
+      <button type="button" 
+              onclick="closeClearClassModal()" 
+              class="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition cursor-pointer">
+        අවලංගු කරන්න
+      </button>
+
+      <button type="button" 
+              onclick="executeClearClassTimetable()" 
+              class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+        <i class="fa-solid fa-trash-can text-[11px]"></i>
+        <span>ඔව්, ඉවත් කරන්න</span>
+      </button>
+    </div>
+
+  </div>
+</div>
+
   
 <!-- ==================== PRINT CONTAINERS ==================== -->
   <div id="printableClassArea" class="hidden p-4 bg-white">
@@ -4028,13 +4093,19 @@ window.renderIndividualTeacherSchedule = renderIndividualTeacherSchedule;
 
     // 1. තෝරාගත් පන්තියේ කාලසටහන පමණක් ඉවත් කිරීම
 
-// 🔴 තෝරාගත් පන්තියේ කාලසටහන ඉවත් කිරීමේ (Clear) ස්මාර්ට් ශ්‍රිතය
+// =========================================================================
+// 🗑️ SMART CLEAR CLASS TIMETABLE CONTROLLER (WITH CUSTOM MODAL & LOCKED CHECK)
+// =========================================================================
+
+// ගෝලීයව තාවකාලික තොරතුරු රඳවා ගැනීමට
+let pendingClearClassData = null;
+
 function clearClassTimetable(classId) {
   const select = document.getElementById("activeClassSelect") || document.getElementById("classTimetableSelectClass");
   const targetClassId = classId || (select ? select.value : null);
 
   if (!targetClassId) {
-    alert("කරුණාකර පන්තියක් තෝරන්න.");
+    alert("කරුණාකර පළමුව පන්තියක් තෝරන්න.");
     return;
   }
 
@@ -4050,7 +4121,7 @@ function clearClassTimetable(classId) {
 
   const className = cls ? cls.name : targetClassId;
 
-  // මෙම පන්තියට අයත් Slots වෙන් කරගැනීම
+  // මෙම පන්තියට අයත් Slots සොයා ගැනීම
   const classSlots = scheduleList.filter(s => 
     String(s.classId).trim().toLowerCase() === cleanCid || 
     (cls && String(s.classId).trim().toLowerCase() === String(cls.name).trim().toLowerCase())
@@ -4061,26 +4132,66 @@ function clearClassTimetable(classId) {
     return;
   }
 
-  // 1. මූලික තහවුරු කරගැනීම
-  const confirmClear = confirm(`⚠️ අවවාදයයි: [${className}] පන්තියේ කාලසටහන සම්පූර්ණයෙන්ම ඉවත් (Clear) කිරීමට ඔබට අවශ්‍ය බව තහවුරු කරන්නද?`);
-  if (!confirmClear) return;
+  const totalCount = classSlots.length;
+  const lockedCount = classSlots.filter(s => Boolean(s.isLocked)).length;
 
-  // 2. Locked කාලච්ඡේද තිබේදැයි පරීක්ෂාව සහ තීරණය ලබාගැනීම
-  const hasLocked = classSlots.some(s => Boolean(s.isLocked));
-  let deleteLocked = false;
+  // Modal එක සඳහා තොරතුරු සැකසීම
+  pendingClearClassData = {
+    cleanCid,
+    className,
+    cls,
+    targetClassId,
+    classSlots
+  };
 
-  if (hasLocked) {
-    deleteLocked = confirm(
-      `🔒 මෙම පන්තිය තුළ අගුළු ලා ඇති (Locked) කාලච්ඡේද පවතී!\n\n` +
-      `• [OK] ඔබන්න: අගුළු ලූ (Locked) කාලච්ඡේද ද ඇතුළුව සියල්ල මකා දැමීමට.\n` +
-      `• [Cancel] ඔබන්න: අගුළු ලූ කාලච්ඡේද ආරක්ෂා කර (Keep Locked) ඉතිරි ඒවා පමණක් මකා දැමීමට.`
-    );
+  // Modal එකේ අගයන් යාවත්කාලීන කිරීම
+  const classInfoEl = document.getElementById("clearModalClassInfo");
+  const statsEl = document.getElementById("clearModalSlotStats");
+  const chkLocked = document.getElementById("chkDeleteLockedSlots");
+
+  if (classInfoEl) {
+    classInfoEl.innerHTML = `<span class="font-bold text-indigo-700">[${className}]</span> පන්තියේ කාලසටහන ඉවත් කිරීමට සූදානම් වේ.`;
   }
 
-  // 3. මෙම පන්තියෙන් ඉවත් වීමට නියමිත Basket / Combined විෂයයන් හඳුනාගැනීම
+  if (statsEl) {
+    statsEl.innerHTML = `හමු වූ කාලච්ඡේද: <b>${totalCount}</b> කි. (අගුළු ලූ කාලච්ඡේද: <span class="text-rose-600 font-extrabold">${lockedCount}</span>)`;
+  }
+
+  // 🔴 DEFAULT RULE: අගුළු ලූ විෂයන් මැකීමට ඉඩ නොදීම (Checkbox Unchecked)
+  if (chkLocked) {
+    chkLocked.checked = false;
+  }
+
+  // Modal එක විවෘත කිරීම
+  const modal = document.getElementById("clearClassConfirmModal");
+  if (modal) {
+    modal.classList.remove("hidden");
+  }
+}
+
+function closeClearClassModal() {
+  const modal = document.getElementById("clearClassConfirmModal");
+  if (modal) {
+    modal.classList.add("hidden");
+  }
+  pendingClearClassData = null;
+}
+
+// තහවුරු කළ පසු කාලසටහන ඉවත් කිරීම සැබෑවටම ක්‍රියාත්මක වීම
+function executeClearClassTimetable() {
+  if (!pendingClearClassData) return;
+
+  const { cleanCid, className, cls, targetClassId, classSlots } = pendingClearClassData;
+  const chkLocked = document.getElementById("chkDeleteLockedSlots");
+  const deleteLocked = chkLocked ? chkLocked.checked : false;
+
+  let scheduleList = (typeof masterSchedule !== "undefined" && Array.isArray(masterSchedule)) 
+    ? masterSchedule 
+    : (window.masterSchedule || []);
+
+  // 1. මෙම පන්තියෙන් ඉවත් වීමට නියමිත Basket / Combined විෂයයන් හඳුනාගැනීම
   const basketSignaturesToRemove = [];
   classSlots.forEach(s => {
-    // Locked ඒවා මකන්නේ නැතිනම් සහ මේ slot එක locked නම් මඟහරින්න
     if (s.isLocked && !deleteLocked) return;
 
     if (s.isCombined || s.isBasket || s.combinedSubjectId) {
@@ -4093,7 +4204,7 @@ function clearClassTimetable(classId) {
     }
   });
 
-  // 4. Master Schedule එක Filter කිරීම
+  // 2. Master Schedule එක Filter කර ඉවත් කිරීම
   scheduleList = scheduleList.filter(s => {
     const isThisClass = String(s.classId).trim().toLowerCase() === cleanCid || 
       (cls && String(s.classId).trim().toLowerCase() === String(cls.name).trim().toLowerCase());
@@ -4101,7 +4212,7 @@ function clearClassTimetable(classId) {
     // A. මෙම පන්තියේ Slots සඳහා:
     if (isThisClass) {
       if (s.isLocked && !deleteLocked) {
-        return true; // Locked ඒවා රඳවා ගනී
+        return true; // Locked ඒවා ආරක්ෂා කරයි
       }
       return false; // ඉවත් කරයි
     }
@@ -4124,27 +4235,36 @@ function clearClassTimetable(classId) {
       });
 
       if (matchesRemovedBasket) {
-        // අදාළ අනෙක් පන්තියේ Slot එක Locked නම් සහ deleteLocked = false නම් ආරක්ෂා කරයි
         if (s.isLocked && !deleteLocked) {
-          return true;
+          return true; // අනෙක් පන්තියේ Locked ඒවා ආරක්ෂා කරයි
         }
         return false; // අනෙක් පන්තියේ Basket slot එකද ඉවත් කරයි
       }
     }
 
-    return true; // අනෙක් සියලුම විෂයන් සුරක්ෂිතව පවතී
+    return true;
   });
 
-  // 5. මතකය සහ Storage යාවත්කාලීන කිරීම
+  // 3. මතකය සහ Storage යාවත්කාලීන කිරීම
   if (typeof masterSchedule !== "undefined") masterSchedule = scheduleList;
   window.masterSchedule = scheduleList;
 
   if (typeof saveAllToStorage === "function") saveAllToStorage();
+  if (typeof syncToFirebase === "function") syncToFirebase();
+
+  // Grids යාවත්කාලීන කිරීම
   if (typeof renderClassTimetableGrid === "function") renderClassTimetableGrid();
+  if (typeof renderGradeTimetableGrid === "function") renderGradeTimetableGrid();
+  if (typeof renderLabTimetableGrid === "function") renderLabTimetableGrid();
   if (typeof renderSubjectQuotaTray === "function") renderSubjectQuotaTray(targetClassId);
+
+  // Modal එක වැසීම
+  closeClearClassModal();
 }
 
 window.clearClassTimetable = clearClassTimetable;
+window.closeClearClassModal = closeClearClassModal;
+window.executeClearClassTimetable = executeClearClassTimetable;
     
 //
 
