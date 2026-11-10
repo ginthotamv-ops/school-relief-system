@@ -16344,6 +16344,46 @@ function openManualReliefOverrideModal(type, index) {
   alert(`සාර්ථකයි! [${tObj.name}] ගුරුතුමාට අතින් ආදේශනය පවරන ලදී.`);
 }
 
+    
+  // =========================================================================
+// 📅 අතීත දින තේරීම අවහිර කිරීම (LOCK PAST DATES)
+// =========================================================================
+function setupLeaveDateConstraints() {
+  // ශ්‍රී ලංකා වේලාවට ගැළපෙන පරිදි අද දිනය (YYYY-MM-DD) ලබා ගැනීම
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${year}-${month}-${day}`;
+
+  const startInput = document.getElementById("longTermStartDate");
+  const endInput = document.getElementById("longTermEndDate");
+
+  if (startInput) {
+    // ආරම්භක දිනය ලෙස අදට පෙර දින තේරීම වළකයි
+    startInput.min = todayStr;
+
+    // ආරම්භක දිනයක් තෝරාගත් විට, අවසාන දිනයේ අවම අගය එයට ගැළපෙන සේ සකසයි
+    startInput.addEventListener("change", function () {
+      if (endInput) {
+        endInput.min = this.value || todayStr;
+        if (endInput.value && endInput.value < this.value) {
+          endInput.value = this.value;
+        }
+      }
+    });
+  }
+
+  if (endInput) {
+    // අවසාන දිනයද අදට පෙර දිනයක් විය නොහැක
+    endInput.min = todayStr;
+  }
+}
+
+// පිටුව Load වන විට ක්‍රියාත්මක කිරීම
+document.addEventListener("DOMContentLoaded", setupLeaveDateConstraints);  
+
+    
 // -------------------------------------------------------------------------
 // 🔴 පැමිණීම් BADGES සහ ලැයිස්තුව යාවත්කාලීන කිරීම
 // -------------------------------------------------------------------------
@@ -16652,27 +16692,59 @@ function closeLongTermLeaveModal() {
 /**
  * දීර්ඝකාලීන නිවාඩු එකතු කිරීම
  */
-function addLongTermLeaveEntry() {
+
+ function addLongTermLeaveEntry() {
   const tid = document.getElementById("longTermTeacherSelect")?.value;
   const start = document.getElementById("longTermStartDate")?.value;
   const end = document.getElementById("longTermEndDate")?.value;
   const reason = document.getElementById("longTermReason")?.value || "දීර්ඝකාලීන නිවාඩු";
 
+  // අද දිනය ලබා ගැනීම
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // 1. හිස්ව ඇත්දැයි බැලීම
   if (!tid || !start || !end) {
-    alert("කරුණාකර ගුරුවරයා, ආරම්භක දිනය සහ අවසාන දිනය ඇතුළත් කරන්න.");
+    alert("⚠️ කරුණාකර ගුරුවරයා, ආරම්භක දිනය සහ අවසාන දිනය ඇතුළත් කරන්න.");
     return;
   }
 
-  window.longTermAbsences.push({ teacherId: tid, startDate: start, endDate: end, reason });
+  // 2. අතීත දිනයක්දැයි බැලීම (Past Date Check)
+  if (start < todayStr) {
+    alert("⚠️ අතීත දිනයන් සඳහා නිවාඩු ඇතුළත් කළ නොහැක. කරුණාකර අද හෝ අනාගත දිනයක් තෝරන්න.");
+    return;
+  }
 
-  // Dropdown යාවත්කාලීන කිරීම (තෝරාගත් අය ඉවත් වේ)
-  populateTeacherSelects();
-  renderLongTermEntriesList();
-  updateLiveAttendanceBadges();
+  // 3. අවසාන දිනය ආරම්භක දිනයට පෙරදැයි බැලීම (Range Check)
+  if (end < start) {
+    alert("⚠️ අවසාන දිනය ආරම්භක දිනයට පසුව හෝ එදිනම විය යුතුය.");
+    return;
+  }
 
-  // Reset Form
+  // දත්ත ලැයිස්තුවට එක් කිරීම
+  window.longTermAbsences = window.longTermAbsences || [];
+  window.longTermAbsences.push({
+    teacherId: tid,
+    startDate: start,
+    endDate: end,
+    reason: reason
+  });
+
+  // UI යාවත්කාලීන කිරීම
+  if (typeof populateTeacherSelects === 'function') populateTeacherSelects();
+  if (typeof renderLongTermEntriesList === 'function') renderLongTermEntriesList();
+  if (typeof updateLiveAttendanceBadges === 'function') updateLiveAttendanceBadges();
+
+  // Inputs Reset කිරීම
   document.getElementById("longTermTeacherSelect").value = "";
+  document.getElementById("longTermStartDate").value = "";
+  document.getElementById("longTermEndDate").value = "";
   document.getElementById("longTermReason").value = "";
+  
+  // Date Limits යළි සැකසීම
+  setupLeaveDateConstraints();
+
+  alert("✅ දීර්ඝකාලීන නිවාඩු සටහන සාර්ථකව ඇතුළත් කරන ලදී.");
 }
     
 /**
