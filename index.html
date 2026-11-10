@@ -16512,13 +16512,14 @@ function updatePeriodButtonStyles() {
 /**
  * දෛනික පැමිණීම්/නිවාඩු ලැයිස්තුවට එක් කිරීම
  */
+// A. දෛනික පැමිණීම් ඇතුළත් කිරීමේදී
 function submitAttendanceEntry() {
   const selectEl = document.getElementById("modalTeacherSelect");
   const tid = selectEl ? selectEl.value : null;
   const reason = document.getElementById("modalAbsenceReason")?.value || "";
   
   if (!tid) {
-    alert("කරුණාකර ලැයිස්තුවෙන් ගුරුවරයෙකු තෝරන්න.");
+    alert("කරුණාකර ගුරුවරයෙකු තෝරන්න.");
     return;
   }
 
@@ -16527,35 +16528,20 @@ function submitAttendanceEntry() {
   if (currentAttendanceTab === "FULL") {
     if (!ctx.fullDayAbsent.includes(tid)) ctx.fullDayAbsent.push(tid);
   } else if (currentAttendanceTab === "SHORT") {
-    if (selectedShortPeriods.size === 0) { 
-      alert("කරුණාකර අදාළ කාලච්ඡේද තෝරන්න."); 
-      return; 
-    }
-    ctx.partialAbsent.push({ 
-      teacherId: tid, 
-      absentPeriods: Array.from(selectedShortPeriods), 
-      reason: reason || "කෙටි නිවාඩු" 
-    });
+    if (selectedShortPeriods.size === 0) { alert("කාලච්ඡේද තෝරන්න."); return; }
+    ctx.partialAbsent.push({ teacherId: tid, absentPeriods: Array.from(selectedShortPeriods), reason: reason || "කෙටි නිවාඩු" });
   } else if (currentAttendanceTab === "DUTY") {
-    if (selectedShortPeriods.size === 0) { 
-      alert("කරුණාකර අදාළ කාලච්ඡේද තෝරන්න."); 
-      return; 
-    }
-    ctx.specialDuty.push({ 
-      teacherId: tid, 
-      dutyPeriods: Array.from(selectedShortPeriods), 
-      dutyName: reason || "විශේෂ රාජකාරි" 
-    });
+    if (selectedShortPeriods.size === 0) { alert("කාලච්ඡේද තෝරන්න."); return; }
+    ctx.specialDuty.push({ teacherId: tid, dutyPeriods: Array.from(selectedShortPeriods), dutyName: reason || "විශේෂ රාජකාරි" });
   }
 
-  // 1. තෝරාගත් ගුරුවරයා Dropdown එකෙන් ස්වයංක්‍රීයව ඉවත් කිරීම
-  populateTeacherSelects();
+  // 💾 ස්ථිරවම Browser එකේ සුරැකීම (Refresh කළද නොමැකේ)
+  saveReliefStateToStorage();
 
-  // 2. Entries ලැයිස්තුව සහ Badges යාවත්කාලීන කිරීම
+  populateTeacherSelects();
   renderAttendanceEntriesList();
   updateLiveAttendanceBadges();
 
-  // 3. Inputs Reset කිරීම
   if (selectEl) selectEl.value = "";
   document.getElementById("modalAbsenceReason").value = "";
   selectedShortPeriods.clear();
@@ -16571,23 +16557,22 @@ function submitAttendanceEntry() {
  * ඇතුළත් කළ ලැයිස්තුවෙන් ඉවත් කිරීමේ ශ්‍රිත (REMOVAL HANDLERS)
  * මෙහිදී ඉවත් කළ සැනින් ගුරුවරයා නැවත Dropdown එකට එකතු වේ
  */
+
+// B. දෛනික පැමිණීම් ලැයිස්තුවෙන් ඉවත් කිරීමේදී
 function removeAttendanceItem(type, index) {
   const ctx = window.dailyReliefContext;
 
-  if (type === 'FULL') {
-    ctx.fullDayAbsent.splice(index, 1);
-  } else if (type === 'SHORT') {
-    ctx.partialAbsent.splice(index, 1);
-  } else if (type === 'DUTY') {
-    ctx.specialDuty.splice(index, 1);
-  }
+  if (type === 'FULL') ctx.fullDayAbsent.splice(index, 1);
+  else if (type === 'SHORT') ctx.partialAbsent.splice(index, 1);
+  else if (type === 'DUTY') ctx.specialDuty.splice(index, 1);
 
-  // ගුරුවරයා නැවත Dropdown එකට පෙන්වීම
+  // 💾 වෙනස්කම LocalStorage එකට Save කිරීම
+  saveReliefStateToStorage();
+
   populateTeacherSelects();
   renderAttendanceEntriesList();
   updateLiveAttendanceBadges();
 }
-
 /**
  * Attendance Entries ලැයිස්තුව UI එකේ ඇඳීම
  */
@@ -16693,58 +16678,87 @@ function closeLongTermLeaveModal() {
  * දීර්ඝකාලීන නිවාඩු එකතු කිරීම
  */
 
- function addLongTermLeaveEntry() {
-  const tid = document.getElementById("longTermTeacherSelect")?.value;
-  const start = document.getElementById("longTermStartDate")?.value;
-  const end = document.getElementById("longTermEndDate")?.value;
-  const reason = document.getElementById("longTermReason")?.value || "දීර්ඝකාලීන නිවාඩු";
+// =========================================================================
+// 📝 දීර්ඝකාලීන නිවාඩු ඇතුළත් කිරීම (FIREBASE + STORAGE AUTO-SYNC)
+// =========================================================================
+function addLongTermLeaveEntry() {
+  const selectEl = document.getElementById("longTermTeacherSelect");
+  const startEl = document.getElementById("longTermStartDate");
+  const endEl = document.getElementById("longTermEndDate");
+  const reasonEl = document.getElementById("longTermReason");
 
-  // අද දිනය ලබා ගැනීම
+  const tid = selectEl ? selectEl.value.trim() : "";
+  const start = startEl ? startEl.value.trim() : "";
+  const end = endEl ? endEl.value.trim() : "";
+  const reason = (reasonEl && reasonEl.value.trim()) ? reasonEl.value.trim() : "දීර්ඝකාලීන නිවාඩු";
+
+  // 1. අද දිනය (YYYY-MM-DD) ලබා ගැනීම
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-  // 1. හිස්ව ඇත්දැයි බැලීම
+  // 2. අගයන් පරීක්ෂාව (Validation)
   if (!tid || !start || !end) {
     alert("⚠️ කරුණාකර ගුරුවරයා, ආරම්භක දිනය සහ අවසාන දිනය ඇතුළත් කරන්න.");
     return;
   }
 
-  // 2. අතීත දිනයක්දැයි බැලීම (Past Date Check)
+  // අතීත දිනයන් පරීක්ෂාව
   if (start < todayStr) {
     alert("⚠️ අතීත දිනයන් සඳහා නිවාඩු ඇතුළත් කළ නොහැක. කරුණාකර අද හෝ අනාගත දිනයක් තෝරන්න.");
     return;
   }
 
-  // 3. අවසාන දිනය ආරම්භක දිනයට පෙරදැයි බැලීම (Range Check)
+  // දිනයන්ගේ පරාසය පරීක්ෂාව
   if (end < start) {
     alert("⚠️ අවසාන දිනය ආරම්භක දිනයට පසුව හෝ එදිනම විය යුතුය.");
     return;
   }
 
-  // දත්ත ලැයිස්තුවට එක් කිරීම
   window.longTermAbsences = window.longTermAbsences || [];
+
+  // 3. එකම ගුරුවරයා සඳහා මෙම කාලසීමාව තුළ දැනටමත් නිවාඩු ඇත්දැයි බැලීම (Duplicate / Overlap Check)
+  const isAlreadyAdded = window.longTermAbsences.some(l => 
+    String(l.teacherId).trim().toLowerCase() === String(tid).trim().toLowerCase() &&
+    !(end < l.startDate || start > l.endDate)
+  );
+
+  if (isAlreadyAdded) {
+    alert("⚠️ මෙම ගුරුවරයා සඳහා මෙම කාලසීමාව තුළ දැනටමත් දීර්ඝකාලීන නිවාඩු සටහනක් පවතී.");
+    return;
+  }
+
+  // 4. දත්ත ලැයිස්තුවට එක් කිරීම
   window.longTermAbsences.push({
     teacherId: tid,
     startDate: start,
     endDate: end,
-    reason: reason
+    reason: reason,
+    updatedAt: new Date().toISOString()
   });
 
-  // UI යාවත්කාලීන කිරීම
+  // 5. 💾 LOCALSTORAGE සහ FIREBASE CLOUD වෙත ක්ෂණිකව සුරැකීම
+  if (typeof saveReliefStateToStorage === 'function') {
+    saveReliefStateToStorage();
+  }
+
+  // 6. UI සංරචක සහ Dropdowns යාවත්කාලීන කිරීම
   if (typeof populateTeacherSelects === 'function') populateTeacherSelects();
   if (typeof renderLongTermEntriesList === 'function') renderLongTermEntriesList();
   if (typeof updateLiveAttendanceBadges === 'function') updateLiveAttendanceBadges();
+  if (typeof renderDailyReliefResults === 'function') renderDailyReliefResults();
 
-  // Inputs Reset කිරීම
-  document.getElementById("longTermTeacherSelect").value = "";
-  document.getElementById("longTermStartDate").value = "";
-  document.getElementById("longTermEndDate").value = "";
-  document.getElementById("longTermReason").value = "";
-  
-  // Date Limits යළි සැකසීම
-  setupLeaveDateConstraints();
+  // 7. Input Form එක පිරිසිදු කිරීම (Reset)
+  if (selectEl) selectEl.value = "";
+  if (startEl) startEl.value = "";
+  if (endEl) endEl.value = "";
+  if (reasonEl) reasonEl.value = "";
 
-  alert("✅ දීර්ඝකාලීන නිවාඩු සටහන සාර්ථකව ඇතුළත් කරන ලදී.");
+  // 8. Date Picker සීමාවන් නැවත සකස් කිරීම
+  if (typeof setupLeaveDateConstraints === 'function') {
+    setupLeaveDateConstraints();
+  }
+
+  alert("✅ දීර්ඝකාලීන නිවාඩු සටහන සාර්ථකව ඇතුළත් කර Firebase Cloud වෙත සුරකින ලදී.");
 }
     
 /**
@@ -16862,6 +16876,180 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
+   // =========================================================================
+// 💾 SMART RELIEF STORAGE & DAILY AUTO-ROLLOVER ENGINE
+// =========================================================================
+
+// දේශීය දින මුද්‍රාව ලබාගැනීම (YYYY-MM-DD)
+function getTodayDateString() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * 1. දත්ත මතකයෙන් (LocalStorage) නැවත ලබා ගැනීම සහ දින මාරුව පරීක්ෂා කිරීම
+ */
+// =========================================================================
+// 🔄 DUAL STORAGE (LOCAL + FIREBASE) & DAY ROLLOVER ENGINE
+// =========================================================================
+function initAndLoadReliefState() {
+  const todayStr = getTodayDateString();
+
+  // 1. පරිගණකයේ LocalStorage වෙතින් දත්ත කියවීම (ක්ෂණික ආරම්භය සහ Offline ආරක්ෂාව)
+  try {
+    const savedLongTerm = localStorage.getItem("school_relief_long_term");
+    window.longTermAbsences = savedLongTerm ? JSON.parse(savedLongTerm) : [];
+  } catch (e) {
+    window.longTermAbsences = [];
+  }
+
+  let savedContext = null;
+  try {
+    const rawContext = localStorage.getItem("school_relief_daily_context");
+    if (rawContext) savedContext = JSON.parse(rawContext);
+  } catch (e) {
+    savedContext = null;
+  }
+
+  // දින මාරුව පරීක්ෂා කිරීම (Day Rollover Check)
+  if (savedContext && savedContext.date === todayStr) {
+    // අද දිනයම නම්: දත්ත නැවත ලබා ගනී
+    window.dailyReliefContext = savedContext;
+    const savedAssignments = localStorage.getItem("school_relief_daily_assignments");
+    window.dailyReliefAssignments = savedAssignments ? JSON.parse(savedAssignments) : [];
+  } else {
+    // නව දිනයක් නම්: දෛනික දත්ත ස්වයංක්‍රීයව Reset වේ
+    window.dailyReliefContext = {
+      date: todayStr,
+      fullDayAbsent: [],
+      partialAbsent: [],
+      specialDuty: []
+    };
+    window.dailyReliefAssignments = [];
+    localStorage.removeItem("school_relief_daily_assignments");
+    if (typeof saveReliefStateToStorage === 'function') {
+      saveReliefStateToStorage();
+    }
+  }
+
+  // 2. Firebase Database එක සම්බන්ධ කර ඇත්නම් Cloud වෙතින් සජීවීව දත්ත ලබා ගැනීම
+  if (typeof firebase !== 'undefined' && firebase.database) {
+    // A. දීර්ඝකාලීන නිවාඩු සජීවීව ලබා ගැනීම
+    firebase.database().ref('relief/longTermAbsences').on('value', (snap) => {
+      const data = snap.val();
+      if (data && Array.isArray(data)) {
+        window.longTermAbsences = data;
+        localStorage.setItem("school_relief_long_term", JSON.stringify(data));
+        if (typeof renderLongTermEntriesList === 'function') renderLongTermEntriesList();
+        if (typeof populateTeacherSelects === 'function') populateTeacherSelects();
+      }
+    });
+
+    // B. අද දිනට අදාළ දෛනික සටහන් Cloud එකෙන් ලබා ගැනීම
+    firebase.database().ref(`relief/dailyRecords/${todayStr}`).on('value', (snap) => {
+      const dayData = snap.val();
+      if (dayData && dayData.dailyContext) {
+        window.dailyReliefContext = dayData.dailyContext;
+        window.dailyReliefAssignments = dayData.dailyAssignments || [];
+        
+        localStorage.setItem("school_relief_daily_context", JSON.stringify(window.dailyReliefContext));
+        localStorage.setItem("school_relief_daily_assignments", JSON.stringify(window.dailyReliefAssignments));
+
+        if (typeof populateTeacherSelects === 'function') populateTeacherSelects();
+        if (typeof renderAttendanceEntriesList === 'function') renderAttendanceEntriesList();
+        if (typeof updateLiveAttendanceBadges === 'function') updateLiveAttendanceBadges();
+        if (typeof renderDailyReliefResults === 'function') renderDailyReliefResults();
+      }
+    });
+  }
+}
+/**
+ * 2. දත්ත වෙනස් වූ සෑම මොහොතකම LocalStorage වෙත ස්ථිරව සුරැකීම
+ */
+
+    // Local Fallback ශ්‍රිතය
+function loadFromLocalFallback(todayStr) {
+  try {
+    const savedLongTerm = localStorage.getItem("school_relief_long_term");
+    window.longTermAbsences = savedLongTerm ? JSON.parse(savedLongTerm) : [];
+
+    const rawContext = localStorage.getItem("school_relief_daily_context");
+    const savedContext = rawContext ? JSON.parse(rawContext) : null;
+
+    if (savedContext && savedContext.date === todayStr) {
+      window.dailyReliefContext = savedContext;
+      const savedAss = localStorage.getItem("school_relief_daily_assignments");
+      window.dailyReliefAssignments = savedAss ? JSON.parse(savedAss) : [];
+    } else {
+      window.dailyReliefContext = {
+        date: todayStr,
+        fullDayAbsent: [],
+        partialAbsent: [],
+        specialDuty: []
+      };
+      window.dailyReliefAssignments = [];
+    }
+  } catch (e) {
+    console.error("Local fallback error:", e);
+  }
+}
+
+// ආරම්භක ඇමතුම
+initAndLoadReliefState();
+    
+    // =========================================================================
+// ☁️ FIREBASE + LOCALSTORAGE DUAL RELIEF ENGINE
+// =========================================================================
+
+/**
+ * 1. දත්ත සුරැකීම (LocalStorage සහ Firebase Cloud දෙකටම)
+ */
+function saveReliefStateToStorage() {
+  const todayStr = getTodayDateString();
+
+  const payload = {
+    date: todayStr,
+    dailyContext: window.dailyReliefContext,
+    longTermAbsences: window.longTermAbsences || [],
+    dailyAssignments: window.dailyReliefAssignments || [],
+    lastUpdated: new Date().toISOString()
+  };
+
+  // A. LocalStorage වෙත ස්ථිරව සුරැකීම (Offline ආරක්ෂාව සඳහා)
+  try {
+    localStorage.setItem("school_relief_long_term", JSON.stringify(window.longTermAbsences || []));
+    localStorage.setItem("school_relief_daily_context", JSON.stringify(window.dailyReliefContext));
+    localStorage.setItem("school_relief_daily_assignments", JSON.stringify(window.dailyReliefAssignments || []));
+  } catch (err) {
+    console.error("Local storage save error:", err);
+  }
+
+  // B. Firebase Realtime Database වෙත Cloud Sync කිරීම
+  if (typeof firebase !== 'undefined' && firebase.database) {
+    // 1. දීර්ඝකාලීන නිවාඩු Cloud එකට සුරැකීම
+    firebase.database().ref('relief/longTermAbsences').set(window.longTermAbsences || []);
+
+    // 2. අද දිනට අදාළ දෛනික සටහන් අදාළ දිනය යටතේ සුරැකීම
+    firebase.database().ref(`relief/dailyRecords/${todayStr}`).set({
+      dailyContext: window.dailyReliefContext,
+      dailyAssignments: window.dailyReliefAssignments || [],
+      lastUpdated: new Date().toLocaleTimeString()
+    }).then(() => {
+      console.log("☁️ Firebase වෙත සාර්ථකව Sync විය!");
+    }).catch(err => {
+      console.warn("Firebase Sync ප්‍රමාදයක් (Offline විය හැක):", err);
+    });
+  }
+}
+
+// පිටුව මුලින් Load වන විටම මෙය ක්‍රියාත්මක වීම
+initAndLoadReliefState();
+
+    
+    
     
   </script>
 
