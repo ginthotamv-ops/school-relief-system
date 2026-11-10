@@ -93,7 +93,7 @@
       
       <div class="flex flex-wrap items-center gap-2">
         <div class="bg-indigo-900/80 px-3 py-1.5 rounded-lg border border-indigo-400/40 flex items-center gap-2">
-          <i class="fa-regular fa-calendar-check text-amber-300 text-xs"></i>
+          <!--i class="fa-regular fa-calendar-check text-amber-300 text-xs"></i -->
           <!-- span class="text-xs font-bold text-indigo-100">දිනය:</span>
           <select id="currentDaySelect" onchange="changeActiveDay(this.value)" class="bg-indigo-950 text-white text-xs font-bold px-2 py-1 rounded border border-indigo-400 outline-none cursor-pointer">
             <option value="Monday">සඳුදා (Monday)</option>
@@ -3241,6 +3241,10 @@ function resetSystemData() {
   // =========================================================================
 // 🔀 UNIFIED MASTER TAB SWITCHER (FOR BOTH switchTab & switchMainTab)
 // =========================================================================
+
+// =========================================================================
+// 🔀 UNIFIED MASTER TAB SWITCHER (FOR BOTH switchTab & switchMainTab)
+// =========================================================================
 function switchTab(tabId) {
   const cleanId = String(tabId || '').trim();
   const isRelief = (cleanId === 'relief' || cleanId === 'reliefTab');
@@ -3358,13 +3362,13 @@ function switchTab(tabId) {
   // 4. තෝරාගත් Tab එකට අදාළ දත්ත Render කිරීම සහ Sync කිරීම
   // -------------------------------------------------------------------------
   
-  // 🔴 RELIEF TAB (දත්ත 55 සහ UI එක Refresh කිරීම)
+  // 🔴 RELIEF TAB (සත්‍ය දත්ත 55 සහ නවීන UI එක පමණක් Refresh කිරීම)
   if (isRelief) {
     if (typeof syncTeachersToRelief === 'function') syncTeachersToRelief();
     if (typeof populateTeacherSelects === 'function') populateTeacherSelects();
     if (typeof updateLiveAttendanceBadges === 'function') updateLiveAttendanceBadges();
     if (typeof renderDailyReliefResults === 'function') renderDailyReliefResults();
-    if (typeof renderReliefAttendance === 'function') renderReliefAttendance();
+    // ⚠️ පැරණි renderReliefAttendance() ශ්‍රිතය මෙතැනින් ඉවත් කර ඇත
   }
   
   // 🔵 ශ්‍රේණියේ කාලසටහන (Grade Master)
@@ -3405,6 +3409,40 @@ function switchTab(tabId) {
   }
 }
 
+// =========================================================================
+// 🛡️ සහායක ශ්‍රිතය: සියලුම Panels එකවර සැඟවීම (ReferenceError වැළැක්වීමට)
+// =========================================================================
+function hideAllTabPanels(excludeElements = []) {
+  const panelIds = [
+    'reliefTab', 
+    'classTimetableTab', 
+    'gradeMasterTab', 
+    'teacherScheduleTab', 
+    'subjectCurriculumTab', 
+    'gradeSettingsTab', 
+    'teachersTab',
+    'tabContentLabTimetable'
+  ];
+
+  panelIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !excludeElements.includes(el)) {
+      el.classList.add('hidden');
+    }
+  });
+
+  document.querySelectorAll('.tab-pane').forEach(el => {
+    if (el && !excludeElements.includes(el)) {
+      el.classList.add('hidden');
+    }
+  });
+}
+
+// ගෝලීයව ප්‍රවේශ විය හැකි වන පරිදි Window එකට සම්බන්ධ කිරීම
+window.switchTab = switchTab;
+window.switchMainTab = switchTab;
+window.hideAllTabPanels = hideAllTabPanels;
+    
 // සහායක ශ්‍රිතය: සියලුම Panels එකවර සැඟවීම
 function hideAllTabPanels(excludeElements = []) {
   const panelIds = [
@@ -3521,53 +3559,14 @@ window.schoolLabs = schoolLabs;
       }
     }
 
-    function renderReliefAttendance() {
-      const dayLabel = document.getElementById("reliefDayLabel");
-      if (dayLabel) dayLabel.innerText = DAY_LABELS[activeDay] || activeDay;
-      const container = document.getElementById("reliefAttendanceList");
-      if (!container) return;
-      container.innerHTML = "";
-
-      updateLeaveQuotaBadges();
-
-      teachers.forEach(t => {
-        const card = document.createElement("div");
-        card.id = `teacher-att-card-${t.id}`;
-        
-        let cardBg = "bg-white border-slate-200";
-        if (t.leaveStatus === "absent") cardBg = "bg-rose-50 border-rose-200";
-        else if (t.leaveStatus === "half_pm" || t.leaveStatus === "half_am") cardBg = "bg-amber-50 border-amber-200";
-        else if (t.leaveStatus === "short_pm" || t.leaveStatus === "short_am") cardBg = "bg-blue-50 border-blue-200";
-
-        card.className = `p-3 rounded-xl border flex flex-col justify-between gap-2.5 transition ${cardBg}`;
-        card.innerHTML = `
-          <div>
-            <div class="flex items-start justify-between">
-              <div>
-                <div class="font-bold text-xs text-slate-800">${t.name}</div>
-                <div class="text-[11px] text-slate-500">${t.subject} [${Array.isArray(t.sections)?t.sections.join(','):'All'}]</div>
-              </div>
-              <label class="text-[10px] flex items-center gap-1 cursor-pointer">
-                <input type="checkbox" ${t.isExempt ? 'checked' : ''} onchange="toggleReliefExemption('${t.id}', this.checked)" class="w-3.5 h-3.5 text-amber-500 rounded">
-                <span class="text-slate-500 font-semibold">Exempt</span>
-              </label>
-            </div>
-            <div class="mt-2">
-              <label class="block text-[10px] font-bold text-slate-600 mb-0.5">පැමිණීම / නිවාඩු තත්ත්වය:</label>
-              <select onchange="changeTeacherLeaveStatus('${t.id}', this.value)" class="w-full p-1.5 border rounded-lg text-xs font-bold bg-white outline-none cursor-pointer">
-                <option value="present" ${t.leaveStatus === 'present' ? 'selected' : ''}>✅ සම්පූර්ණ පැමිණි (Full Day)</option>
-                <option value="absent" ${t.leaveStatus === 'absent' ? 'selected' : ''}>❌ නොපැමිණි (Full Day Absent)</option>
-                <option value="half_pm" ${t.leaveStatus === 'half_pm' ? 'selected' : ''}>🟡 Half Day (සවස P5-P8 නිවාඩු)</option>
-                <option value="half_am" ${t.leaveStatus === 'half_am' ? 'selected' : ''}>🟡 Half Day (උදෑසන P1-P4 නිවාඩු)</option>
-                <option value="short_pm" ${t.leaveStatus === 'short_pm' ? 'selected' : ''}>🔵 Short Leave (සවස P7-P8 නිවාඩු)</option>
-                <option value="short_am" ${t.leaveStatus === 'short_am' ? 'selected' : ''}>🔵 Short Leave (උදෑසන P1-P2 නිවාඩු)</option>
-              </select>
-            </div>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-    }
+    // 🛑 පැරණි Card UI එක ඇඳීම වැළැක්වීම සඳහා අක්‍රිය කරන ලදී
+function renderReliefAttendance() {
+  // පැරණි කාඩ්පත් අඳින්නේ නැත. නව පද්ධතියේ Badges පමණක් යාවත්කාලීන කරයි.
+  if (typeof updateLiveAttendanceBadges === 'function') {
+    updateLiveAttendanceBadges();
+  }
+}
+window.renderReliefAttendance = renderReliefAttendance;
 
     function changeTeacherLeaveStatus(teacherId, newStatus) {
       const teacher = teachers.find(t => t.id === teacherId);
@@ -4613,15 +4612,7 @@ window.renderIndividualTeacherSchedule = renderIndividualTeacherSchedule;
       alert(`[${DAY_LABELS[d1]} P${p1}] සහ [${DAY_LABELS[d2]} P${p2}] සාර්ථකව මාරු කරන ලදි!`);
     }
 
-    // =========================================================================
-    // 8. CLASS & GRADE TIMETABLE CONTROLLER
-    // =========================================================================
 
-// =========================================================================
-    // CLEAR SCHEDULE CONTROLLER (SINGLE CLASS & ALL CLASSES)
-    // =========================================================================
-
-    // 1. තෝරාගත් පන්තියේ කාලසටහන පමණක් ඉවත් කිරීම
 
 // =========================================================================
 // 🗑️ SMART CLEAR CLASS TIMETABLE CONTROLLER (WITH CUSTOM MODAL & LOCKED CHECK)
