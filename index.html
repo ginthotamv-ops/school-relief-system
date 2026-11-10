@@ -152,94 +152,307 @@
   <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
 
     <!-- TAB 1: DAILY RELIEF -->
-    <div id="reliefTab" class="space-y-6">
-      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center pb-4 border-b border-slate-100 gap-3">
-          <div>
-            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <i class="fa-solid fa-bolt text-amber-500"></i> අද දින පැමිණීම, නිවාඩු & Relief (<span id="reliefDayLabel" class="text-indigo-600 font-bold">සඳුදා</span>)
-            </h2>
-            <p class="text-xs text-slate-500 mt-0.5">නොපැමිණි, Half Day (උපරිම 5) සහ Short Leave (උපරිම 5) තෝරා සහන කාලසටහන සකසන්න.</p>
-          </div>
-          <button type="button" onclick="runAutoReliefEngine()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold py-2.5 px-4 rounded-xl shadow transition flex items-center gap-2">
-            <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> සහන කාලසටහන සකසන්න
+
+
+
+<!-- ========================================================================= -->
+<!-- 📋 සම්පූර්ණ ඒකාබද්ධ සහන කාලසටහන් පුවරුව (UNIFIED SMART RELIEF MANAGER) -->
+<!-- ========================================================================= -->
+<div id="reliefTab" class="space-y-4">
+  <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200">
+    
+    <!-- 1. ප්‍රධාන ශීර්ෂය සහ ක්‍රියාකාරී බොත්තම් තීරුව (Header & Control Panel) -->
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center pb-3.5 border-b border-slate-100 gap-3 no-print">
+      <div>
+        <h2 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-bolt text-amber-500"></i>
+          <span>දෛනික සහන කාලසටහන (Relief Manager)</span>
+          <span id="reliefDayLabel" class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full font-bold border border-indigo-200">
+            <!-- Real Date JS මඟින් වැටේ -->
+          </span>
+        </h2>
+        <p class="text-xs text-slate-500 mt-0.5">නොපැමිණි, කෙටි නිවාඩු, විශේෂ රාජකාරි සහ දීර්ඝකාලීන නිවාඩු කළමනාකරණය.</p>
+      </div>
+
+      <!-- ප්‍රධාන පාලක බොත්තම් -->
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- A. දෛනික නිවාඩු / Duty Modal -->
+        <button type="button" onclick="openDailyAttendanceModal()" class="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-user-xmark"></i>
+          <span>නොපැමිණීම් / Duty</span>
+        </button>
+
+        <!-- B. දීර්ඝකාලීන නිවාඩු Modal -->
+        <button type="button" onclick="openLongTermLeaveModal()" class="px-3 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-calendar-days"></i>
+          <span>දීර්ඝකාලීන නිවාඩු</span>
+        </button>
+
+        <!-- C. ස්මාර්ට් සහන ජනනය (Run Engine) -->
+        <button type="button" onclick="runAutoReliefEngine()" class="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+          <span>සහන කාලසටහන සකසන්න</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. දෛනික සාරාංශ තීරුව (Live Statistics Badges) -->
+    <div class="my-3 p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs no-print">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="font-bold text-slate-700"><i class="fa-solid fa-chart-pie mr-1 text-slate-500"></i> දෛනික සාරාංශය:</span>
+        <span id="badgePresentCount" class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg font-bold">පැමිණි: 0</span>
+        <span id="badgeAbsentCount" class="bg-rose-100 text-rose-800 px-2.5 py-1 rounded-lg font-bold">නොපැමිණි: 0</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span id="badgeShortLeaveCount" class="bg-blue-100 text-blue-900 border border-blue-200 px-2.5 py-1 rounded-lg font-bold">කෙටි නිවාඩු: 0</span>
+        <span id="badgeDutyCount" class="bg-purple-100 text-purple-900 border border-purple-200 px-2.5 py-1 rounded-lg font-bold">විශේෂ රාජකාරි: 0</span>
+        <span id="badgeLongTermCount" class="bg-slate-200 text-slate-800 px-2.5 py-1 rounded-lg font-bold">දීර්ඝකාලීන: 0</span>
+      </div>
+    </div>
+
+    <!-- 3. ගුරු පැමිණීම් ක්ෂණික පුවරුව (Quick Attendance Grid) -->
+    <div id="reliefAttendanceList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 my-3 max-h-52 overflow-y-auto p-1">
+      <!-- Dynamic Teacher Attendance Status Badges -->
+    </div>
+
+    <!-- 4. රිලීෆ් දැමීමට නොහැකි වූ පන්ති සඳහා අනතුරු ඇඟවීමේ පුවරුව (Unassigned Overflow) -->
+    <div id="unassignedReliefContainer" class="hidden mt-4 p-4 rounded-xl border border-rose-300 bg-rose-50/90 space-y-2">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2 text-rose-900 font-black text-xs sm:text-sm">
+          <i class="fa-solid fa-triangle-exclamation text-rose-600 text-base"></i>
+          <span>රිලීෆ් යෙදීමට නොහැකි වූ කාලච්ඡේද (Unassigned Relief Sessions)</span>
+        </div>
+        <span class="text-[11px] text-rose-700 font-bold">ගුරු හිඟය හෝ උපරිම 7 සීමාව නිසා සිරවූ අවස්ථා</span>
+      </div>
+      <div class="overflow-x-auto bg-white rounded-lg border border-rose-200">
+        <table class="w-full text-xs text-left">
+          <thead class="bg-rose-100/70 text-rose-950 font-bold">
+            <tr>
+              <th class="p-2 border-b">කාලච්ඡේදය</th>
+              <th class="p-2 border-b">පන්තිය</th>
+              <th class="p-2 border-b">අංශය</th>
+              <th class="p-2 border-b">විෂය</th>
+              <th class="p-2 border-b">නොපැමිණි ගුරුතුමා</th>
+              <th class="p-2 border-b">හේතුව</th>
+              <th class="p-2 border-b text-center">ක්‍රියාමාර්ග</th>
+            </tr>
+          </thead>
+          <tbody id="unassignedReliefTableBody" class="divide-y divide-rose-100 text-rose-800 font-medium"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 5. වෙන් කළ සහන කාලච්ඡේද ලැයිස්තුව & බාහිර මෙවලම් (Export & Print Panel) -->
+    <div class="mt-5 pt-4 border-t border-slate-200">
+      
+      <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 mb-3 no-print">
+        <div>
+          <h3 class="text-xs sm:text-sm font-bold text-slate-800">වෙන් කළ සහන කාලච්ඡේද ලැයිස්තුව</h3>
+          <p class="text-[11px] text-slate-500">ගුරු අනුව Slips 16ක් Print කිරීමට හෝ WhatsApp Staff Group වෙත යවන්න.</p>
+        </div>
+
+        <!-- Print, WhatsApp & PDF Tools -->
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button type="button" onclick="print16ReliefCutSlipsA4()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-scissors text-xs"></i> <span>A4 Slips 16ක්</span>
+          </button>
+          <button type="button" onclick="adminOpenReliefQueue()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-brands fa-whatsapp text-xs"></i> <span>WhatsApp Queue</span>
+          </button>
+          <button type="button" onclick="downloadReliefPDFForStaffGroup()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-file-pdf text-xs"></i> <span>Staff PDF</span>
+          </button>
+          <button type="button" onclick="printReliefSlip()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-print text-xs"></i> <span>ලැයිස්තුව Print</span>
+          </button>
+          <button type="button" onclick="adminBroadcastReliefToSchoolGroup()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-users text-xs"></i> <span>Staff Group (Text)</span>
           </button>
         </div>
+      </div>
 
-        <div class="my-3 p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div class="flex items-center gap-2">
-            <span class="font-bold text-slate-700"><i class="fa-solid fa-chart-pie mr-1"></i> දෛනික සාරාංශය:</span>
-            <span id="badgePresentCount" class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg font-bold">පැමිණි: 0</span>
-            <span id="badgeAbsentCount" class="bg-rose-100 text-rose-800 px-2.5 py-1 rounded-lg font-bold">නොපැමිණි: 0</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span id="badgeHalfDayCount" class="bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1 rounded-lg font-bold">Half Day: 0 / 5</span>
-            <span id="badgeShortLeaveCount" class="bg-blue-100 text-blue-900 border border-blue-300 px-3 py-1 rounded-lg font-bold">Short Leave: 0 / 5</span>
+      <!-- ප්‍රධාන සහන ප්‍රතිඵල වගුව -->
+      <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-xs">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+            <tr>
+              <th class="p-2.5">කාලච්ඡේදය</th>
+              <th class="p-2.5">පන්තිය</th>
+              <th class="p-2.5">අංශය</th>
+              <th class="p-2.5">විෂය</th>
+              <th class="p-2.5">නොපැමිණි ගුරුතුමා</th>
+              <th class="p-2.5">පැවරූ සහන ගුරුවරයා</th>
+              <th class="p-2.5">තත්ත්වය</th>
+              <th class="p-2.5 text-center no-print">ක්‍රියාමාර්ග (Manual)</th>
+            </tr>
+          </thead>
+          <tbody id="reliefResultsTableBody" class="divide-y divide-slate-100 font-medium">
+            <tr>
+              <td colspan="8" class="p-4 text-center text-slate-400">
+                තවමත් Relief Generate කර නොමැත. ඉහත 'සහන කාලසටහන සකසන්න' ඔබන්න.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 🔴 MODAL 1: දෛනික නොපැමිණීම් / කෙටි නිවාඩු / විශේෂ රාජකාරි MODAL -->
+<!-- ========================================================================= -->
+<div id="dailyAttendanceModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
+  <div class="bg-white rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
+    
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+          <i class="fa-solid fa-user-slash text-base"></i>
+        </div>
+        <div>
+          <h3 class="text-sm sm:text-base font-bold text-slate-900">දෛනික නොපැමිණීම් සහ නිවාඩු කළමනාකරණය</h3>
+          <p class="text-[11px] text-slate-500">නොපැමිණි, කෙටි නිවාඩු හෝ විශේෂ රාජකාරි සඳහා යොමු කළ ගුරුවරුන් ඇතුළත් කරන්න.</p>
+        </div>
+      </div>
+      <button type="button" onclick="closeDailyAttendanceModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+
+    <!-- Attendance Form Tabs -->
+    <div class="flex border-b border-slate-200 mt-3 text-xs font-bold">
+      <button type="button" id="tabBtnFullAbsent" onclick="switchAttendanceTab('FULL')" class="px-4 py-2 text-indigo-600 border-b-2 border-indigo-600 transition">සම්පූර්ණ දින නිවාඩු</button>
+      <button type="button" id="tabBtnShortLeave" onclick="switchAttendanceTab('SHORT')" class="px-4 py-2 text-slate-500 hover:text-slate-700 transition">කෙටි නිවාඩු (Short Leave)</button>
+      <button type="button" id="tabBtnSpecialDuty" onclick="switchAttendanceTab('DUTY')" class="px-4 py-2 text-slate-500 hover:text-slate-700 transition">විශේෂ රාජකාරි (Special Duty)</button>
+    </div>
+
+    <div class="overflow-y-auto py-3 space-y-3 flex-1 pr-1">
+      
+      <!-- ගුරු තේරීමේ පුවරුව -->
+      <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex flex-wrap items-center gap-3">
+        <div class="flex-1 min-w-[220px]">
+          <label class="text-[11px] font-extrabold text-slate-600 block mb-1">ගුරුවරයා තෝරන්න (නම හෝ අංකය):</label>
+          <select id="modalTeacherSelect" class="w-full text-xs font-bold bg-white border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+            <!-- Dynamic Teachers List -->
+          </select>
+        </div>
+
+        <!-- කාලච්ඡේද තේරීම (කෙටි නිවාඩු සහ Duty සඳහා පමණක් දිස්වේ) -->
+        <div id="attendancePeriodsBox" class="hidden w-full bg-white p-2.5 rounded-lg border border-slate-200">
+          <label class="text-[11px] font-extrabold text-slate-600 block mb-1.5">නොමැති / රාජකාරි කාලච්ඡේද තෝරන්න:</label>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button type="button" onclick="togglePeriodSelect(1)" id="pBtn_1" class="period-btn px-2.5 py-1 text-xs font-bold border rounded-lg bg-white border-slate-300">1</button>
+            <button type="button" onclick="togglePeriodSelect(2)" id="pBtn_2" class="period-btn px-2.5 py-1 text-xs font-bold border rounded-lg bg-white border-slate-300">2</button>
+            <button type="button" onclick="togglePeriodSelect(3)" id="pBtn_3" class="period-btn px-2.5 py-1 text-xs font-bold border rounded-lg bg-white border-slate-300">3</button>
+            <button type="button" onclick="togglePeriodSelect(4)" id="pBtn_4" class="period-btn px-2.5 py-1 text-xs font-bold border rounded-lg bg-white border-slate-300">4</button>
+            <span class="text-[11px] font-extrabold text-amber-700 self-center px-1">විවේකය</span>
+            <button type="button" onclick="togglePeriodSelect(5)" id="pBtn_5" class="period-btn px-2.5 py-1 text-xs font-bold border rounded-lg bg-white border-slate-300">5</button>
+            <button type="button" onclick="togglePeriodSelect(6)" id="pBtn_6" class="period-btn px-2.5 py-1 text-xs font-bold border rounded-lg bg-white border-slate-300">6</button>
+            <button type="button" onclick="togglePeriodSelect(7)" id="pBtn_7" class="period-btn px-2.5 py-1 text-xs font-bold border rounded-lg bg-white border-slate-300">7</button>
+            <button type="button" onclick="togglePeriodSelect(8)" id="pBtn_8" class="period-btn px-2.5 py-1 text-xs font-bold border rounded-lg bg-white border-slate-300">8</button>
+            
+            <button type="button" onclick="setPeriodRange(1, 4)" class="px-2 py-1 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 rounded-lg ml-2 border border-slate-200">1-4 (උදෑසන)</button>
+            <button type="button" onclick="setPeriodRange(5, 8)" class="px-2 py-1 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200">5-8 (සවස)</button>
           </div>
         </div>
 
-        <div id="reliefAttendanceList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-4"></div>
+        <div class="w-full flex items-center justify-between gap-2 pt-1">
+          <input type="text" id="modalAbsenceReason" placeholder="හේතුව / රාජකාරියේ නම (විකල්පයි)" class="flex-1 text-xs bg-white border border-slate-300 rounded-lg p-2 outline-none focus:ring-1 focus:ring-indigo-500">
+          <button type="button" onclick="submitAttendanceEntry()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+            <i class="fa-solid fa-plus text-[10px]"></i>
+            <span>ලැයිස්තුවට එක් කරන්න</span>
+          </button>
+        </div>
+      </div>
 
-        <div id="unassignedReliefContainer" class="hidden mt-6 p-4 rounded-xl border border-red-200 bg-red-50">
-          <div class="flex items-center gap-2 text-red-800 font-black text-sm mb-2">
-            <i class="fa-solid fa-triangle-exclamation text-red-600"></i>
-            <span>රිලීෆ් යෙදීමට නොහැකි වූ පන්ති හා විෂයන් ලැයිස්තුව (Unassigned Relief Sessions)</span>
+      <!-- අද දින ඇතුළත් කළ ලැයිස්තුව -->
+      <div>
+        <h4 class="text-xs font-bold text-slate-700 mb-2">අද දින නොපැමිණීම් / රාජකාරි ලැයිස්තුව:</h4>
+        <div id="attendanceEntriesList" class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+          <!-- Dynamic entries -->
+        </div>
+      </div>
+
+    </div>
+
+    <div class="flex items-center justify-end pt-3 border-t border-slate-100">
+      <button type="button" onclick="closeDailyAttendanceModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition cursor-pointer">
+        අවසන් (Done)
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 🔴 MODAL 2: දීර්ඝකාලීන නිවාඩු ලේඛනය (LONG-TERM LEAVE REGISTRY) -->
+<!-- ========================================================================= -->
+<div id="longTermLeaveModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
+  <div class="bg-white rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
+    
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700">
+          <i class="fa-solid fa-calendar-xmark text-base"></i>
+        </div>
+        <div>
+          <h3 class="text-sm sm:text-base font-bold text-slate-900">දීර්ඝකාලීන නිවාඩු ලේඛනය</h3>
+          <p class="text-[11px] text-slate-500">ප්‍රසූත නිවාඩු, අනියුක්ත හෝ දිගුකාලීන අසනීප නිවාඩු.</p>
+        </div>
+      </div>
+      <button type="button" onclick="closeLongTermLeaveModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+
+    <div class="overflow-y-auto py-3 space-y-3 flex-1 pr-1">
+      <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
+        <div>
+          <label class="text-[11px] font-extrabold text-slate-600 block mb-1">ගුරුවරයා තෝරන්න:</label>
+          <select id="longTermTeacherSelect" class="w-full text-xs font-bold bg-white border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+            <!-- Dynamic Teachers -->
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] font-black text-slate-500 block mb-0.5">ආරම්භක දිනය:</label>
+            <input type="date" id="longTermStartDate" class="w-full text-xs font-bold bg-white border border-slate-300 rounded-lg p-1.5 outline-none">
           </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-xs text-left bg-white border border-red-200 rounded-lg">
-              <thead class="bg-red-100 text-red-900 font-bold">
-                <tr>
-                  <th class="p-2 border">කාලච්ඡේදය</th><th class="p-2 border">පන්තිය</th><th class="p-2 border">අංශය</th>
-                  <th class="p-2 border">විෂය</th><th class="p-2 border">නොපැමිණි / නිවාඩු ගුරුතුමා</th><th class="p-2 border">හේතුව</th>
-                </tr>
-              </thead>
-              <tbody id="unassignedReliefTableBody" class="divide-y divide-red-100 text-red-800"></tbody>
-            </table>
+          <div>
+            <label class="text-[10px] font-black text-slate-500 block mb-0.5">අවසාන දිනය:</label>
+            <input type="date" id="longTermEndDate" class="w-full text-xs font-bold bg-white border border-slate-300 rounded-lg p-1.5 outline-none">
           </div>
         </div>
 
-        <div class="mt-8 pt-6 border-t border-slate-200">
-          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
-            <div>
-              <h3 class="text-sm font-bold text-slate-800">වෙන් කළ සහන කාලච්ඡේද ලැයිස්තුව</h3>
-              <p class="text-[11px] text-slate-500">ගුරු අනුව Slips 16ක් Print කිරීමට හෝ කාලච්ඡේද අනුව Staff Group PDF බාගත කරන්න.</p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <button type="button" onclick="print16ReliefCutSlipsA4()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
-                <i class="fa-solid fa-scissors text-sm"></i> 🎟️ A4 එකට Slips 16ක් Print
-              </button>
-              <button type="button" onclick="adminOpenReliefQueue()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
-                <i class="fa-brands fa-whatsapp text-sm"></i> 📲 Relief Queue
-              </button>
-              <button type="button" onclick="downloadReliefPDFForStaffGroup()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
-                <i class="fa-solid fa-file-pdf text-sm"></i> 📄 Staff Group PDF
-              </button>
-              <button type="button" onclick="printReliefSlip()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
-                <i class="fa-solid fa-print text-sm"></i> 🖨️ ලැයිස්තුව Print
-              </button>
-              <button type="button" onclick="adminBroadcastReliefToSchoolGroup()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
-                <i class="fa-solid fa-users text-sm"></i> 📢 Staff Group (Text)
-              </button>
-            </div>
-          </div>
- 
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse text-xs">
-              <thead class="bg-slate-100 text-slate-700 font-bold border-b">
-                <tr>
-                  <th class="p-2.5">කාලච්ඡේදය</th><th class="p-2.5">පන්තිය</th><th class="p-2.5">අංශය</th><th class="p-2.5">විෂය</th>
-                  <th class="p-2.5">පැවරූ සහන ගුරුවරයා</th><th class="p-2.5">තත්ත්වය</th><th class="p-2.5 text-center">ක්‍රියාමාර්ග (Manual)</th>
-                </tr>
-              </thead>
-              <tbody id="reliefResultsTableBody" class="divide-y divide-slate-100">
-                <tr><td colspan="7" class="p-4 text-center text-slate-400">තවමත් Relief Generate කර නොමැත. ඉහත 'සහන කාලසටහන සකසන්න' ඔබන්න.</td></tr>
-              </tbody>
-            </table>
-          </div>
+        <div class="flex items-center gap-2">
+          <input type="text" id="longTermReason" placeholder="නිවාඩු වර්ගය (උදා: ප්‍රසූත නිවාඩු)" class="flex-1 text-xs bg-white border border-slate-300 rounded-lg p-1.5 outline-none">
+          <button type="button" onclick="addLongTermLeaveEntry()" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition cursor-pointer">
+            ඇතුළත් කරන්න
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-bold text-slate-700 mb-2">දැනට ලියාපදිංචි කර ඇති දීර්ඝකාලීන නිවාඩු:</h4>
+        <div id="longTermEntriesList" class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+          <!-- Dynamic entries -->
         </div>
       </div>
     </div>
 
+    <div class="flex items-center justify-end pt-3 border-t border-slate-100">
+      <button type="button" onclick="closeLongTermLeaveModal()" class="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-xl transition cursor-pointer">
+        වසන්න
+      </button>
+    </div>
+
+  </div>
+</div>
+    
     <!-- TAB 2: CLASS TIMETABLE -->
 
  <!-- Class Timetable: 5-Day Weekly View -->
@@ -2267,6 +2480,11 @@ var DEFAULT_CURRICULUM = [
       { id: "T09", name: "ජගත් විජේසිංහ", phone: "0712345679", subject: "History", sections: ["6-7", "8-11"], leaveStatus: "present", isExempt: false, allowOver35: false }
     ];
 
+
+
+
+
+    
 // Dropdown එකෙන් පිටත ක්ලික් කළ විට Dropdown එක වැසීම
 document.addEventListener("click", (e) => {
   const dropdown = document.getElementById("classAutoFillDropdown");
@@ -15612,7 +15830,709 @@ function handleGradeCellQuickHighlight(subject, teacherId) {
 
 // 🔴 ගෝලීයව (Global Window) ලබාගත හැකි වන පරිදි Export කිරීම
 window.handleGradeCellQuickHighlight = handleGradeCellQuickHighlight;
-  
+
+
+// 🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
+    
+// =========================================================================
+// 🚀 PRODUCTION-READY SMART RELIEF ENGINE & CONTROLLER (FINAL UNIFIED)
+// =========================================================================
+
+// 1. ගෝලීය දත්ත ආකෘති (State Initializers)
+window.longTermAbsences = window.longTermAbsences || [];
+window.dailyReliefContext = window.dailyReliefContext || {
+  date: new Date().toISOString().split('T')[0],
+  fullDayAbsent: [],
+  partialAbsent: [],
+  specialDuty: []
+};
+window.dailyReliefAssignments = window.dailyReliefAssignments || [];
+window.unassignedReliefSessions = window.unassignedReliefSessions || [];
+
+// පාසලේ අංශ අනුපිළිවෙළ
+const SECTION_ORDER = ["6-7", "8-11", "12-13"];
+
+function getSectionForGrade(grade) {
+  const g = parseInt(grade, 10);
+  if (g === 6 || g === 7) return "6-7";
+  if (g >= 8 && g <= 11) return "8-11";
+  if (g === 12 || g === 13) return "12-13";
+  return "8-11";
+}
+
+// 2. සැබෑ පද්ධති දිනය සහ Timetable Day Index ලබාගැනීම
+function getSystemDateContext() {
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0];
+  const jsDay = now.getDay(); // 0: Sun, 1: Mon, ... 5: Fri, 6: Sat
+  const timetableDay = (jsDay >= 1 && jsDay <= 5) ? (jsDay - 1) : 0;
+  const dayNames = ["සඳුදා", "අඟහරුවාදා", "බදාදා", "බ්‍රහස්පතින්දා", "සිකුරාදා", "සෙනසුරාදා", "ඉරිදා"];
+  const displayDayName = (jsDay >= 1 && jsDay <= 5) ? dayNames[jsDay - 1] : "සති අන්තය";
+
+  return {
+    dateString: dateStr,
+    timetableDayIndex: timetableDay,
+    isWeekend: (jsDay === 0 || jsDay === 6),
+    dayName: displayDayName,
+    displayDate: `${dateStr} (${displayDayName})`
+  };
+}
+
+// -------------------------------------------------------------------------
+// 🔴 ප්‍රමුඛතා පියවර 6 කින් යුත් ලකුණු ගණනය කිරීම (Hierarchical Relief Scorer)
+// -------------------------------------------------------------------------
+function calculateHierarchicalReliefScore(teacher, targetGrade, targetSubject, totalPeriodsToday) {
+  const targetSection = getSectionForGrade(targetGrade);
+  const targetSecIndex = SECTION_ORDER.indexOf(targetSection);
+
+  const teacherSections = Array.isArray(teacher.sections) 
+    ? teacher.sections.map(s => String(s).trim()) 
+    : [String(teacher.sections || '').trim()];
+
+  const cleanTargetSub = typeof cleanSubjectKey === "function" 
+    ? cleanSubjectKey(targetSubject) 
+    : String(targetSubject || '').trim().toLowerCase();
+
+  let isSameSubject = false;
+  if (teacher.subject) {
+    const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(teacher.subject) : teacher.subject.trim().toLowerCase();
+    if (sKey === cleanTargetSub) isSameSubject = true;
+  }
+  if (!isSameSubject && Array.isArray(teacher.subjects)) {
+    isSameSubject = teacher.subjects.some(s => {
+      const sKey = typeof cleanSubjectKey === "function" ? cleanSubjectKey(s) : s.trim().toLowerCase();
+      return sKey === cleanTargetSub;
+    });
+  }
+
+  const isInTargetSection = teacherSections.includes(targetSection);
+  const isExclusiveToTargetSection = isInTargetSection && teacherSections.length === 1;
+
+  let baseTierScore = 0;
+
+  if (isExclusiveToTargetSection && isSameSubject) {
+    baseTierScore = 10000; // Tier 1: එම අංශයේ පමණක් + එම විෂයම
+  } 
+  else if (isExclusiveToTargetSection && !isSameSubject) {
+    baseTierScore = 8000;  // Tier 2: එම අංශයේ පමණක් + වෙනත් විෂයක්
+  } 
+  else if (isInTargetSection && isSameSubject) {
+    baseTierScore = 6000;  // Tier 3: එම අංශය + වෙනත් අංශ + එම විෂයම
+  } 
+  else if (isInTargetSection && !isSameSubject) {
+    baseTierScore = 4000;  // Tier 4: එම අංශය + වෙනත් අංශ + වෙනත් විෂයක්
+  } 
+  else if (!isInTargetSection && isSameSubject) {
+    // Tier 5: වෙනත් අංශයක + එම විෂයම (ආසන්නම අංශයට වැඩි ලකුණු)
+    const minDistance = Math.min(...teacherSections.map(s => {
+      const idx = SECTION_ORDER.indexOf(s);
+      return idx !== -1 ? Math.abs(idx - targetSecIndex) : 2;
+    }));
+    baseTierScore = 2000 - (minDistance * 250);
+  } 
+  else {
+    // Tier 6: වෙනත් අංශයක + වෙනත් විෂයක් (ආසන්නම අංශයට වැඩි ලකුණු)
+    const minDistance = teacherSections.length > 0
+      ? Math.min(...teacherSections.map(s => {
+          const idx = SECTION_ORDER.indexOf(s);
+          return idx !== -1 ? Math.abs(idx - targetSecIndex) : 2;
+        }))
+      : 2;
+    baseTierScore = 1000 - (minDistance * 250);
+  }
+
+  // Workload Tie-Breaker: එදින අඩුම කාලච්ඡේද ඇති ගුරුතුමාට ප්‍රමුඛතාව
+  const workloadBonus = (7 - totalPeriodsToday) * 25;
+
+  return baseTierScore + workloadBonus;
+}
+
+// -------------------------------------------------------------------------
+// 🔴 හොඳම ආදේශක ගුරුවරයා තේරීම (Smart Relief Matcher)
+// -------------------------------------------------------------------------
+function findBestReliefTeacher(day, period, targetClassId, targetSubject, currentAssignments) {
+  const allTeachers = window.schoolTeachers || [];
+  const allClasses = window.schoolClasses || [];
+  const schedule = window.masterSchedule || [];
+  const ctx = window.dailyReliefContext || {};
+
+  const todayStr = ctx.date || getSystemDateContext().dateString;
+
+  // 1. දීර්ඝකාලීන නිවාඩු ඇති අය
+  const longTermAbsentIds = new Set(
+    (window.longTermAbsences || [])
+      .filter(l => todayStr >= l.startDate && todayStr <= l.endDate)
+      .map(l => String(l.teacherId).trim().toLowerCase())
+  );
+
+  // 2. සම්පූර්ණ දින නිවාඩු හෝ මුළු දවසම Duty ඇති අය
+  const fullDayBlocked = new Set([
+    ...longTermAbsentIds,
+    ...(ctx.fullDayAbsent || []).map(id => String(id).trim().toLowerCase()),
+    ...(ctx.specialDuty || []).filter(d => (d.dutyPeriods || []).length >= 8).map(d => String(d.teacherId).trim().toLowerCase())
+  ]);
+
+  // 3. මෙම කාලච්ඡේදයේ කෙටි නිවාඩු හෝ විශේෂ රාජකාරි ඇති අය
+  const periodBlocked = new Set();
+  (ctx.partialAbsent || []).forEach(p => {
+    if ((p.absentPeriods || []).map(Number).includes(Number(period))) {
+      periodBlocked.add(String(p.teacherId).trim().toLowerCase());
+    }
+  });
+  (ctx.specialDuty || []).forEach(d => {
+    if ((d.dutyPeriods || []).map(Number).includes(Number(period))) {
+      periodBlocked.add(String(d.teacherId).trim().toLowerCase());
+    }
+  });
+
+  const targetClassObj = allClasses.find(c => String(c.id).toLowerCase() === String(targetClassId).toLowerCase());
+  const targetGrade = targetClassObj ? targetClassObj.grade : 8;
+
+  let candidates = [];
+
+  allTeachers.forEach(teacher => {
+    const tid = String(teacher.id).trim().toLowerCase();
+
+    // 🛑 HARD CONSTRAINTS
+    if (teacher.isExempt === true) return; // විශේෂ රාජකාරි නිසා නිදහස් කළ අය (Principal, VP)
+    if (teacher.leaveStatus && teacher.leaveStatus !== "present") return;
+    if (fullDayBlocked.has(tid)) return;
+    if (periodBlocked.has(tid)) return;
+
+    // සාමාන්‍ය කාලසටහනේ මෙම වේලාවේ පන්තියක් ඇත්ද?
+    const busyInSchedule = schedule.some(s => 
+      String(s.teacherId || '').trim().toLowerCase() === tid &&
+      Number(s.day) === Number(day) &&
+      Number(s.period) === Number(period)
+    );
+    if (busyInSchedule) return;
+
+    // වෙනත් පන්තියකට දැනටමත් මෙම වේලාවේ Relief පවරා ඇත්ද?
+    const busyInRelief = currentAssignments.some(r => 
+      String(r.reliefTeacherId || '').trim().toLowerCase() === tid &&
+      Number(r.period) === Number(period)
+    );
+    if (busyInRelief) return;
+
+    // 🛑 දිනකට උපරිම කාලච්ඡේද 7 සීමාව පරීක්ෂාව
+    const regularToday = schedule.filter(s => 
+      String(s.teacherId || '').trim().toLowerCase() === tid && 
+      Number(s.day) === Number(day)
+    ).length;
+
+    const reliefToday = currentAssignments.filter(r => 
+      String(r.reliefTeacherId || '').trim().toLowerCase() === tid
+    ).length;
+
+    const totalToday = regularToday + reliefToday;
+
+    // 7 හෝ ඊට වැඩි නම් ස්වයංක්‍රීයව බැහැර කරයි
+    if (totalToday >= 7) return;
+
+    // ලකුණු ගණනය කිරීම
+    const score = calculateHierarchicalReliefScore(teacher, targetGrade, targetSubject, totalToday);
+
+    candidates.push({
+      teacherId: teacher.id,
+      teacherName: teacher.name,
+      totalPeriodsToday: totalToday,
+      score: score
+    });
+  });
+
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0];
+}
+
+// -------------------------------------------------------------------------
+// 🔴 ප්‍රධාන එන්ජිම ධාවනය කිරීම (runAutoReliefEngine)
+// -------------------------------------------------------------------------
+function runAutoReliefEngine() {
+  const schedule = window.masterSchedule || [];
+  const ctx = window.dailyReliefContext || {};
+  const dateCtx = getSystemDateContext();
+  const day = dateCtx.timetableDayIndex;
+  const todayStr = ctx.date || dateCtx.dateString;
+
+  const absentTeacherMap = new Map();
+
+  (window.longTermAbsences || []).forEach(l => {
+    if (todayStr >= l.startDate && todayStr <= l.endDate) {
+      absentTeacherMap.set(String(l.teacherId).trim().toLowerCase(), l.reason || "දීර්ඝකාලීන නිවාඩු");
+    }
+  });
+
+  (ctx.fullDayAbsent || []).forEach(tid => {
+    absentTeacherMap.set(String(tid).trim().toLowerCase(), "සම්පූර්ණ දින නිවාඩු");
+  });
+
+  (ctx.partialAbsent || []).forEach(p => {
+    absentTeacherMap.set(String(p.teacherId).trim().toLowerCase(), p.reason || "කෙටි නිවාඩු");
+  });
+
+  (ctx.specialDuty || []).forEach(d => {
+    absentTeacherMap.set(String(d.teacherId).trim().toLowerCase(), d.dutyName || "විශේෂ පාසල් රාජකාරි");
+  });
+
+  if (absentTeacherMap.size === 0) {
+    alert("ℹ️ අද දින සඳහා කිසිදු ගුරු නිවාඩුවක් හෝ විශේෂ රාජකාරියක් වාර්තා වී නොමැත.");
+    return;
+  }
+
+  const slotsToRelieve = [];
+
+  schedule.forEach(slot => {
+    if (Number(slot.day) !== Number(day)) return;
+    const tid = String(slot.teacherId || '').trim().toLowerCase();
+    if (!tid) return;
+
+    if (absentTeacherMap.has(tid)) {
+      const reason = absentTeacherMap.get(tid);
+
+      const isShortLeave = (ctx.partialAbsent || []).some(p => 
+        String(p.teacherId).trim().toLowerCase() === tid && 
+        (p.absentPeriods || []).map(Number).includes(Number(slot.period))
+      );
+      const isDutyPeriod = (ctx.specialDuty || []).some(d => 
+        String(d.teacherId).trim().toLowerCase() === tid && 
+        (d.dutyPeriods || []).map(Number).includes(Number(slot.period))
+      );
+      const isFullDay = (ctx.fullDayAbsent || []).some(id => String(id).trim().toLowerCase() === tid) || 
+        (window.longTermAbsences || []).some(l => String(l.teacherId).trim().toLowerCase() === tid && todayStr >= l.startDate && todayStr <= l.endDate);
+
+      if (isFullDay || isShortLeave || isDutyPeriod) {
+        slotsToRelieve.push({
+          day: slot.day,
+          period: Number(slot.period),
+          classId: slot.classId,
+          subject: slot.subject,
+          absentTeacherId: slot.teacherId,
+          reason: reason
+        });
+      }
+    }
+  });
+
+  slotsToRelieve.sort((a, b) => a.period - b.period);
+
+  const assignments = [];
+  const unassigned = [];
+
+  slotsToRelieve.forEach(slot => {
+    const match = findBestReliefTeacher(day, slot.period, slot.classId, slot.subject, assignments);
+
+    if (match) {
+      assignments.push({
+        ...slot,
+        reliefTeacherId: match.teacherId,
+        reliefTeacherName: match.teacherName,
+        isManualOverride: false
+      });
+    } else {
+      unassigned.push({
+        ...slot,
+        reliefTeacherId: null,
+        reliefTeacherName: "පවරා නැත (ගුරු හිඟය / 7 සීමාව)",
+        isManualOverride: false
+      });
+    }
+  });
+
+  window.dailyReliefAssignments = assignments;
+  window.unassignedReliefSessions = unassigned;
+
+  renderDailyReliefResults();
+
+  if (unassigned.length > 0) {
+    alert(`⚠️ ආදේශන ජනනය අවසන්! කාලච්ඡේද ${assignments.length} ක් සාර්ථකව පවරන ලදී. කාලච්ඡේද ${unassigned.length} ක් උපරිම 7 සීමාව නිසා පිරවීමට නොහැකි විය. කරුණාකර Manual Override මඟින් සකසන්න.`);
+  } else {
+    alert(`🎉 සාර්ථකයි! අද දින හිස් වූ කාලච්ඡේද ${assignments.length} ම 100% ක් සාර්ථකව පවරන ලදී.`);
+  }
+}
+
+// සහායක නම් (Backwards compatibility)
+window.runSmartReliefGenerator = runAutoReliefEngine;
+window.runAutoReliefEngine = runAutoReliefEngine;
+
+// -------------------------------------------------------------------------
+// 🔴 ප්‍රධාන RELIEF වගු RENDER කිරීම
+// -------------------------------------------------------------------------
+function renderDailyReliefResults() {
+  const tbody = document.getElementById("reliefResultsTableBody");
+  const unassignedContainer = document.getElementById("unassignedReliefContainer");
+  const unassignedTbody = document.getElementById("unassignedReliefTableBody");
+  const badge = document.getElementById("reliefDayLabel");
+
+  const dateCtx = getSystemDateContext();
+  if (badge) badge.innerText = `${dateCtx.dayName} - ${dateCtx.dateString}`;
+
+  const assignments = window.dailyReliefAssignments || [];
+  const unassigned = window.unassignedReliefSessions || [];
+
+  // 1. Unassigned Alerts පෙන්වීම
+  if (unassignedContainer && unassignedTbody) {
+    if (unassigned.length > 0) {
+      unassignedContainer.classList.remove("hidden");
+      unassignedTbody.innerHTML = unassigned.map((row, idx) => {
+        const clsObj = (window.schoolClasses || []).find(c => String(c.id).toLowerCase() === String(row.classId).toLowerCase());
+        const sec = clsObj ? getSectionForGrade(clsObj.grade) : "-";
+        return `
+          <tr class="hover:bg-rose-50/50">
+            <td class="p-2 font-black text-rose-800">Period ${row.period}</td>
+            <td class="p-2 font-bold text-slate-800">${row.classId}</td>
+            <td class="p-2 text-slate-600 font-semibold">${sec}</td>
+            <td class="p-2 text-slate-700">${row.subject}</td>
+            <td class="p-2 text-slate-600">${getTeacherName(row.absentTeacherId)}</td>
+            <td class="p-2 text-slate-500">${row.reason}</td>
+            <td class="p-2 text-center">
+              <button type="button" onclick="openManualReliefOverrideModal('UNASSIGNED', ${idx})" class="px-2 py-1 text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition shadow-2xs cursor-pointer">
+                <i class="fa-solid fa-user-plus text-[10px]"></i> Force Assign
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    } else {
+      unassignedContainer.classList.add("hidden");
+    }
+  }
+
+  // 2. Assigned Relief Table පිරවීම
+  if (tbody) {
+    if (assignments.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">අද දින සඳහා සහන කාලච්ඡේද වාර්තා වී නොමැත.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = assignments.map((row, idx) => {
+      const clsObj = (window.schoolClasses || []).find(c => String(c.id).toLowerCase() === String(row.classId).toLowerCase());
+      const sec = clsObj ? getSectionForGrade(clsObj.grade) : "-";
+
+      return `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="p-2.5 font-black text-indigo-700">Period ${row.period}</td>
+          <td class="p-2.5 font-bold text-slate-800">${row.classId}</td>
+          <td class="p-2.5 font-semibold text-slate-600">${sec}</td>
+          <td class="p-2.5 text-slate-700 font-semibold">${row.subject}</td>
+          <td class="p-2.5 text-slate-600">${getTeacherName(row.absentTeacherId)}</td>
+          <td class="p-2.5 font-bold text-emerald-700">${row.reliefTeacherName}</td>
+          <td class="p-2.5">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${row.isManualOverride ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
+              ${row.isManualOverride ? 'Manual Force' : 'Auto Match'}
+            </span>
+          </td>
+          <td class="p-2.5 text-center no-print">
+            <button type="button" onclick="openManualReliefOverrideModal('ASSIGNED', ${idx})" class="px-2.5 py-1 text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition cursor-pointer">
+              <i class="fa-solid fa-pen-to-square text-[10px]"></i> වෙනස් කරන්න
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+}
+
+// -------------------------------------------------------------------------
+// 🔴 MANUAL FORCE ASSIGN (7 සීමාව ඉක්මවා යාමට අවශ්‍ය අවස්ථාවලදී)
+// -------------------------------------------------------------------------
+function openManualReliefOverrideModal(type, index) {
+  const targetList = (type === 'ASSIGNED') ? window.dailyReliefAssignments : window.unassignedReliefSessions;
+  const item = targetList ? targetList[index] : null;
+  if (!item) return;
+
+  const allTeachers = window.schoolTeachers || [];
+  const newTid = prompt(`[${item.classId}] පන්තියට Period ${item.period} සඳහා ආදේශක ගුරු අංකය ඇතුළත් කරන්න:\n(සටහන: ගුරුවරයෙකුට 7 සීමාව ඉක්මවා යන්නේ නම් අවවාදාත්මකව Force Assign කෙරේ)`);
+  if (!newTid) return;
+
+  const tObj = allTeachers.find(t => String(t.id).trim().toLowerCase() === String(newTid).trim().toLowerCase());
+  if (!tObj) {
+    alert("වැරදි ගුරු අංකයකි.");
+    return;
+  }
+
+  item.reliefTeacherId = tObj.id;
+  item.reliefTeacherName = `${tObj.name} (Manual Force)`;
+  item.isManualOverride = true;
+
+  if (type === 'UNASSIGNED') {
+    window.unassignedReliefSessions.splice(index, 1);
+    window.dailyReliefAssignments.push(item);
+  }
+
+  renderDailyReliefResults();
+  updateLiveAttendanceBadges();
+  alert(`සාර්ථකයි! [${tObj.name}] ගුරුතුමාට අතින් ආදේශනය පවරන ලදී.`);
+}
+
+// -------------------------------------------------------------------------
+// 🔴 පැමිණීම් BADGES සහ ලැයිස්තුව යාවත්කාලීන කිරීම
+// -------------------------------------------------------------------------
+function updateLiveAttendanceBadges() {
+  const allTeachers = window.schoolTeachers || [];
+  const ctx = window.dailyReliefContext || {};
+  const todayStr = ctx.date || getSystemDateContext().dateString;
+
+  const longTermSet = new Set((window.longTermAbsences || []).filter(l => todayStr >= l.startDate && todayStr <= l.endDate).map(l => String(l.teacherId).toLowerCase()));
+  const fullAbsentSet = new Set((ctx.fullDayAbsent || []).map(id => String(id).toLowerCase()));
+  const shortLeaveSet = new Set((ctx.partialAbsent || []).map(p => String(p.teacherId).toLowerCase()));
+  const dutySet = new Set((ctx.specialDuty || []).map(d => String(d.teacherId).toLowerCase()));
+
+  const totalAbsentCount = new Set([...longTermSet, ...fullAbsentSet]).size;
+  const presentCount = Math.max(0, allTeachers.length - totalAbsentCount);
+
+  const bPresent = document.getElementById("badgePresentCount");
+  const bAbsent = document.getElementById("badgeAbsentCount");
+  const bShort = document.getElementById("badgeShortLeaveCount");
+  const bDuty = document.getElementById("badgeDutyCount");
+  const bLong = document.getElementById("badgeLongTermCount");
+
+  if (bPresent) bPresent.innerText = `පැමිණි: ${presentCount}`;
+  if (bAbsent) bAbsent.innerText = `නොපැමිණි: ${totalAbsentCount}`;
+  if (bShort) bShort.innerText = `කෙටි නිවාඩු: ${shortLeaveSet.size}`;
+  if (bDuty) bDuty.innerText = `විශේෂ Duty: ${dutySet.size}`;
+  if (bLong) bLong.innerText = `දීර්ඝකාලීන: ${longTermSet.size}`;
+
+  // Quick Attendance Cards Grid
+  const listEl = document.getElementById("reliefAttendanceList");
+  if (listEl) {
+    listEl.innerHTML = allTeachers.map(t => {
+      const tid = String(t.id).toLowerCase();
+      let statusClass = "bg-emerald-50 text-emerald-800 border-emerald-200";
+      let statusText = "පැමිණ ඇත";
+
+      if (longTermSet.has(tid)) {
+        statusClass = "bg-slate-100 text-slate-800 border-slate-300";
+        statusText = "දීර්ඝකාලීන";
+      } else if (fullAbsentSet.has(tid)) {
+        statusClass = "bg-rose-50 text-rose-800 border-rose-200";
+        statusText = "නොපැමිණි";
+      } else if (dutySet.has(tid)) {
+        statusClass = "bg-purple-50 text-purple-800 border-purple-200";
+        statusText = "විශේෂ Duty";
+      } else if (shortLeaveSet.has(tid)) {
+        statusClass = "bg-amber-50 text-amber-800 border-amber-200";
+        statusText = "කෙටි නිවාඩු";
+      }
+
+      return `
+        <div class="p-2 rounded-xl border text-xs font-bold flex items-center justify-between ${statusClass}">
+          <span class="truncate">${t.name}</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-white/70 shadow-2xs">${statusText}</span>
+        </div>
+      `;
+    }).join("");
+  }
+}
+
+function getTeacherName(tid) {
+  if (!tid) return "-";
+  const t = (window.schoolTeachers || []).find(x => String(x.id).toLowerCase() === String(tid).toLowerCase());
+  return t ? t.name : tid;
+}
+
+// -------------------------------------------------------------------------
+// 🔴 MODAL 1 CONTROLS: DAILY ATTENDANCE & DUTY
+// -------------------------------------------------------------------------
+let currentAttendanceTab = "FULL";
+let selectedShortPeriods = new Set();
+
+function openDailyAttendanceModal() {
+  populateTeacherSelects();
+  renderAttendanceEntriesList();
+  document.getElementById("dailyAttendanceModal")?.classList.remove("hidden");
+}
+
+function closeDailyAttendanceModal() {
+  document.getElementById("dailyAttendanceModal")?.classList.add("hidden");
+  updateLiveAttendanceBadges();
+}
+
+function switchAttendanceTab(tab) {
+  currentAttendanceTab = tab;
+  const pBox = document.getElementById("attendancePeriodsBox");
+
+  document.getElementById("tabBtnFullAbsent")?.classList.toggle("text-indigo-600", tab === "FULL");
+  document.getElementById("tabBtnFullAbsent")?.classList.toggle("border-b-2", tab === "FULL");
+  document.getElementById("tabBtnShortLeave")?.classList.toggle("text-indigo-600", tab === "SHORT");
+  document.getElementById("tabBtnShortLeave")?.classList.toggle("border-b-2", tab === "SHORT");
+  document.getElementById("tabBtnSpecialDuty")?.classList.toggle("text-indigo-600", tab === "DUTY");
+  document.getElementById("tabBtnSpecialDuty")?.classList.toggle("border-b-2", tab === "DUTY");
+
+  if (pBox) pBox.classList.toggle("hidden", tab === "FULL");
+  selectedShortPeriods.clear();
+  updatePeriodButtonStyles();
+}
+
+function togglePeriodSelect(p) {
+  if (selectedShortPeriods.has(p)) selectedShortPeriods.delete(p);
+  else selectedShortPeriods.add(p);
+  updatePeriodButtonStyles();
+}
+
+function setPeriodRange(start, end) {
+  selectedShortPeriods.clear();
+  for (let i = start; i <= end; i++) selectedShortPeriods.add(i);
+  updatePeriodButtonStyles();
+}
+
+function updatePeriodButtonStyles() {
+  for (let i = 1; i <= 8; i++) {
+    const btn = document.getElementById(`pBtn_${i}`);
+    if (btn) {
+      const active = selectedShortPeriods.has(i);
+      btn.className = `period-btn px-2.5 py-1 text-xs font-bold border rounded-lg cursor-pointer ${active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300'}`;
+    }
+  }
+}
+
+function submitAttendanceEntry() {
+  const tid = document.getElementById("modalTeacherSelect")?.value;
+  const reason = document.getElementById("modalAbsenceReason")?.value || "";
+  if (!tid) return;
+
+  const ctx = window.dailyReliefContext;
+
+  if (currentAttendanceTab === "FULL") {
+    if (!ctx.fullDayAbsent.includes(tid)) ctx.fullDayAbsent.push(tid);
+  } else if (currentAttendanceTab === "SHORT") {
+    if (selectedShortPeriods.size === 0) { alert("කරුණාකර අදාළ කාලච්ඡේද තෝරන්න."); return; }
+    ctx.partialAbsent.push({ teacherId: tid, absentPeriods: Array.from(selectedShortPeriods), reason: reason || "කෙටි නිවාඩු" });
+  } else if (currentAttendanceTab === "DUTY") {
+    if (selectedShortPeriods.size === 0) { alert("කරුණාකර අදාළ කාලච්ඡේද තෝරන්න."); return; }
+    ctx.specialDuty.push({ teacherId: tid, dutyPeriods: Array.from(selectedShortPeriods), dutyName: reason || "විශේෂ රාජකාරි" });
+  }
+
+  renderAttendanceEntriesList();
+  document.getElementById("modalAbsenceReason").value = "";
+  selectedShortPeriods.clear();
+  updatePeriodButtonStyles();
+  updateLiveAttendanceBadges();
+}
+
+function renderAttendanceEntriesList() {
+  const el = document.getElementById("attendanceEntriesList");
+  if (!el) return;
+  const ctx = window.dailyReliefContext;
+  let html = "";
+
+  (ctx.fullDayAbsent || []).forEach((tid, idx) => {
+    html += `<div class="flex items-center justify-between p-2 bg-rose-50 border border-rose-200 rounded-lg text-xs">
+      <span><b>${getTeacherName(tid)}</b> - සම්පූර්ණ දින නිවාඩු</span>
+      <button onclick="window.dailyReliefContext.fullDayAbsent.splice(${idx},1); renderAttendanceEntriesList(); updateLiveAttendanceBadges();" class="text-rose-600 font-bold hover:underline cursor-pointer">ඉවත් කරන්න</button>
+    </div>`;
+  });
+
+  (ctx.partialAbsent || []).forEach((p, idx) => {
+    html += `<div class="flex items-center justify-between p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs">
+      <span><b>${getTeacherName(p.teacherId)}</b> - කෙටි නිවාඩු (Periods: ${p.absentPeriods.join(', ')})</span>
+      <button onclick="window.dailyReliefContext.partialAbsent.splice(${idx},1); renderAttendanceEntriesList(); updateLiveAttendanceBadges();" class="text-rose-600 font-bold hover:underline cursor-pointer">ඉවත් කරන්න</button>
+    </div>`;
+  });
+
+  (ctx.specialDuty || []).forEach((d, idx) => {
+    html += `<div class="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded-lg text-xs">
+      <span><b>${getTeacherName(d.teacherId)}</b> - රාජකාරි: ${d.dutyName} (Periods: ${d.dutyPeriods.join(', ')})</span>
+      <button onclick="window.dailyReliefContext.specialDuty.splice(${idx},1); renderAttendanceEntriesList(); updateLiveAttendanceBadges();" class="text-rose-600 font-bold hover:underline cursor-pointer">ඉවත් කරන්න</button>
+    </div>`;
+  });
+
+  el.innerHTML = html || `<div class="text-xs text-slate-400 p-2 text-center">කිසිදු සටහනක් නොමැත.</div>`;
+}
+
+// -------------------------------------------------------------------------
+// 🔴 MODAL 2 CONTROLS: LONG-TERM LEAVE
+// -------------------------------------------------------------------------
+function openLongTermLeaveModal() {
+  populateTeacherSelects();
+  renderLongTermEntriesList();
+  document.getElementById("longTermLeaveModal")?.classList.remove("hidden");
+}
+
+function closeLongTermLeaveModal() {
+  document.getElementById("longTermLeaveModal")?.classList.add("hidden");
+  updateLiveAttendanceBadges();
+}
+
+function addLongTermLeaveEntry() {
+  const tid = document.getElementById("longTermTeacherSelect")?.value;
+  const start = document.getElementById("longTermStartDate")?.value;
+  const end = document.getElementById("longTermEndDate")?.value;
+  const reason = document.getElementById("longTermReason")?.value || "දීර්ඝකාලීන නිවාඩු";
+
+  if (!tid || !start || !end) {
+    alert("කරුණාකර ගුරුවරයා, ආරම්භක දිනය සහ අවසාන දිනය ඇතුළත් කරන්න.");
+    return;
+  }
+
+  window.longTermAbsences.push({ teacherId: tid, startDate: start, endDate: end, reason });
+  renderLongTermEntriesList();
+  updateLiveAttendanceBadges();
+}
+
+function renderLongTermEntriesList() {
+  const el = document.getElementById("longTermEntriesList");
+  if (!el) return;
+
+  el.innerHTML = (window.longTermAbsences || []).map((item, idx) => `
+    <div class="flex items-center justify-between p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+      <div>
+        <span class="font-bold text-slate-800">${getTeacherName(item.teacherId)}</span>
+        <span class="text-slate-500 block text-[10px]">${item.startDate} සිට ${item.endDate} දක්වා (${item.reason})</span>
+      </div>
+      <button type="button" onclick="window.longTermAbsences.splice(${idx},1); renderLongTermEntriesList(); updateLiveAttendanceBadges();" class="text-rose-600 font-bold hover:underline cursor-pointer">මකන්න</button>
+    </div>
+  `).join("") || `<div class="text-xs text-slate-400 p-2 text-center">දීර්ඝකාලීන නිවාඩු කිසිවක් සටහන්ව නොමැත.</div>`;
+}
+
+function populateTeacherSelects() {
+  const teachers = window.schoolTeachers || [];
+  const opts = teachers.map(t => `<option value="${t.id}">${t.name} (${t.id})</option>`).join("");
+  const s1 = document.getElementById("modalTeacherSelect");
+  const s2 = document.getElementById("longTermTeacherSelect");
+  if (s1) s1.innerHTML = opts;
+  if (s2) s2.innerHTML = opts;
+}
+
+// -------------------------------------------------------------------------
+// 🔴 PRINT & EXPORT HANDLERS
+// -------------------------------------------------------------------------
+function printReliefSlip() { window.print(); }
+
+function print16ReliefCutSlipsA4() {
+  alert("🎟️ A4 Slips 16ක් මුද්‍රණය සූදානම් කෙරේ...");
+  window.print();
+}
+
+function adminOpenReliefQueue() {
+  alert("📲 WhatsApp Relief Queue විවෘත වේ...");
+}
+
+function downloadReliefPDFForStaffGroup() {
+  alert("📄 Staff Group PDF ගොනුව සකස් වෙමින් පවතී...");
+}
+
+function adminBroadcastReliefToSchoolGroup() {
+  const list = window.dailyReliefAssignments || [];
+  if (list.length === 0) { alert("වෙන් කළ සහන කාලච්ඡේද නොමැත."); return; }
+  let msg = `📢 *දෛනික සහන කාලසටහන (${getSystemDateContext().dateString})*\n\n`;
+  list.forEach(r => {
+    msg += `• Period ${r.period} | ${r.classId} (${r.subject}) ➜ ${r.reliefTeacherName}\n`;
+  });
+  navigator.clipboard.writeText(msg).then(() => {
+    alert("📋 පණිවිඩය Clipboard එකට Copy විය. Staff WhatsApp Group එකට Paste කළ හැක.");
+  });
+}
+
+// ආරම්භක Initialization
+document.addEventListener("DOMContentLoaded", () => {
+  renderDailyReliefResults();
+  updateLiveAttendanceBadges();
+});
+
+
+    
   </script>
 
   
