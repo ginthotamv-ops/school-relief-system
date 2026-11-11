@@ -363,10 +363,10 @@
             
             <button type="button" onclick="setPeriodRange(1, 4)" class="px-2 py-1 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 rounded-lg ml-2 border border-slate-200">1-4 (උදෑසන)</button>
             <button type="button" onclick="setPeriodRange(5, 8)" class="px-2 py-1 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200">5-8 (සවස)</button>
-          <!-- 🟢 අලුතින් එක් කළ සම්පූර්ණ දින බොත්තම -->
-    <button type="button" onclick="setPeriodRange(1, 8)" class="px-2 py-1 text-[10px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200 cursor-pointer">
-      <i class="fa-solid fa-check-double mr-1"></i>1-8 (මුළු දවසම)
-    </button>
+          
+            <button type="button" id="btnWholeDay" onclick="setPeriodRange(1, 8)" class="hidden px-2 py-1 text-[10px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200 cursor-pointer">
+  <i class="fa-solid fa-check-double mr-1"></i>1-8 (මුළු දවසම)
+</button>
           </div>
         </div>
 
@@ -16599,7 +16599,16 @@ function switchAttendanceTab(tabType) {
       periodsBox.classList.remove("hidden");
     }
   }
-
+  
+// 2. 🟢 1-8 (මුළු දවසම) බොත්තම විශේෂ රාජකාරි වලදී පමණක් පෙන්වීම
+  const btnWholeDay = document.getElementById("btnWholeDay");
+  if (btnWholeDay) {
+    if (tabType === "DUTY") {
+      btnWholeDay.classList.remove("hidden"); // DUTY වලදී පමණක් පෙනේ
+    } else {
+      btnWholeDay.classList.add("hidden");    // FULL සහ SHORT වලදී සැඟවෙයි
+    }
+  }
   // Tab එක මාරු වන විට කලින් තෝරාගත් කාලච්ඡේද ඉවත් කර Reset කිරීම
   window.selectedShortPeriods.clear();
   updatePeriodButtonStyles();
