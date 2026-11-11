@@ -16521,41 +16521,97 @@ function updatePeriodButtonStyles() {
  * දෛනික පැමිණීම්/නිවාඩු ලැයිස්තුවට එක් කිරීම
  */
 // A. දෛනික පැමිණීම් ඇතුළත් කිරීමේදී
+
+// =========================================================================
+// 📝 දෛනික පැමිණීම් ඇතුළත් කිරීම (CRASH-PROOF SUBMIT ATTENDANCE)
+// =========================================================================
 function submitAttendanceEntry() {
   const selectEl = document.getElementById("modalTeacherSelect");
-  const tid = selectEl ? selectEl.value : null;
-  const reason = document.getElementById("modalAbsenceReason")?.value || "";
+  const tid = selectEl ? selectEl.value.trim() : null;
+  const reason = document.getElementById("modalAbsenceReason")?.value.trim() || "";
   
   if (!tid) {
-    alert("කරුණාකර ගුරුවරයෙකු තෝරන්න.");
+    alert("කරුණාකර ලැයිස්තුවෙන් ගුරුවරයෙකු තෝරන්න.");
     return;
   }
 
-  const ctx = window.dailyReliefContext;
-
-  if (currentAttendanceTab === "FULL") {
-    if (!ctx.fullDayAbsent.includes(tid)) ctx.fullDayAbsent.push(tid);
-  } else if (currentAttendanceTab === "SHORT") {
-    if (selectedShortPeriods.size === 0) { alert("කාලච්ඡේද තෝරන්න."); return; }
-    ctx.partialAbsent.push({ teacherId: tid, absentPeriods: Array.from(selectedShortPeriods), reason: reason || "කෙටි නිවාඩු" });
-  } else if (currentAttendanceTab === "DUTY") {
-    if (selectedShortPeriods.size === 0) { alert("කාලච්ඡේද තෝරන්න."); return; }
-    ctx.specialDuty.push({ teacherId: tid, dutyPeriods: Array.from(selectedShortPeriods), dutyName: reason || "විශේෂ රාජකාරි" });
+  // 1. 🛡️ FIREBASE OMISSION FIX (Arrays නොමැති නම් ස්වයංක්‍රීයව නිර්මාණය කිරීම)
+  if (!window.dailyReliefContext) {
+    window.dailyReliefContext = {
+      date: typeof getTodayDateString === 'function' ? getTodayDateString() : new Date().toISOString().split('T')[0],
+      fullDayAbsent: [],
+      partialAbsent: [],
+      specialDuty: []
+    };
   }
 
-  // 💾 ස්ථිරවම Browser එකේ සුරැකීම (Refresh කළද නොමැකේ)
-  saveReliefStateToStorage();
+  const ctx = window.dailyReliefContext;
+  if (!Array.isArray(ctx.fullDayAbsent)) ctx.fullDayAbsent = [];
+  if (!Array.isArray(ctx.partialAbsent)) ctx.partialAbsent = [];
+  if (!Array.isArray(ctx.specialDuty)) ctx.specialDuty = [];
 
-  populateTeacherSelects();
-  renderAttendanceEntriesList();
-  updateLiveAttendanceBadges();
+  // Active Tab එක හඳුනාගැනීම (default: 'FULL')
+  const activeTab = window.currentAttendanceTab || "FULL";
 
+  // 2. අදාළ නිවාඩු කාණ්ඩයට ඇතුළත් කිරීම
+  if (activeTab === "FULL") {
+    if (!ctx.fullDayAbsent.includes(tid)) {
+      ctx.fullDayAbsent.push(tid);
+    } else {
+      alert("මෙම ගුරුවරයා දැනටමත් සම්පූර්ණ දින නිවාඩු ලැයිස්තුවට ඇතුළත් කර ඇත.");
+      return;
+    }
+  } 
+  else if (activeTab === "SHORT") {
+    const periods = window.selectedShortPeriods ? Array.from(window.selectedShortPeriods) : [];
+    if (periods.length === 0) { 
+      alert("කරුණාකර අදාළ කෙටි නිවාඩු කාලච්ඡේද තෝරන්න."); 
+      return; 
+    }
+    ctx.partialAbsent.push({ 
+      teacherId: tid, 
+      absentPeriods: periods, 
+      reason: reason || "කෙටි නිවාඩු" 
+    });
+  } 
+  else if (activeTab === "DUTY") {
+    const periods = window.selectedShortPeriods ? Array.from(window.selectedShortPeriods) : [];
+    if (periods.length === 0) { 
+      alert("කරුණාකර අදාළ රාජකාරි කාලච්ඡේද තෝරන්න."); 
+      return; 
+    }
+    ctx.specialDuty.push({ 
+      teacherId: tid, 
+      dutyPeriods: periods, 
+      dutyName: reason || "විශේෂ රාජකාරි" 
+    });
+  }
+
+  // 3. 💾 LocalStorage සහ Firebase Cloud වෙත ස්ථිරව සුරැකීම
+  if (typeof saveReliefStateToStorage === 'function') {
+    saveReliefStateToStorage();
+  }
+
+  // 4. UI යාවත්කාලීන කිරීම (Dropdowns වලින් ඉවත් කිරීම සහ ලැයිස්තු ඇඳීම)
+  if (typeof populateTeacherSelects === 'function') populateTeacherSelects();
+  if (typeof renderAttendanceEntriesList === 'function') renderAttendanceEntriesList();
+  if (typeof updateLiveAttendanceBadges === 'function') updateLiveAttendanceBadges();
+  if (typeof renderDailyReliefResults === 'function') renderDailyReliefResults();
+
+  // 5. Input Fields Reset කිරීම
   if (selectEl) selectEl.value = "";
-  document.getElementById("modalAbsenceReason").value = "";
-  selectedShortPeriods.clear();
-  updatePeriodButtonStyles();
-}
+  const reasonInput = document.getElementById("modalAbsenceReason");
+  if (reasonInput) reasonInput.value = "";
+  
+  if (window.selectedShortPeriods && typeof window.selectedShortPeriods.clear === 'function') {
+    window.selectedShortPeriods.clear();
+  }
+  if (typeof updatePeriodButtonStyles === 'function') {
+    updatePeriodButtonStyles();
+  }
 
+  console.log("✅ ගුරු නිවාඩු සටහන සාර්ථකව එකතු විය.");
+}
 /**
  * ඇතුළත් කළ ලැයිස්තුවෙන් ඉවත් කිරීමේ ශ්‍රිත (REMOVAL HANDLERS)
  * මෙහිදී ඉවත් කළ සැනින් ගුරුවරයා නැවත Dropdown එකට එකතු වේ
@@ -16900,11 +16956,9 @@ function getTodayDateString() {
 /**
  * 1. දත්ත මතකයෙන් (LocalStorage) නැවත ලබා ගැනීම සහ දින මාරුව පරීක්ෂා කිරීම
  */
+
 // =========================================================================
-// 🔄 DUAL STORAGE (LOCAL + FIREBASE) & DAY ROLLOVER ENGINE
-// =========================================================================
-// =========================================================================
-// 🔄 CRASH-PROOF INIT AND LOAD RELIEF STATE
+// 🔄 CRASH-PROOF INIT AND LOAD RELIEF STATE (FIREBASE ARRAY SAFE)
 // =========================================================================
 function initAndLoadReliefState() {
   const todayStr = getTodayDateString();
@@ -16912,7 +16966,8 @@ function initAndLoadReliefState() {
   // 1. LocalStorage වෙතින් දත්ත Restore කිරීම
   try {
     const savedLongTerm = localStorage.getItem("school_relief_long_term");
-    window.longTermAbsences = savedLongTerm ? JSON.parse(savedLongTerm) : [];
+    const parsedLT = savedLongTerm ? JSON.parse(savedLongTerm) : [];
+    window.longTermAbsences = Array.isArray(parsedLT) ? parsedLT : Object.values(parsedLT || {});
   } catch (e) {
     window.longTermAbsences = [];
   }
@@ -16925,12 +16980,18 @@ function initAndLoadReliefState() {
     savedContext = null;
   }
 
-  // දින මාරුව පරීක්ෂා කිරීම (Day Rollover)
+  // දින මාරුව පරීක්ෂා කිරීම (Day Rollover) සහ Local Data Normalization
   if (savedContext && savedContext.date === todayStr) {
-    window.dailyReliefContext = savedContext;
+    window.dailyReliefContext = {
+      date: todayStr,
+      fullDayAbsent: Array.isArray(savedContext.fullDayAbsent) ? savedContext.fullDayAbsent : [],
+      partialAbsent: Array.isArray(savedContext.partialAbsent) ? savedContext.partialAbsent : [],
+      specialDuty: Array.isArray(savedContext.specialDuty) ? savedContext.specialDuty : []
+    };
     const savedAssignments = localStorage.getItem("school_relief_daily_assignments");
     window.dailyReliefAssignments = savedAssignments ? JSON.parse(savedAssignments) : [];
   } else {
+    // නව දිනයක් නම් සියලුම ලැයිස්තු හිස් Arrays ලෙස සකසයි
     window.dailyReliefContext = {
       date: todayStr,
       fullDayAbsent: [],
@@ -16944,8 +17005,7 @@ function initAndLoadReliefState() {
     }
   }
 
-  // 2. 🛡️ 16941 පේළියේ Error එක වැළැක්වීමේ ආරක්ෂිත පරීක්ෂාව:
-  // Firebase App එකක් සැබවින්ම Initialize වී ඇත්නම් පමණක් Cloud Listener ක්‍රියාත්මක වේ
+  // 2. 🛡️ Firebase Listener පරීක්ෂාව සහ ආරක්ෂිත Cloud Sync
   const isFirebaseInitialized = (
     typeof firebase !== 'undefined' &&
     Array.isArray(firebase.apps) &&
@@ -16957,27 +17017,42 @@ function initAndLoadReliefState() {
     try {
       const db = firebase.database();
 
-      // දීර්ඝකාලීන නිවාඩු Cloud එකෙන් ලබා ගැනීම
+      // A. දීර්ඝකාලීන නිවාඩු Cloud එකෙන් ලබා ගැනීම
       db.ref('relief/longTermAbsences').on('value', (snap) => {
         const data = snap.val();
-        if (data && Array.isArray(data)) {
-          window.longTermAbsences = data;
-          localStorage.setItem("school_relief_long_term", JSON.stringify(data));
+        if (data) {
+          // Firebase Objects හෝ Arrays යන ඕනෑම ආකාරයකින් ආවද Array එකක් බවට පත් කරයි
+          window.longTermAbsences = Array.isArray(data) ? data : Object.values(data);
+          localStorage.setItem("school_relief_long_term", JSON.stringify(window.longTermAbsences));
           if (typeof renderLongTermEntriesList === 'function') renderLongTermEntriesList();
           if (typeof populateTeacherSelects === 'function') populateTeacherSelects();
+          if (typeof updateLiveAttendanceBadges === 'function') updateLiveAttendanceBadges();
         }
       });
 
-      // අද දිනට අදාළ දෛනික සටහන් Cloud එකෙන් ලබා ගැනීම
+      // B. අද දිනට අදාළ දෛනික සටහන් Cloud එකෙන් ලබා ගැනීම (🛡️ ARRAY SAFETY FIX)
       db.ref(`relief/dailyRecords/${todayStr}`).on('value', (snap) => {
         const dayData = snap.val();
         if (dayData && dayData.dailyContext) {
-          window.dailyReliefContext = dayData.dailyContext;
-          window.dailyReliefAssignments = dayData.dailyAssignments || [];
+          const rawCtx = dayData.dailyContext;
+
+          // 🔴 Firebase මඟින් හිස් ලැයිස්තු මඟහැරියද (undefined වුවද) මෙහිදී නැවත [] බවට පත් කරයි:
+          window.dailyReliefContext = {
+            date: rawCtx.date || todayStr,
+            fullDayAbsent: Array.isArray(rawCtx.fullDayAbsent) ? rawCtx.fullDayAbsent : (rawCtx.fullDayAbsent ? Object.values(rawCtx.fullDayAbsent) : []),
+            partialAbsent: Array.isArray(rawCtx.partialAbsent) ? rawCtx.partialAbsent : (rawCtx.partialAbsent ? Object.values(rawCtx.partialAbsent) : []),
+            specialDuty: Array.isArray(rawCtx.specialDuty) ? rawCtx.specialDuty : (rawCtx.specialDuty ? Object.values(rawCtx.specialDuty) : [])
+          };
+
+          window.dailyReliefAssignments = Array.isArray(dayData.dailyAssignments) 
+            ? dayData.dailyAssignments 
+            : (dayData.dailyAssignments ? Object.values(dayData.dailyAssignments) : []);
           
+          // LocalStorage වෙත ආරක්ෂිතව සුරැකීම
           localStorage.setItem("school_relief_daily_context", JSON.stringify(window.dailyReliefContext));
           localStorage.setItem("school_relief_daily_assignments", JSON.stringify(window.dailyReliefAssignments));
 
+          // UI සංරචක සජීවීව Refresh කිරීම
           if (typeof populateTeacherSelects === 'function') populateTeacherSelects();
           if (typeof renderAttendanceEntriesList === 'function') renderAttendanceEntriesList();
           if (typeof updateLiveAttendanceBadges === 'function') updateLiveAttendanceBadges();
@@ -16985,10 +17060,10 @@ function initAndLoadReliefState() {
         }
       });
     } catch (fbErr) {
-      console.warn("Firebase listener skipped:", fbErr.message);
+      console.warn("Firebase listener error:", fbErr.message);
     }
   } else {
-    console.warn("⚠️ Firebase App එක Initialize කර නොමැත. පද්ධතිය LocalStorage මඟින් පමණක් ක්‍රියාත්මක වේ.");
+    console.warn("⚠️ Firebase App එක Initialize කර නොමැත. LocalStorage භාවිත වේ.");
   }
 }
 /**
