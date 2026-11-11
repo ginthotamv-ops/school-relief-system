@@ -16706,56 +16706,165 @@ function submitAttendanceEntry() {
  */
 
 // B. දෛනික පැමිණීම් ලැයිස්තුවෙන් ඉවත් කිරීමේදී
+
+    ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅
+// =========================================================================
+// 🗑️ සටහනක් ඉවත් කිරීම (AUTO FIREBASE SYNC & RELIEF RE-RENDER)
+// =========================================================================
 function removeAttendanceItem(type, index) {
   const ctx = window.dailyReliefContext;
+  if (!ctx) return;
 
-  if (type === 'FULL') ctx.fullDayAbsent.splice(index, 1);
-  else if (type === 'SHORT') ctx.partialAbsent.splice(index, 1);
-  else if (type === 'DUTY') ctx.specialDuty.splice(index, 1);
+  // 1. Array පරීක්ෂාව සමඟ ආරක්ෂිතව ලැයිස්තුවෙන් ඉවත් කිරීම
+  if (type === 'FULL' && Array.isArray(ctx.fullDayAbsent)) {
+    ctx.fullDayAbsent.splice(index, 1);
+  } else if (type === 'SHORT' && Array.isArray(ctx.partialAbsent)) {
+    ctx.partialAbsent.splice(index, 1);
+  } else if (type === 'DUTY' && Array.isArray(ctx.specialDuty)) {
+    ctx.specialDuty.splice(index, 1);
+  }
 
-  // 💾 වෙනස්කම LocalStorage එකට Save කිරීම
-  saveReliefStateToStorage();
+  // 2. 💾 වෙනස්කම LocalStorage සහ Firebase දෙකටම Cloud Sync කිරීම
+  if (typeof saveReliefStateToStorage === 'function') {
+    saveReliefStateToStorage();
+  }
 
-  populateTeacherSelects();
-  renderAttendanceEntriesList();
-  updateLiveAttendanceBadges();
+  // 3. UI සහ සහන කාලසටහන ක්ෂණිකව Re-calculate කර Refresh කිරීම
+  if (typeof populateTeacherSelects === 'function') populateTeacherSelects();
+  if (typeof renderAttendanceEntriesList === 'function') renderAttendanceEntriesList();
+  if (typeof updateLiveAttendanceBadges === 'function') updateLiveAttendanceBadges();
+  
+  // 🔴 ඉතා වැදගත්: සහන වගුවෙන්ද එම ගුරුවරයාගේ සහන ඉවත් කිරීම
+  if (typeof renderDailyReliefResults === 'function') renderDailyReliefResults();
 }
+
+
+ 
+   
+
+
+window.removeAttendanceItem = removeAttendanceItem;
 /**
  * Attendance Entries ලැයිස්තුව UI එකේ ඇඳීම
  */
 
+// =========================================================================
+// 📋 දෛනික පැමිණීම් සටහන් ලැයිස්තුව ප්‍රදර්ශනය කිරීම (CRASH-PROOF)
+// =========================================================================
 function renderAttendanceEntriesList() {
   const el = document.getElementById("attendanceEntriesList");
   if (!el) return;
-  const ctx = window.dailyReliefContext;
+
+  // 1. 🛡️ Context ආරක්ෂිතව ලබා ගැනීම (Crash වීම වළක්වයි)
+  const ctx = window.dailyReliefContext || {};
+
+  // Firebase Object/Array ආරක්ෂිතව Array එකක් බවට හැරවීම
+  const toSafeArray = (data) => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    return Object.values(data);
+  };
+
+  const fullList = toSafeArray(ctx.fullDayAbsent);
+  const partialList = toSafeArray(ctx.partialAbsent);
+  const dutyList = toSafeArray(ctx.specialDuty);
+
+  // ගුරු නම සහ අංකය ආරක්ෂිතව ලබාගැනීමේ සහායක ශ්‍රිත
+  const getSafeTeacherName = (tid) => {
+    if (typeof getTeacherName === 'function') {
+      const name = getTeacherName(tid);
+      if (name && name !== 'undefined') return name;
+    }
+    const teacher = (window.teachers || []).find(t => String(t.id).trim() === String(tid).trim());
+    return teacher ? teacher.name : `ගුරුභවතා (${tid})`;
+  };
+
+  const getSafeTeacherNum = (tid) => {
+    if (typeof getTeacherDisplayNumber === 'function') {
+      const num = getTeacherDisplayNumber(tid);
+      if (num) return num;
+    }
+    const idx = (window.teachers || []).findIndex(t => String(t.id).trim() === String(tid).trim());
+    return idx !== -1 ? String(idx + 1).padStart(2, '0') : tid;
+  };
+
+  // කාලච්ඡේද P1, P2 ලෙස අංක පිළිවෙළට සකස් කිරීම
+  const formatPeriods = (periods) => {
+    const arr = toSafeArray(periods);
+    if (arr.length === 0) return "සටහන් කර නොමැත";
+    return arr
+      .map(p => parseInt(String(p).replace(/\D/g, ''), 10))
+      .filter(p => !isNaN(p))
+      .sort((a, b) => a - b)
+      .map(p => `P${p}`)
+      .join(', ');
+  };
+
   let html = "";
 
-  (ctx.fullDayAbsent || []).forEach((tid, idx) => {
-    const tnum = getTeacherDisplayNumber(tid);
-    html += `<div class="flex items-center justify-between p-2 bg-rose-50 border border-rose-200 rounded-lg text-xs">
-      <span><b>[${tnum}] ${getTeacherName(tid)}</b> - සම්පූර්ණ දින නිවාඩු</span>
-      <button type="button" onclick="removeAttendanceItem('FULL', ${idx})" class="text-rose-600 font-bold hover:underline cursor-pointer">ඉවත් කරන්න</button>
-    </div>`;
+  // 2. 🛑 සම්පූර්ණ දින නිවාඩු (Full Day Absent)
+  fullList.forEach((tid, idx) => {
+    const tnum = getSafeTeacherNum(tid);
+    const tname = getSafeTeacherName(tid);
+    html += `
+      <div class="flex items-center justify-between p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs gap-2">
+        <div class="flex items-center gap-1.5 overflow-hidden">
+          <span class="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
+          <span class="text-slate-800 truncate"><b>[${tnum}] ${tname}</b> - <span class="text-rose-700 font-semibold">සම්පූර්ණ දින නිවාඩු</span></span>
+        </div>
+        <button type="button" onclick="removeAttendanceItem('FULL', ${idx})" class="text-rose-600 hover:text-rose-800 font-bold hover:underline shrink-0 cursor-pointer">
+          ඉවත් කරන්න
+        </button>
+      </div>`;
   });
 
-  (ctx.partialAbsent || []).forEach((p, idx) => {
-    const tnum = getTeacherDisplayNumber(p.teacherId);
-    html += `<div class="flex items-center justify-between p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs">
-      <span><b>[${tnum}] ${getTeacherName(p.teacherId)}</b> - කෙටි නිවාඩු (Periods: ${p.absentPeriods.join(', ')})</span>
-      <button type="button" onclick="removeAttendanceItem('SHORT', ${idx})" class="text-rose-600 font-bold hover:underline cursor-pointer">ඉවත් කරන්න</button>
-    </div>`;
+  // 3. 🟡 කෙටි නිවාඩු (Short Leave)
+  partialList.forEach((p, idx) => {
+    if (!p) return;
+    const tid = p.teacherId || p.id;
+    const tnum = getSafeTeacherNum(tid);
+    const tname = getSafeTeacherName(tid);
+    const periodsFormatted = formatPeriods(p.absentPeriods);
+    const reasonText = p.reason ? ` (${p.reason})` : '';
+
+    html += `
+      <div class="flex items-center justify-between p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs gap-2">
+        <div class="flex items-center gap-1.5 overflow-hidden">
+          <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+          <span class="text-slate-800 truncate"><b>[${tnum}] ${tname}</b> - <span class="text-amber-800 font-semibold">කෙටි නිවාඩු${reasonText}</span> <span class="text-slate-500 font-bold">[${periodsFormatted}]</span></span>
+        </div>
+        <button type="button" onclick="removeAttendanceItem('SHORT', ${idx})" class="text-rose-600 hover:text-rose-800 font-bold hover:underline shrink-0 cursor-pointer">
+          ඉවත් කරන්න
+        </button>
+      </div>`;
   });
 
-  (ctx.specialDuty || []).forEach((d, idx) => {
-    const tnum = getTeacherDisplayNumber(d.teacherId);
-    html += `<div class="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded-lg text-xs">
-      <span><b>[${tnum}] ${getTeacherName(d.teacherId)}</b> - රාජකාරි: ${d.dutyName} (Periods: ${d.dutyPeriods.join(', ')})</span>
-      <button type="button" onclick="removeAttendanceItem('DUTY', ${idx})" class="text-rose-600 font-bold hover:underline cursor-pointer">ඉවත් කරන්න</button>
-    </div>`;
+  // 4. 🔵 විශේෂ රාජකාරි (Special Duty)
+  dutyList.forEach((d, idx) => {
+    if (!d) return;
+    const tid = d.teacherId || d.id;
+    const tnum = getSafeTeacherNum(tid);
+    const tname = getSafeTeacherName(tid);
+    const periodsFormatted = formatPeriods(d.dutyPeriods);
+    const dutyLabel = d.dutyName || 'විශේෂ රාජකාරි';
+
+    html += `
+      <div class="flex items-center justify-between p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-xs gap-2">
+        <div class="flex items-center gap-1.5 overflow-hidden">
+          <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
+          <span class="text-slate-800 truncate"><b>[${tnum}] ${tname}</b> - <span class="text-blue-800 font-semibold">රාජකාරි: ${dutyLabel}</span> <span class="text-slate-500 font-bold">[${periodsFormatted}]</span></span>
+        </div>
+        <button type="button" onclick="removeAttendanceItem('DUTY', ${idx})" class="text-rose-600 hover:text-rose-800 font-bold hover:underline shrink-0 cursor-pointer">
+          ඉවත් කරන්න
+        </button>
+      </div>`;
   });
 
-  el.innerHTML = html || `<div class="text-xs text-slate-400 p-2 text-center">කිසිදු සටහනක් නොමැත.</div>`;
+  // 5. කිසිවක් නැති විට පෙන්වන පණිවිඩය
+  el.innerHTML = html || `<div class="text-xs text-slate-400 p-3 text-center bg-slate-50 border border-dashed border-slate-200 rounded-xl">අද දිනට කිසිදු නිවාඩු හෝ රාජකාරි සටහනක් ඇතුළත් කර නොමැත.</div>`;
 }
+
+window.renderAttendanceEntriesList = renderAttendanceEntriesList;
 
 /**
  * දීර්ඝකාලීන නිවාඩු එකතු කිරීම
