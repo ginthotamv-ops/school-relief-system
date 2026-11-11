@@ -16245,81 +16245,164 @@ window.runAutoReliefEngine = runAutoReliefEngine;
 // -------------------------------------------------------------------------
 // 🔴 ප්‍රධාන RELIEF වගු RENDER කිරීම
 // -------------------------------------------------------------------------
+// =========================================================================
+// 📋 2. කාලච්ඡේදය අනුව සහන වගුව ජනනය කරන ප්‍රධාන ශ්‍රිතය (REPLACEMENT)
+// =========================================================================
 function renderDailyReliefResults() {
-  const tbody = document.getElementById("reliefResultsTableBody");
-  const unassignedContainer = document.getElementById("unassignedReliefContainer");
-  const unassignedTbody = document.getElementById("unassignedReliefTableBody");
-  const badge = document.getElementById("reliefDayLabel");
+  const container = document.getElementById("dailyReliefTableContainer") || 
+                    document.getElementById("reliefResultsContainer") || 
+                    document.getElementById("reliefTableBody");
+  
+  if (!container) return;
 
-  const dateCtx = getSystemDateContext();
-  if (badge) badge.innerText = `${dateCtx.dayName} - ${dateCtx.dateString}`;
+  const currentDay = typeof activeDay !== 'undefined' ? activeDay : "Monday";
+  const allTeachers = window.teachers || [];
+  
+  let neededReliefSlots = [];
+  window.dailyReliefAssignments = []; // සහන ලැයිස්තුව මුලින් පිරිසිදු කිරීම
 
-  const assignments = window.dailyReliefAssignments || [];
-  const unassigned = window.unassignedReliefSessions || [];
+  // -----------------------------------------------------------------------
+  // පියවර A: කාලච්ඡේද 1 සිට 8 දක්වා පමණක් නිවාඩු පරීක්ෂා කිරීම
+  // -----------------------------------------------------------------------
+  for (let period = 1; period <= 8; period++) {
+    allTeachers.forEach(teacher => {
+      // 1. අදාළ කාලච්ඡේදයේදී මෙම ගුරුවරයාට පන්තියක් තිබේදැයි බැලීම
+      let lesson = null;
+      if (typeof getTeacherScheduleSlot === 'function') {
+        lesson = getTeacherScheduleSlot(teacher.id, currentDay, period);
+      } else if (window.masterTimetable && window.masterTimetable[teacher.id]) {
+        lesson = window.masterTimetable[teacher.id][currentDay]?.[period];
+      }
 
-  // 1. Unassigned Alerts පෙන්වීම
-  if (unassignedContainer && unassignedTbody) {
-    if (unassigned.length > 0) {
-      unassignedContainer.classList.remove("hidden");
-      unassignedTbody.innerHTML = unassigned.map((row, idx) => {
-        const clsObj = (window.schoolClasses || []).find(c => String(c.id).toLowerCase() === String(row.classId).toLowerCase());
-        const sec = clsObj ? getSectionForGrade(clsObj.grade) : "-";
-        return `
-          <tr class="hover:bg-rose-50/50">
-            <td class="p-2 font-black text-rose-800">Period ${row.period}</td>
-            <td class="p-2 font-bold text-slate-800">${row.classId}</td>
-            <td class="p-2 text-slate-600 font-semibold">${sec}</td>
-            <td class="p-2 text-slate-700">${row.subject}</td>
-            <td class="p-2 text-slate-600">${getTeacherName(row.absentTeacherId)}</td>
-            <td class="p-2 text-slate-500">${row.reason}</td>
-            <td class="p-2 text-center">
-              <button type="button" onclick="openManualReliefOverrideModal('UNASSIGNED', ${idx})" class="px-2 py-1 text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition shadow-2xs cursor-pointer">
-                <i class="fa-solid fa-user-plus text-[10px]"></i> Force Assign
-              </button>
-            </td>
-          </tr>
-        `;
-      }).join("");
-    } else {
-      unassignedContainer.classList.add("hidden");
-    }
+      // පන්තියක් තිබේ නම් පමණක් නිවාඩු තත්ත්වය පරීක්ෂා කිරීම
+      if (lesson && (lesson.className || lesson.gradeClass || lesson.subject)) {
+        const absenceStatus = checkTeacherPeriodAbsence(teacher.id, period);
+
+        // 🛑 ගුරුවරයා මෙම නිශ්චිත කාලච්ඡේදයේදී පමණක් නිවාඩු නම් සහන අවශ්‍ය වේ
+        if (absenceStatus.isAbsent) {
+          neededReliefSlots.push({
+            period: period,
+            absentTeacherId: teacher.id,
+            absentTeacherName: teacher.name,
+            gradeClass: lesson.className || lesson.gradeClass || 'පන්තිය',
+            subject: lesson.subject || 'විෂයය',
+            leaveType: absenceStatus.type,
+            leaveLabel: absenceStatus.label
+          });
+        }
+      }
+    });
   }
 
-  // 2. Assigned Relief Table පිරවීම
-  if (tbody) {
-    if (assignments.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">අද දින සඳහා සහන කාලච්ඡේද වාර්තා වී නොමැත.</td></tr>`;
-      return;
+  // -----------------------------------------------------------------------
+  // පියවර B: එක් එක් කාලච්ඡේදය සඳහා නිදහස් ගුරුවරුන් (Free Teachers) සොයා පැවරීම
+  // -----------------------------------------------------------------------
+  const assignedReliefCount = {}; // එක් ගුරුවරයෙකුට ලැබෙන සහන වාර ගණන සමබර කිරීමට
+
+  neededReliefSlots.forEach(slot => {
+    // එම කාලච්ඡේදයේදී පාසලේ සිටින (Present) සහ කිසිදු පන්තියක් නොමැති නිදහස් ගුරුවරුන් සෙවීම
+    const freeTeachers = allTeachers.filter(t => {
+      // 1. තමන්ගේම පන්තියක් සඳහා තමන්වම නොයෙදීම
+      if (String(t.id) === String(slot.absentTeacherId)) return false;
+
+      // 2. ගුරුවරයා මෙම කාලච්ඡේදයේ නිවාඩු නොවිය යුතුය
+      const status = checkTeacherPeriodAbsence(t.id, slot.period);
+      if (status.isAbsent) return false;
+
+      // 3. ගුරුවරයාට එම කාලච්ඡේදයේ වෙනත් නියමිත පන්තියක් නොතිබිය යුතුය
+      let hasRegularLesson = false;
+      if (typeof getTeacherScheduleSlot === 'function') {
+        hasRegularLesson = !!getTeacherScheduleSlot(t.id, currentDay, slot.period);
+      } else if (window.masterTimetable && window.masterTimetable[t.id]) {
+        hasRegularLesson = !!window.masterTimetable[t.id][currentDay]?.[slot.period];
+      }
+      if (hasRegularLesson) return false;
+
+      // 4. එම කාලච්ඡේදයේදීම දැනටමත් වෙනත් පන්තියකට සහන ගුරුවරයෙකු ලෙස යොදා නොතිබිය යුතුය
+      const alreadyReliefAssigned = window.dailyReliefAssignments.some(
+        a => a.period === slot.period && String(a.assignedTeacherId) === String(t.id)
+      );
+      if (alreadyReliefAssigned) return false;
+
+      return true;
+    });
+
+    // අඩුම සහන වාර ගණනක් කර ඇති ගුරුවරයා තෝරා ගැනීම (Fair Distribution)
+    freeTeachers.sort((a, b) => (assignedReliefCount[a.id] || 0) - (assignedReliefCount[b.id] || 0));
+    const chosenReliefTeacher = freeTeachers.length > 0 ? freeTeachers[0] : null;
+
+    if (chosenReliefTeacher) {
+      assignedReliefCount[chosenReliefTeacher.id] = (assignedReliefCount[chosenReliefTeacher.id] || 0) + 1;
     }
 
-    tbody.innerHTML = assignments.map((row, idx) => {
-      const clsObj = (window.schoolClasses || []).find(c => String(c.id).toLowerCase() === String(row.classId).toLowerCase());
-      const sec = clsObj ? getSectionForGrade(clsObj.grade) : "-";
+    window.dailyReliefAssignments.push({
+      ...slot,
+      assignedTeacherId: chosenReliefTeacher ? chosenReliefTeacher.id : null,
+      assignedTeacherName: chosenReliefTeacher ? chosenReliefTeacher.name : "⚠️ නිදහස් ගුරුවරයෙකු නොමැත"
+    });
+  });
 
-      return `
-        <tr class="hover:bg-slate-50 transition">
-          <td class="p-2.5 font-black text-indigo-700">Period ${row.period}</td>
-          <td class="p-2.5 font-bold text-slate-800">${row.classId}</td>
-          <td class="p-2.5 font-semibold text-slate-600">${sec}</td>
-          <td class="p-2.5 text-slate-700 font-semibold">${row.subject}</td>
-          <td class="p-2.5 text-slate-600">${getTeacherName(row.absentTeacherId)}</td>
-          <td class="p-2.5 font-bold text-emerald-700">${row.reliefTeacherName}</td>
-          <td class="p-2.5">
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${row.isManualOverride ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
-              ${row.isManualOverride ? 'Manual Force' : 'Auto Match'}
-            </span>
-          </td>
-          <td class="p-2.5 text-center no-print">
-            <button type="button" onclick="openManualReliefOverrideModal('ASSIGNED', ${idx})" class="px-2.5 py-1 text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition cursor-pointer">
-              <i class="fa-solid fa-pen-to-square text-[10px]"></i> වෙනස් කරන්න
-            </button>
-          </td>
+  // -----------------------------------------------------------------------
+  // පියවර C: HTML වගුව ඇඳීම
+  // -----------------------------------------------------------------------
+  if (window.dailyReliefAssignments.length === 0) {
+    container.innerHTML = `
+      <div class="p-6 text-center text-slate-500 font-bold bg-slate-50 border border-slate-200 rounded-xl my-3">
+        ✅ අද දිනට සහන කාලච්ඡේද (Relief) අවශ්‍ය නොවේ. සියලුම කාලච්ඡේද සම්පූර්ණයි.
+      </div>
+    `;
+    return;
+  }
+
+  let tableHtml = `
+    <table class="w-full text-left border-collapse text-xs">
+      <thead>
+        <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
+          <th class="p-2.5 font-bold text-center w-14">කාලච්ඡේදය</th>
+          <th class="p-2.5 font-bold">පන්තිය</th>
+          <th class="p-2.5 font-bold">විෂයය</th>
+          <th class="p-2.5 font-bold">නිවාඩු ගුරුවරයා</th>
+          <th class="p-2.5 font-bold">නිවාඩු කාණ්ඩය</th>
+          <th class="p-2.5 font-bold text-emerald-800">පත්කළ සහන ගුරුවරයා</th>
         </tr>
-      `;
-    }).join("");
+      </thead>
+      <tbody class="divide-y divide-slate-200 bg-white">
+  `;
+
+  window.dailyReliefAssignments.forEach(item => {
+    let badgeClass = "bg-rose-100 text-rose-700";
+    if (item.leaveType === "SHORT") badgeClass = "bg-amber-100 text-amber-800";
+    if (item.leaveType === "DUTY") badgeClass = "bg-blue-100 text-blue-800";
+
+    tableHtml += `
+      <tr class="hover:bg-slate-50 transition">
+        <td class="p-2.5 font-black text-center text-indigo-700">P${item.period}</td>
+        <td class="p-2.5 font-bold text-slate-800">${item.gradeClass}</td>
+        <td class="p-2.5 text-slate-600">${item.subject}</td>
+        <td class="p-2.5 font-medium text-slate-700">${item.absentTeacherName}</td>
+        <td class="p-2.5">
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeClass}">
+            ${item.leaveLabel}
+          </span>
+        </td>
+        <td class="p-2.5 font-bold ${item.assignedTeacherId ? 'text-emerald-700' : 'text-rose-600 font-black'}">
+          ${item.assignedTeacherName}
+        </td>
+      </tr>
+    `;
+  });
+
+  tableHtml += `</tbody></table>`;
+  container.innerHTML = tableHtml;
+
+  // 💾 ස්වයංක්‍රීයව Storage/Firebase වෙත Save කිරීම
+  if (typeof saveReliefStateToStorage === 'function') {
+    saveReliefStateToStorage();
   }
 }
 
+window.checkTeacherPeriodAbsence = checkTeacherPeriodAbsence;
+window.renderDailyReliefResults = renderDailyReliefResults;
 // -------------------------------------------------------------------------
 // 🔴 MANUAL FORCE ASSIGN (7 සීමාව ඉක්මවා යාමට අවශ්‍ය අවස්ථාවලදී)
 // -------------------------------------------------------------------------
@@ -16957,6 +17040,47 @@ function getTodayDateString() {
  * 1. දත්ත මතකයෙන් (LocalStorage) නැවත ලබා ගැනීම සහ දින මාරුව පරීක්ෂා කිරීම
  */
 
+// =========================================================================
+// 🎯 1. ගුරුවරයෙකු නිශ්චිත කාලච්ඡේදයක නිවාඩුදැයි තහවුරු කරන ශ්‍රිතය
+// =========================================================================
+function checkTeacherPeriodAbsence(teacherId, periodNumber) {
+  const tid = String(teacherId || '').trim().toLowerCase();
+  const targetPeriod = parseInt(String(periodNumber).replace(/\D/g, ''), 10);
+  const todayStr = typeof getTodayDateString === 'function' ? getTodayDateString() : new Date().toISOString().split('T')[0];
+
+  const ctx = window.dailyReliefContext || {};
+  const fullAbsentList = (ctx.fullDayAbsent || []).map(id => String(id).trim().toLowerCase());
+  const longTermList = (window.longTermAbsences || [])
+    .filter(l => todayStr >= l.startDate && todayStr <= l.endDate)
+    .map(l => String(l.teacherId).trim().toLowerCase());
+
+  // 1. සම්පූර්ණ දින නිවාඩු හෝ දීර්ඝකාලීන නිවාඩු -> සියලු කාලච්ඡේද (P1-P8) සඳහා නිවාඩු වේ
+  if (fullAbsentList.includes(tid) || longTermList.includes(tid)) {
+    return { isAbsent: true, type: 'FULL', label: 'සම්පූර්ණ නිවාඩු' };
+  }
+
+  // 2. කෙටි නිවාඩු (Short Leave) -> තෝරාගත් කාලච්ඡේදවලට පමණක් නිවාඩු වේ
+  const partialRecord = (ctx.partialAbsent || []).find(p => String(p.teacherId).trim().toLowerCase() === tid);
+  if (partialRecord && Array.isArray(partialRecord.absentPeriods)) {
+    const isPeriodMatch = partialRecord.absentPeriods.some(p => parseInt(String(p).replace(/\D/g, ''), 10) === targetPeriod);
+    if (isPeriodMatch) {
+      return { isAbsent: true, type: 'SHORT', label: `කෙටි නිවාඩු (${partialRecord.reason || 'Short Leave'})` };
+    }
+  }
+
+  // 3. විශේෂ රාජකාරි (Special Duty) -> අදාළ කාලච්ඡේදවලට පමණක් නිවාඩු වේ
+  const dutyRecord = (ctx.specialDuty || []).find(d => String(d.teacherId).trim().toLowerCase() === tid);
+  if (dutyRecord && Array.isArray(dutyRecord.dutyPeriods)) {
+    const isDutyMatch = dutyRecord.dutyPeriods.some(p => parseInt(String(p).replace(/\D/g, ''), 10) === targetPeriod);
+    if (isDutyMatch) {
+      return { isAbsent: true, type: 'DUTY', label: `රාජකාරි (${dutyRecord.dutyName || 'Duty'})` };
+    }
+  }
+
+  // ගුරුවරයා එම කාලච්ඡේදයේ පාසලේ පසුවේ
+  return { isAbsent: false, type: 'PRESENT', label: 'පැමිණ ඇත' };
+}
+    
 // =========================================================================
 // 🔄 CRASH-PROOF INIT AND LOAD RELIEF STATE (FIREBASE ARRAY SAFE)
 // =========================================================================
