@@ -2422,6 +2422,8 @@
 </div>
 
 <!-- SCRIPT COMPLETE ENGINE -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script>
     // =========================================================================
     // 1. GLOBAL VARIABLES & DEFAULT DATA (TOP SCOPE)
@@ -2753,10 +2755,16 @@ window.saveSubjectTeachersAssignment = function() {
       measurementId: "G-CV79BHXPZ5"
     };
 
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+      console.log("🔥 Firebase App සාර්ථකව සම්බන්ධ විය!");
+    }
+    
     let firebaseDb = null;
     let isFirebaseActive = false;
 
-   
+
+    
     function markLocalStorageMode() {
       const badge = document.getElementById("cloudStatusBadge");
       if (badge) {
@@ -16895,10 +16903,13 @@ function getTodayDateString() {
 // =========================================================================
 // 🔄 DUAL STORAGE (LOCAL + FIREBASE) & DAY ROLLOVER ENGINE
 // =========================================================================
+// =========================================================================
+// 🔄 CRASH-PROOF INIT AND LOAD RELIEF STATE
+// =========================================================================
 function initAndLoadReliefState() {
   const todayStr = getTodayDateString();
 
-  // 1. පරිගණකයේ LocalStorage වෙතින් දත්ත කියවීම (ක්ෂණික ආරම්භය සහ Offline ආරක්ෂාව)
+  // 1. LocalStorage වෙතින් දත්ත Restore කිරීම
   try {
     const savedLongTerm = localStorage.getItem("school_relief_long_term");
     window.longTermAbsences = savedLongTerm ? JSON.parse(savedLongTerm) : [];
@@ -16914,14 +16925,12 @@ function initAndLoadReliefState() {
     savedContext = null;
   }
 
-  // දින මාරුව පරීක්ෂා කිරීම (Day Rollover Check)
+  // දින මාරුව පරීක්ෂා කිරීම (Day Rollover)
   if (savedContext && savedContext.date === todayStr) {
-    // අද දිනයම නම්: දත්ත නැවත ලබා ගනී
     window.dailyReliefContext = savedContext;
     const savedAssignments = localStorage.getItem("school_relief_daily_assignments");
     window.dailyReliefAssignments = savedAssignments ? JSON.parse(savedAssignments) : [];
   } else {
-    // නව දිනයක් නම්: දෛනික දත්ත ස්වයංක්‍රීයව Reset වේ
     window.dailyReliefContext = {
       date: todayStr,
       fullDayAbsent: [],
@@ -16935,35 +16944,51 @@ function initAndLoadReliefState() {
     }
   }
 
-  // 2. Firebase Database එක සම්බන්ධ කර ඇත්නම් Cloud වෙතින් සජීවීව දත්ත ලබා ගැනීම
-  if (typeof firebase !== 'undefined' && firebase.database) {
-    // A. දීර්ඝකාලීන නිවාඩු සජීවීව ලබා ගැනීම
-    firebase.database().ref('relief/longTermAbsences').on('value', (snap) => {
-      const data = snap.val();
-      if (data && Array.isArray(data)) {
-        window.longTermAbsences = data;
-        localStorage.setItem("school_relief_long_term", JSON.stringify(data));
-        if (typeof renderLongTermEntriesList === 'function') renderLongTermEntriesList();
-        if (typeof populateTeacherSelects === 'function') populateTeacherSelects();
-      }
-    });
+  // 2. 🛡️ 16941 පේළියේ Error එක වැළැක්වීමේ ආරක්ෂිත පරීක්ෂාව:
+  // Firebase App එකක් සැබවින්ම Initialize වී ඇත්නම් පමණක් Cloud Listener ක්‍රියාත්මක වේ
+  const isFirebaseInitialized = (
+    typeof firebase !== 'undefined' &&
+    Array.isArray(firebase.apps) &&
+    firebase.apps.length > 0 &&
+    typeof firebase.database === 'function'
+  );
 
-    // B. අද දිනට අදාළ දෛනික සටහන් Cloud එකෙන් ලබා ගැනීම
-    firebase.database().ref(`relief/dailyRecords/${todayStr}`).on('value', (snap) => {
-      const dayData = snap.val();
-      if (dayData && dayData.dailyContext) {
-        window.dailyReliefContext = dayData.dailyContext;
-        window.dailyReliefAssignments = dayData.dailyAssignments || [];
-        
-        localStorage.setItem("school_relief_daily_context", JSON.stringify(window.dailyReliefContext));
-        localStorage.setItem("school_relief_daily_assignments", JSON.stringify(window.dailyReliefAssignments));
+  if (isFirebaseInitialized) {
+    try {
+      const db = firebase.database();
 
-        if (typeof populateTeacherSelects === 'function') populateTeacherSelects();
-        if (typeof renderAttendanceEntriesList === 'function') renderAttendanceEntriesList();
-        if (typeof updateLiveAttendanceBadges === 'function') updateLiveAttendanceBadges();
-        if (typeof renderDailyReliefResults === 'function') renderDailyReliefResults();
-      }
-    });
+      // දීර්ඝකාලීන නිවාඩු Cloud එකෙන් ලබා ගැනීම
+      db.ref('relief/longTermAbsences').on('value', (snap) => {
+        const data = snap.val();
+        if (data && Array.isArray(data)) {
+          window.longTermAbsences = data;
+          localStorage.setItem("school_relief_long_term", JSON.stringify(data));
+          if (typeof renderLongTermEntriesList === 'function') renderLongTermEntriesList();
+          if (typeof populateTeacherSelects === 'function') populateTeacherSelects();
+        }
+      });
+
+      // අද දිනට අදාළ දෛනික සටහන් Cloud එකෙන් ලබා ගැනීම
+      db.ref(`relief/dailyRecords/${todayStr}`).on('value', (snap) => {
+        const dayData = snap.val();
+        if (dayData && dayData.dailyContext) {
+          window.dailyReliefContext = dayData.dailyContext;
+          window.dailyReliefAssignments = dayData.dailyAssignments || [];
+          
+          localStorage.setItem("school_relief_daily_context", JSON.stringify(window.dailyReliefContext));
+          localStorage.setItem("school_relief_daily_assignments", JSON.stringify(window.dailyReliefAssignments));
+
+          if (typeof populateTeacherSelects === 'function') populateTeacherSelects();
+          if (typeof renderAttendanceEntriesList === 'function') renderAttendanceEntriesList();
+          if (typeof updateLiveAttendanceBadges === 'function') updateLiveAttendanceBadges();
+          if (typeof renderDailyReliefResults === 'function') renderDailyReliefResults();
+        }
+      });
+    } catch (fbErr) {
+      console.warn("Firebase listener skipped:", fbErr.message);
+    }
+  } else {
+    console.warn("⚠️ Firebase App එක Initialize කර නොමැත. පද්ධතිය LocalStorage මඟින් පමණක් ක්‍රියාත්මක වේ.");
   }
 }
 /**
@@ -17016,9 +17041,6 @@ function loadFromLocalFallback(todayStr) {
 // ආරම්භක ඇමතුම
 initAndLoadReliefState();
     
-    // =========================================================================
-// ☁️ FIREBASE + LOCALSTORAGE DUAL RELIEF ENGINE
-// =========================================================================
 
 /**
  * 1. දත්ත සුරැකීම (LocalStorage සහ Firebase Cloud දෙකටම)
