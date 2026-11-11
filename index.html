@@ -4622,7 +4622,59 @@ window.renderIndividualTeacherSchedule = renderIndividualTeacherSchedule;
       alert(`[${DAY_LABELS[d1]} P${p1}] සහ [${DAY_LABELS[d2]} P${p2}] සාර්ථකව මාරු කරන ලදි!`);
     }
 
+// =========================================================================
+// 📅 පද්ධතියේ අද දිනය තිරයේ ප්‍රදර්ශනය කිරීම (AUTO-DETECT ID)
+// =========================================================================
+function setSystemDisplayDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${year}-${month}-${day}`; // "2026-11-11"
 
+  const daysOfWeek = ["ඉරිදා", "සඳුදා", "අඟහරුවාදා", "බදාදා", "බ්‍රහස්පතින්දා", "සිකුරාදා", "සෙනසුරාදා"];
+  const sinhalaDay = daysOfWeek[now.getDay()];
+  const fullDisplayText = `${todayStr} (${sinhalaDay})`;
+
+  // HTML එකේ තිබිය හැකි සියලුම පොදු Date IDs පරීක්ෂා කර දිනය ඇතුළත් කිරීම
+  const possibleIds = [
+    "currentDateDisplay",
+    "todayDateDisplay",
+    "currentDate",
+    "todayDate",
+    "headerDateDisplay",
+    "headerDate",
+    "reliefDateDisplay",
+    "activeDateText",
+    "modalCurrentDate"
+  ];
+
+  let applied = false;
+  possibleIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.innerText = fullDisplayText;
+      applied = true;
+    }
+  });
+
+  // ඔබගේ HTML එකේ class="today-date-text" ලෙස යොදා ඇත්නම්:
+  document.querySelectorAll(".today-date-text").forEach(el => {
+    el.innerText = fullDisplayText;
+    applied = true;
+  });
+
+  if (!applied) {
+    console.warn("⚠️ දිනය පෙන්වන HTML Element එකේ ID එක හමු නොවීය. කරුණාකර HTML හි දිනය ඇති span එකට id='currentDate' ලබා දෙන්න.");
+  }
+}
+
+// පිටුව Load වූ සැනින් ධාවනය කිරීම
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setSystemDisplayDate);
+} else {
+  setSystemDisplayDate();
+}
 
 // =========================================================================
 // 🗑️ SMART CLEAR CLASS TIMETABLE CONTROLLER (WITH CUSTOM MODAL & LOCKED CHECK)
