@@ -16544,81 +16544,118 @@ function getTeacherName(tid) {
 // -------------------------------------------------------------------------
 // 🔴 MODAL 1 CONTROLS: DAILY ATTENDANCE & DUTY
 // -------------------------------------------------------------------------
-let currentAttendanceTab = "FULL";
-let selectedShortPeriods = new Set();
 
-function openDailyAttendanceModal() {
-  populateTeacherSelects();
-  renderAttendanceEntriesList();
-  document.getElementById("dailyAttendanceModal")?.classList.remove("hidden");
-}
 
-function closeDailyAttendanceModal() {
-  document.getElementById("dailyAttendanceModal")?.classList.add("hidden");
-  updateLiveAttendanceBadges();
-}
+// =========================================================================
+// 🎯 ATTENDANCE MODAL CONTROLLER (HTML එකට අනුකූලව සකසන ලද කේතය)
+// =========================================================================
 
-function switchAttendanceTab(tab) {
-  currentAttendanceTab = tab;
-  const pBox = document.getElementById("attendancePeriodsBox");
+window.currentAttendanceTab = "FULL"; // Default Tab: FULL | SHORT | DUTY
+window.selectedShortPeriods = new Set(); // තෝරාගත් කාලච්ඡේද රඳවා ගැනීම
 
-  document.getElementById("tabBtnFullAbsent")?.classList.toggle("text-indigo-600", tab === "FULL");
-  document.getElementById("tabBtnFullAbsent")?.classList.toggle("border-b-2", tab === "FULL");
-  document.getElementById("tabBtnShortLeave")?.classList.toggle("text-indigo-600", tab === "SHORT");
-  document.getElementById("tabBtnShortLeave")?.classList.toggle("border-b-2", tab === "SHORT");
-  document.getElementById("tabBtnSpecialDuty")?.classList.toggle("text-indigo-600", tab === "DUTY");
-  document.getElementById("tabBtnSpecialDuty")?.classList.toggle("border-b-2", tab === "DUTY");
+/**
+ * 1. Modal එකේ Tabs මාරු කිරීම (FULL / SHORT / DUTY)
+ */
+function switchAttendanceTab(tabType) {
+  window.currentAttendanceTab = tabType;
 
-  if (pBox) pBox.classList.toggle("hidden", tab === "FULL");
-  selectedShortPeriods.clear();
+  const btnFull = document.getElementById("tabBtnFullAbsent");
+  const btnShort = document.getElementById("tabBtnShortLeave");
+  const btnDuty = document.getElementById("tabBtnSpecialDuty");
+  const periodsBox = document.getElementById("attendancePeriodsBox");
+
+  // Tab Styles Reset කිරීම
+  const activeClasses = ["text-indigo-600", "border-b-2", "border-indigo-600"];
+  const inactiveClasses = ["text-slate-500"];
+
+  [btnFull, btnShort, btnDuty].forEach(btn => {
+    if (btn) {
+      btn.classList.remove(...activeClasses);
+      btn.classList.add(...inactiveClasses);
+    }
+  });
+
+  // තෝරාගත් Tab එක Active කිරීම
+  if (tabType === "FULL" && btnFull) {
+    btnFull.classList.add(...activeClasses);
+    btnFull.classList.remove(...inactiveClasses);
+  } else if (tabType === "SHORT" && btnShort) {
+    btnShort.classList.add(...activeClasses);
+    btnShort.classList.remove(...inactiveClasses);
+  } else if (tabType === "DUTY" && btnDuty) {
+    btnDuty.classList.add(...activeClasses);
+    btnDuty.classList.remove(...inactiveClasses);
+  }
+
+  // කෙටි නිවාඩු හෝ රාජකාරි නම් පමණක් කාලච්ඡේද කොටුව පෙන්වීම
+  if (periodsBox) {
+    if (tabType === "FULL") {
+      periodsBox.classList.add("hidden");
+    } else {
+      periodsBox.classList.remove("hidden");
+    }
+  }
+
+  // Tab එක මාරු වන විට කලින් තෝරාගත් කාලච්ඡේද ඉවත් කර Reset කිරීම
+  window.selectedShortPeriods.clear();
   updatePeriodButtonStyles();
 }
 
-function togglePeriodSelect(p) {
-  if (selectedShortPeriods.has(p)) selectedShortPeriods.delete(p);
-  else selectedShortPeriods.add(p);
+/**
+ * 2. තනි කාලච්ඡේදයක් (1-8) Click කළ විට Select / Deselect කිරීම
+ */
+function togglePeriodSelect(periodNum) {
+  const p = parseInt(periodNum, 10);
+  if (window.selectedShortPeriods.has(p)) {
+    window.selectedShortPeriods.delete(p);
+  } else {
+    window.selectedShortPeriods.add(p);
+  }
   updatePeriodButtonStyles();
 }
 
+/**
+ * 3. 1-4 (උදෑසන) හෝ 5-8 (සවස) එකවර තේරීම
+ */
 function setPeriodRange(start, end) {
-  selectedShortPeriods.clear();
-  for (let i = start; i <= end; i++) selectedShortPeriods.add(i);
+  window.selectedShortPeriods.clear();
+  for (let i = start; i <= end; i++) {
+    window.selectedShortPeriods.add(i);
+  }
   updatePeriodButtonStyles();
 }
 
+/**
+ * 4. කාලච්ඡේද බොත්තම් වල පාට (Styles) යාවත්කාලීන කිරීම
+ */
 function updatePeriodButtonStyles() {
   for (let i = 1; i <= 8; i++) {
     const btn = document.getElementById(`pBtn_${i}`);
     if (btn) {
-      const active = selectedShortPeriods.has(i);
-      btn.className = `period-btn px-2.5 py-1 text-xs font-bold border rounded-lg cursor-pointer ${active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300'}`;
+      if (window.selectedShortPeriods.has(i)) {
+        btn.className = "period-btn px-2.5 py-1 text-xs font-black border rounded-lg bg-indigo-600 text-white border-indigo-600 shadow-sm transition";
+      } else {
+        btn.className = "period-btn px-2.5 py-1 text-xs font-bold border rounded-lg bg-white border-slate-300 text-slate-700 hover:bg-slate-50 transition";
+      }
     }
   }
 }
 
-    // =========================================================================
-// 🔄 දත්ත ඇතුළත් කිරීම් සහ ඉවත් කිරීම් (AUTO RE-POPULATE)
-// =========================================================================
-
 /**
- * දෛනික පැමිණීම්/නිවාඩු ලැයිස්තුවට එක් කිරීම
+ * 5. "ලැයිස්තුවට එක් කරන්න" බොත්තම එබූ විට නිවැරදි කාණ්ඩයට Data යැවීම
  */
-// A. දෛනික පැමිණීම් ඇතුළත් කිරීමේදී
-
-// =========================================================================
-// 📝 දෛනික පැමිණීම් ඇතුළත් කිරීම (CRASH-PROOF SUBMIT ATTENDANCE)
-// =========================================================================
 function submitAttendanceEntry() {
   const selectEl = document.getElementById("modalTeacherSelect");
-  const tid = selectEl ? selectEl.value.trim() : null;
-  const reason = document.getElementById("modalAbsenceReason")?.value.trim() || "";
-  
+  const tid = selectEl ? selectEl.value.trim() : "";
+  const reasonEl = document.getElementById("modalAbsenceReason");
+  const reason = reasonEl ? reasonEl.value.trim() : "";
+
   if (!tid) {
-    alert("කරුණාකර ලැයිස්තුවෙන් ගුරුවරයෙකු තෝරන්න.");
+    alert("⚠️ කරුණාකර ලැයිස්තුවෙන් ගුරුවරයෙකු තෝරන්න.");
     return;
   }
 
-  // 1. 🛡️ FIREBASE OMISSION FIX (Arrays නොමැති නම් ස්වයංක්‍රීයව නිර්මාණය කිරීම)
+  // Safety Context Check
   if (!window.dailyReliefContext) {
     window.dailyReliefContext = {
       date: typeof getTodayDateString === 'function' ? getTodayDateString() : new Date().toISOString().split('T')[0],
@@ -16633,79 +16670,84 @@ function submitAttendanceEntry() {
   if (!Array.isArray(ctx.partialAbsent)) ctx.partialAbsent = [];
   if (!Array.isArray(ctx.specialDuty)) ctx.specialDuty = [];
 
-  // Active Tab එක හඳුනාගැනීම (default: 'FULL')
-  const activeTab = window.currentAttendanceTab || "FULL";
+  const tab = window.currentAttendanceTab || "FULL";
 
-  // 2. අදාළ නිවාඩු කාණ්ඩයට ඇතුළත් කිරීම
-  if (activeTab === "FULL") {
+  // A. සම්පූර්ණ දින නිවාඩු
+  if (tab === "FULL") {
     if (!ctx.fullDayAbsent.includes(tid)) {
       ctx.fullDayAbsent.push(tid);
     } else {
-      alert("මෙම ගුරුවරයා දැනටමත් සම්පූර්ණ දින නිවාඩු ලැයිස්තුවට ඇතුළත් කර ඇත.");
+      alert("⚠️ මෙම ගුරුවරයා දැනටමත් සම්පූර්ණ දින නිවාඩු ලැයිස්තුවට එක්කර ඇත.");
       return;
     }
-  } 
-  else if (activeTab === "SHORT") {
-    const periods = window.selectedShortPeriods ? Array.from(window.selectedShortPeriods) : [];
-    if (periods.length === 0) { 
-      alert("කරුණාකර අදාළ කෙටි නිවාඩු කාලච්ඡේද තෝරන්න."); 
-      return; 
+  }
+  // B. කෙටි නිවාඩු (Short Leave)
+  else if (tab === "SHORT") {
+    const periods = Array.from(window.selectedShortPeriods).sort((a, b) => a - b);
+    if (periods.length === 0) {
+      alert("⚠️ කරුණාකර ගුරුවරයා නොමැති කාලච්ඡේද (P1 - P8) තෝරන්න.");
+      return;
     }
-    ctx.partialAbsent.push({ 
-      teacherId: tid, 
-      absentPeriods: periods, 
-      reason: reason || "කෙටි නිවාඩු" 
+    ctx.partialAbsent.push({
+      teacherId: tid,
+      absentPeriods: periods,
+      reason: reason || "කෙටි නිවාඩු"
     });
-  } 
-  else if (activeTab === "DUTY") {
-    const periods = window.selectedShortPeriods ? Array.from(window.selectedShortPeriods) : [];
-    if (periods.length === 0) { 
-      alert("කරුණාකර අදාළ රාජකාරි කාලච්ඡේද තෝරන්න."); 
-      return; 
+  }
+  // C. විශේෂ රාජකාරි (Special Duty)
+  else if (tab === "DUTY") {
+    const periods = Array.from(window.selectedShortPeriods).sort((a, b) => a - b);
+    if (periods.length === 0) {
+      alert("⚠️ කරුණාකර රාජකාරි යෙදී ඇති කාලච්ඡේද (P1 - P8) තෝරන්න.");
+      return;
     }
-    ctx.specialDuty.push({ 
-      teacherId: tid, 
-      dutyPeriods: periods, 
-      dutyName: reason || "විශේෂ රාජකාරි" 
+    ctx.specialDuty.push({
+      teacherId: tid,
+      dutyPeriods: periods,
+      dutyName: reason || "විශේෂ රාජකාරි"
     });
   }
 
-  // 3. 💾 LocalStorage සහ Firebase Cloud වෙත ස්ථිරව සුරැකීම
+  // 💾 Firebase Cloud සහ LocalStorage වෙත සුරැකීම
   if (typeof saveReliefStateToStorage === 'function') {
     saveReliefStateToStorage();
   }
 
-  // 4. UI යාවත්කාලීන කිරීම (Dropdowns වලින් ඉවත් කිරීම සහ ලැයිස්තු ඇඳීම)
+  // UI සංරචක සහ සහන වගුව Re-render කිරීම
   if (typeof populateTeacherSelects === 'function') populateTeacherSelects();
   if (typeof renderAttendanceEntriesList === 'function') renderAttendanceEntriesList();
   if (typeof updateLiveAttendanceBadges === 'function') updateLiveAttendanceBadges();
   if (typeof renderDailyReliefResults === 'function') renderDailyReliefResults();
 
-  // 5. Input Fields Reset කිරීම
+  // Inputs Reset කිරීම
   if (selectEl) selectEl.value = "";
-  const reasonInput = document.getElementById("modalAbsenceReason");
-  if (reasonInput) reasonInput.value = "";
-  
-  if (window.selectedShortPeriods && typeof window.selectedShortPeriods.clear === 'function') {
-    window.selectedShortPeriods.clear();
-  }
-  if (typeof updatePeriodButtonStyles === 'function') {
-    updatePeriodButtonStyles();
-  }
+  if (reasonEl) reasonEl.value = "";
+  window.selectedShortPeriods.clear();
+  updatePeriodButtonStyles();
 
-  console.log("✅ ගුරු නිවාඩු සටහන සාර්ථකව එකතු විය.");
+  // නැවත සාමාන්‍ය Full Day Tab එකට මාරු කිරීම
+  switchAttendanceTab("FULL");
+
+  alert("✅ සටහන සාර්ථකව ඇතුළත් කරන ලදී.");
 }
+
 /**
- * ඇතුළත් කළ ලැයිස්තුවෙන් ඉවත් කිරීමේ ශ්‍රිත (REMOVAL HANDLERS)
- * මෙහිදී ඉවත් කළ සැනින් ගුරුවරයා නැවත Dropdown එකට එකතු වේ
+ * 6. Modal එක වැසීම සහ විවෘත කිරීම
  */
+function closeDailyAttendanceModal() {
+  const modal = document.getElementById("dailyAttendanceModal");
+  if (modal) modal.classList.add("hidden");
+}
 
-    /**
- * ඇතුළත් කළ ලැයිස්තුවෙන් ඉවත් කිරීමේ ශ්‍රිත (REMOVAL HANDLERS)
- * මෙහිදී ඉවත් කළ සැනින් ගුරුවරයා නැවත Dropdown එකට එකතු වේ
- */
-
-// B. දෛනික පැමිණීම් ලැයිස්තුවෙන් ඉවත් කිරීමේදී
+function openDailyAttendanceModal() {
+  const modal = document.getElementById("dailyAttendanceModal");
+  if (modal) {
+    modal.classList.remove("hidden");
+    switchAttendanceTab("FULL");
+    if (typeof populateTeacherSelects === 'function') populateTeacherSelects();
+    if (typeof renderAttendanceEntriesList === 'function') renderAttendanceEntriesList();
+  }
+}
 
  //   ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅
 // =========================================================================
