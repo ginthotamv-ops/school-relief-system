@@ -3681,18 +3681,191 @@ window.renderReliefAttendance = renderReliefAttendance;
       });
     }
 
-    function openManualReliefModal(index) {
-      currentManualReliefIndex = index;
-      const item = generatedReliefResults[index];
-      document.getElementById("manualModalPeriod").innerText = item.period;
-      document.getElementById("manualModalClass").innerText = item.classId;
-      document.getElementById("manualModalSection").innerText = item.section;
-      document.getElementById("manualModalSubject").innerText = item.subject;
-      document.getElementById("manualModalAbsentTeacher").innerText = item.absentTeacherName;
-      document.getElementById("chkForceOverrideTeachers").checked = false;
-      populateManualReliefDropdown();
-      document.getElementById("manualReliefModal").classList.remove("hidden");
+    
+    // =========================================================================
+// 📅 ගුරුවරයෙකුගේ අදාළ දින කාලච්ඡේද 1 - 8 විස්තරය ලබාගැනීම
+// =========================================================================
+function getTeacherFullDaySchedule(teacherId, targetDayNum) {
+  const tid = String(teacherId || '').trim().toLowerCase();
+  const allSlots = window.masterSchedule || [];
+  const results = window.generatedReliefResults || window.dailyReliefAssignments || [];
+  const ctx = window.dailyReliefContext || {};
+
+  // කාලච්ඡේද 1 සිට 8 දක්වා ආරම්භක සැකසුම
+  const periodsData = {};
+  for (let p = 1; p <= 8; p++) {
+    periodsData[p] = { period: p, status: 'FREE', title: 'නිදහස්', detail: '-' };
+  }
+
+  // 1. නිවාඩු / විශේෂ රාජකාරි පරීක්ෂාව
+  const shortRecord = (ctx.partialAbsent || []).find(p => String(p.teacherId).trim().toLowerCase() === tid);
+  if (shortRecord && Array.isArray(shortRecord.absentPeriods)) {
+    shortRecord.absentPeriods.forEach(p => {
+      const pNum = Number(p);
+      if (periodsData[pNum]) {
+        periodsData[pNum] = { status: 'LEAVE', title: 'කෙටි නිවාඩු', detail: shortRecord.reason || 'Short Leave' };
+      }
+    });
+  }
+
+  const dutyRecord = (ctx.specialDuty || []).find(d => String(d.teacherId).trim().toLowerCase() === tid);
+  if (dutyRecord && Array.isArray(dutyRecord.dutyPeriods)) {
+    dutyRecord.dutyPeriods.forEach(p => {
+      const pNum = Number(p);
+      if (periodsData[pNum]) {
+        periodsData[pNum] = { status: 'DUTY', title: 'රාජකාරි', detail: dutyRecord.dutyName || 'Special Duty' };
+      }
+    });
+  }
+
+  // 2. කාලසටහනේ සාමාන්‍ය පන්ති (Master Schedule)
+  allSlots.forEach(slot => {
+    if (typeof normalizeDayNumber === 'function' ? normalizeDayNumber(slot.day) === targetDayNum : Number(slot.day) === targetDayNum) {
+      const pNum = Number(slot.period);
+      if (pNum >= 1 && pNum <= 8) {
+        const teachers = typeof extractSlotTeachers === 'function' ? extractSlotTeachers(slot) : [{ teacherId: slot.teacherId, subject: slot.subject }];
+        const match = teachers.find(t => String(t.teacherId).trim().toLowerCase() === tid);
+        if (match) {
+          periodsData[pNum] = {
+            status: 'CLASS',
+            title: slot.classId,
+            detail: match.subject || slot.subject || 'විෂයය'
+          };
+        }
+      }
     }
+  });
+
+  // 3. දැනටමත් වෙනත් සහන පන්තියකට පවරා ඇත්නම්
+  results.forEach(res => {
+    if (res.assignedId && String(res.assignedId).trim().toLowerCase() === tid) {
+      const pNum = Number(res.period);
+      if (periodsData[pNum] && periodsData[pNum].status === 'FREE') {
+        periodsData[pNum] = {
+          status: 'RELIEF',
+          title: `සහන: ${res.classId}`,
+          detail: res.subject || 'ආදේශනයක්'
+        };
+      }
+    }
+  });
+
+  return periodsData;
+}
+
+// =========================================================================
+// 🎨 තෝරාගත් ගුරුවරයාගේ කාලසටහන Modal එක තුළ ඇඳීම
+// =========================================================================
+function renderTeacherSchedulePreview(teacherId, currentReliefPeriod) {
+  const container = document.getElementById("teacherDayScheduleContainer");
+  if (!container) return;
+
+  if (!teacherId) {
+    container.innerHTML = `<div class="text-xs text-slate-400 text-center p-3 border border-dashed rounded-xl bg-slate-50">ගුරුවරයෙකු තේරූ විට දෛනික කාලසටහන මෙහි දිස්වේ.</div>`;
+    return;
+  }
+
+  const targetDayNum = typeof normalizeDayNumber === 'function' 
+    ? normalizeDayNumber(window.activeDay || 1) 
+    : 1;
+
+  const tObj = (window.teachers || []).find(t => String(t.id).trim().toLowerCase() === String(teacherId).trim().toLowerCase());
+  const tName = tObj ? tObj.name : teacherId;
+  const schedule = getTeacherFullDaySchedule(teacherId, targetDayNum);
+
+  let gridHtml = "";
+
+  for (let p = 1; p <= 8; p++) {
+    const item = schedule[p];
+    const isTargetSlot = (Number(p) === Number(currentReliefPeriod));
+
+    let bgClass = "bg-emerald-50 border-emerald-200 text-emerald-800"; // FREE
+    let icon = '<i class="fa-solid fa-check text-[10px]"></i>';
+
+    if (item.status === 'CLASS') {
+      bgClass = "bg-slate-100 border-slate-300 text-slate-800";
+      icon = '<i class="fa-solid fa-chalkboard-user text-[10px] text-slate-500"></i>';
+    } else if (item.status === 'RELIEF') {
+      bgClass = "bg-purple-50 border-purple-200 text-purple-800";
+      icon = '<i class="fa-solid fa-hand-holding-hand text-[10px] text-purple-600"></i>';
+    } else if (item.status === 'DUTY' || item.status === 'LEAVE') {
+      bgClass = "bg-amber-50 border-amber-200 text-amber-800";
+      icon = '<i class="fa-solid fa-clock text-[10px] text-amber-600"></i>';
+    }
+
+    // සහන ලබාදීමට නියමිත කාලච්ඡේදය විශේෂ Highlight එකකින් පෙන්වීම
+    const ringClass = isTargetSlot ? "ring-2 ring-indigo-600 ring-offset-1 scale-[1.03] z-10 shadow-sm" : "";
+
+    gridHtml += `
+      <div class="flex flex-col items-center justify-between p-2 rounded-xl border text-center transition ${bgClass} ${ringClass}">
+        <div class="flex items-center gap-1">
+          <span class="text-[10px] font-black uppercase">P${p}</span>
+          ${icon}
+        </div>
+        <div class="font-bold text-[11px] truncate max-w-full my-0.5" title="${item.title}">${item.title}</div>
+        <div class="text-[9px] opacity-75 truncate max-w-full" title="${item.detail}">${item.detail}</div>
+        ${isTargetSlot ? '<span class="mt-1 text-[8px] bg-indigo-600 text-white font-extrabold px-1 rounded-sm">මෙම කාලච්ඡේදය</span>' : ''}
+      </div>
+    `;
+  }
+
+  container.innerHTML = `
+    <div class="mt-3 p-3 bg-white border border-slate-200 rounded-2xl shadow-xs">
+      <div class="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-100 text-xs">
+        <span class="font-bold text-slate-700 flex items-center gap-1.5">
+          <i class="fa-regular fa-calendar-check text-indigo-600"></i>
+          <span class="text-indigo-900">${tName}</span> ගුරුතුමාගේ/තුමියගේ අද දින කාලසටහන:
+        </span>
+        <span class="text-[11px] text-slate-400 font-medium">කාලච්ඡේද 1 - 8</span>
+      </div>
+      <div class="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
+        ${gridHtml}
+      </div>
+    </div>
+  `;
+}
+
+window.renderTeacherSchedulePreview = renderTeacherSchedulePreview;
+    
+    
+function openManualReliefModal(index) {
+  currentManualReliefIndex = index;
+  const item = generatedReliefResults[index];
+  
+  document.getElementById("manualModalPeriod").innerText = item.period;
+  document.getElementById("manualModalClass").innerText = item.classId;
+  document.getElementById("manualModalSection").innerText = item.section;
+  document.getElementById("manualModalSubject").innerText = item.subject;
+  document.getElementById("manualModalAbsentTeacher").innerText = item.absentTeacherName;
+  document.getElementById("chkForceOverrideTeachers").checked = false;
+  
+  // 1. Dropdown එක සාමාන්‍ය පරිදි පුරවයි
+  populateManualReliefDropdown();
+
+  // 2. 🟢 Dropdown එක හඳුනාගෙන, එය මාරු වන විට (onchange) කාලසටහන පෙන්වීම
+  const teacherSelect = document.getElementById("manualTeacherSelect") || 
+                        document.getElementById("manualReliefTeacherSelect") || 
+                        document.querySelector("#manualReliefModal select");
+
+  if (teacherSelect) {
+    // Dropdown එක වෙනස් කරන විට අලුත් ගුරුවරයාගේ කාලසටහන පෙන්වයි
+    teacherSelect.onchange = function() {
+      if (typeof renderTeacherSchedulePreview === 'function') {
+        renderTeacherSchedulePreview(this.value, item.period);
+      }
+    };
+
+    // Modal එක විවෘත වූ සැනින් දැනට තෝරා ඇති ගුරුවරයාගේ කාලසටහන පෙන්වයි
+    const initialTeacherId = item.assignedId || teacherSelect.value;
+    if (typeof renderTeacherSchedulePreview === 'function') {
+      renderTeacherSchedulePreview(initialTeacherId, item.period);
+    }
+  }
+
+  // 3. Modal එක තිරයේ පෙන්වීම
+  document.getElementById("manualReliefModal").classList.remove("hidden");
+}
+    
 
     function populateManualReliefDropdown() {
       if (currentManualReliefIndex === null) return;
