@@ -3768,9 +3768,9 @@ function renderTeacherSchedulePreview(teacherId, currentReliefPeriod) {
     return;
   }
 
-  const targetDayNum = typeof normalizeDayNumber === 'function' 
-    ? normalizeDayNumber(window.activeDay || 1) 
-    : 1;
+const targetDayNum = typeof normalizeDayNumber === 'function' 
+    ? normalizeDayNumber(window.activeDay ?? 0) 
+    : (window.activeDay ?? 0);
 
   const tObj = (window.teachers || []).find(t => String(t.id).trim().toLowerCase() === String(teacherId).trim().toLowerCase());
   const tName = tObj ? tObj.name : teacherId;
@@ -16245,28 +16245,35 @@ function findBestReliefTeacher(day, period, targetClassId, targetSubject, curren
 }
 
 
-    // =========================================================================
-// 🗓️ දිනයන් (1-5, English, සිංහල) ඒකාකාරී අංකයක් බවට පත් කිරීම
 // =========================================================================
-function normalizeDayToNumber(dayVal) {
-  if (typeof dayVal === 'number') return dayVal;
-  const s = String(dayVal || '').trim().toLowerCase();
+// 🗓️ දිනයන් 0 - 4 (0 = සඳුදා ... 3 = බ්‍රහස්පතින්දා, 4 = සිකුරාදා) බවට හැරවීම
+// =========================================================================
+function normalizeDayNumber(d) {
+  if (d === undefined || d === null || d === '') return null;
+  if (typeof d === 'number') return d;
 
-  if (s === '1' || s === 'mon' || s === 'monday' || s === 'සඳුදා') return 1;
-  if (s === '2' || s === 'tue' || s === 'tuesday' || s === 'අඟහරුවාදා') return 2;
-  if (s === '3' || s === 'wed' || s === 'wednesday' || s === 'බදාදා') return 3;
-  if (s === '4' || s === 'thu' || s === 'thursday' || s === 'බ්‍රහස්පතින්දා') return 4;
-  if (s === '5' || s === 'fri' || s === 'friday' || s === 'සිකුරාදා') return 5;
+  const s = String(d).trim().toLowerCase();
+  if (s === '0' || s.includes('mon') || s.includes('සඳු')) return 0;
+  if (s === '1' || s.includes('tue') || s.includes('අඟ')) return 1;
+  if (s === '2' || s.includes('wed') || s.includes('බදා')) return 2;
+  if (s === '3' || s.includes('thu') || s.includes('බ්‍රහ')) return 3;
+  if (s === '4' || s.includes('fri') || s.includes('සිකු')) return 4;
 
-  return parseInt(s, 10) || null;
+  const parsed = parseInt(s, 10);
+  return isNaN(parsed) ? null : parsed;
 }
 
-   function syncActiveDayWithToday() {
+function syncActiveDayWithToday() {
   const dayIndex = new Date().getDay(); // 0 = Sunday, 1 = Monday, ..., 4 = Thursday, 5 = Friday
   if (dayIndex >= 1 && dayIndex <= 5) {
-    window.activeDay = dayIndex; // masterSchedule එකේ 1, 2, 3, 4, 5 සමඟ 100% ක් ගැළපේ
+    window.activeDay = dayIndex - 1; // 0 = සඳුදා, 1 = අඟහරුවාදා, 2 = බදාදා, 3 = බ්‍රහස්පතින්දා, 4 = සිකුරාදා
   } else {
-    window.activeDay = 1; // සති අන්තයක නම් Default එක සඳුදා (1) ලෙස තබයි
+    window.activeDay = 0; // සති අන්තයක නම් Default එක සඳුදා (0) ලෙස තබයි
+  }
+  
+  // activeDay නමින් වෙනම variable එකක් ඇත්නම් එයද යාවත්කාලීන කිරීම
+  if (typeof activeDay !== 'undefined') {
+    activeDay = window.activeDay;
   }
 }
 syncActiveDayWithToday();
@@ -16279,16 +16286,18 @@ syncActiveDayWithToday();
 // 🗓️ 1. දිනයන් (1-5, English, සිංහල) ඒකාකාරී අංකයක් බවට පත් කිරීම
 // =========================================================================
 function normalizeDayNumber(d) {
-  if (d === undefined || d === null) return null;
+ if (d === undefined || d === null || d === '') return null;
   if (typeof d === 'number') return d;
+
   const s = String(d).trim().toLowerCase();
-  if (s === '1' || s.includes('mon') || s.includes('සඳු')) return 1;
-  if (s === '2' || s.includes('tue') || s.includes('අඟ')) return 2;
-  if (s === '3' || s.includes('wed') || s.includes('බදා')) return 3;
-  if (s === '4' || s.includes('thu') || s.includes('බ්‍රහ')) return 4;
-  if (s === '5' || s.includes('fri') || s.includes('සිකු')) return 5;
-  return parseInt(s, 10) || null;
-}
+  if (s === '0' || s.includes('mon') || s.includes('සඳු')) return 0;
+  if (s === '1' || s.includes('tue') || s.includes('අඟ')) return 1;
+  if (s === '2' || s.includes('wed') || s.includes('බදා')) return 2;
+  if (s === '3' || s.includes('thu') || s.includes('බ්‍රහ')) return 3;
+  if (s === '4' || s.includes('fri') || s.includes('සිකු')) return 4;
+
+  const parsed = parseInt(s, 10);
+  return isNaN(parsed) ? null : parsed;
 
 // =========================================================================
 // 🔍 2. ගුරුවරයෙකු නිවාඩුදැයි පරීක්ෂා කිරීම (ID හෝ නම දෙකෙන්ම පරීක්ෂා කරයි)
@@ -16388,7 +16397,7 @@ function runAutoReliefEngine() {
 
   const teacherList = window.teachers || (typeof teachers !== 'undefined' ? teachers : []);
   const allSlots = window.masterSchedule || (typeof masterSchedule !== 'undefined' ? masterSchedule : []);
-  const targetDayNum = normalizeDayNumber(window.activeDay || (typeof activeDay !== 'undefined' ? activeDay : 1));
+const targetDayNum = normalizeDayNumber(window.activeDay ?? (typeof activeDay !== 'undefined' ? activeDay : 0));
 
   // 1. Load Map සකස් කිරීම
   teacherList.forEach(t => {
