@@ -17752,7 +17752,7 @@ function loadFromLocalFallback(todayStr) {
     console.error("Local fallback error:", e);
   }
 }
-}
+
 // ආරම්භක ඇමතුම
 initAndLoadReliefState();
     
@@ -17805,7 +17805,7 @@ function saveReliefStateToStorage() {
       console.warn("Firebase database access skipped:", fbErr.message);
     }
   }
-}}
+}
 // පිටුව මුලින් Load වන විටම මෙය ක්‍රියාත්මක වීම
 initAndLoadReliefState();
 
