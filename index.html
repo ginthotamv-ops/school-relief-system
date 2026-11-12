@@ -16172,7 +16172,38 @@ function getPeriodAbsenceInfo(teacherIdentifier, periodNum) {
 }
 
 // =========================================================================
-// 🚀 3. ප්‍රධාන සහන එන්ජිම (AUTO RELIEF ENGINE)
+// 🧩 1. සාමාන්‍ය සහ BASKET පන්ති වලින් ගුරුවරුන් නිවැරදිව වෙන් කර ගැනීම
+// =========================================================================
+function extractSlotTeachers(slot) {
+  const list = [];
+  if (!slot) return list;
+
+  // slot.isBasket නොතිබුණද basketItems තිබේ නම් Basket ලෙස හඳුනාගනී
+  const hasBasketItems = Array.isArray(slot.basketItems) && slot.basketItems.length > 0;
+
+  if (hasBasketItems) {
+    slot.basketItems.forEach(b => {
+      if (b && b.teacherId) {
+        list.push({
+          teacherId: b.teacherId,
+          subject: `${b.subject || slot.subject || 'විෂයය'} (Basket)`,
+          isBasket: true
+        });
+      }
+    });
+  } else if (slot.teacherId) {
+    list.push({
+      teacherId: slot.teacherId,
+      subject: slot.subject || 'විෂයය',
+      isBasket: false
+    });
+  }
+
+  return list;
+}
+
+// =========================================================================
+// 🚀 2. දෛනික සහන කළමනාකරණ ප්‍රධාන එන්ජිම (AUTO RELIEF ENGINE)
 // =========================================================================
 function runAutoReliefEngine() {
   window.generatedReliefResults = [];
@@ -16181,13 +16212,9 @@ function runAutoReliefEngine() {
 
   const teacherList = window.teachers || (typeof teachers !== 'undefined' ? teachers : []);
   const allSlots = window.masterSchedule || (typeof masterSchedule !== 'undefined' ? masterSchedule : []);
-  
-  // දින අංකය (1 - 5) තහවුරු කරගැනීම
   const targetDayNum = normalizeDayNumber(window.activeDay || (typeof activeDay !== 'undefined' ? activeDay : 1));
 
-  console.log(`🔍 සහන පරීක්ෂාව ආරම්භ විය | ඉලක්ක දින අංකය: ${targetDayNum}`);
-
-  // 1. Load Map ගොඩනැගීම
+  // 1. Load Map සකස් කිරීම
   teacherList.forEach(t => {
     const key = String(t.id).trim().toLowerCase();
     loadMap[key] = {
@@ -16202,49 +16229,55 @@ function runAutoReliefEngine() {
     };
   });
 
-  // 2. අද දින පන්තිවල සිටින ගුරුවරුන් කාර්යබහුල ලෙස ලකුණු කිරීම
+  // 2. පාසලේ සිටින ගුරුවරුන් කාර්යබහුල (Occupied) ලෙස ලකුණු කිරීම
   allSlots.forEach(slot => {
     if (normalizeDayNumber(slot.day) === targetDayNum) {
-      if (!slot.isBasket && slot.teacherId) {
-        const tidKey = String(slot.teacherId).trim().toLowerCase();
+      const entries = extractSlotTeachers(slot);
+      entries.forEach(entry => {
+        const tidKey = String(entry.teacherId).trim().toLowerCase();
         const t = loadMap[tidKey];
-        const absence = getPeriodAbsenceInfo(slot.teacherId, slot.period);
+        const absence = getPeriodAbsenceInfo(entry.teacherId, slot.period);
         if (t && !absence.isAbsent) {
           t.occupiedPeriods.add(Number(slot.period));
         }
-      } else if (slot.isBasket && slot.basketItems) {
-        slot.basketItems.forEach(b => {
-          if (b.teacherId) {
-            const bKey = String(b.teacherId).trim().toLowerCase();
-            const t = loadMap[bKey];
-            const absence = getPeriodAbsenceInfo(b.teacherId, slot.period);
-            if (t && !absence.isAbsent) {
-              t.occupiedPeriods.add(Number(slot.period));
-            }
-          }
-        });
-      }
+      });
     }
   });
 
-  // 3. සහන අවශ්‍ය පන්ති (Relief Units) හඳුනාගැනීම
+  // 3. සහන අවශ්‍ය පන්ති හඳුනාගැනීම (6-A+6-B+6-C ඒකාබද්ධ කරමින්)
   const reliefUnits = [];
   const handledKeys = new Set();
 
   allSlots.forEach(slot => {
-    // දිනය සමානදැයි නම්‍යශීලීව පරීක්ෂා කිරීම
     if (normalizeDayNumber(slot.day) === targetDayNum) {
       const clsObj = (window.schoolClasses || (typeof schoolClasses !== 'undefined' ? schoolClasses : [])).find(c => c.id === slot.classId);
       const clsSection = clsObj && typeof getSectionOfGrade === 'function' ? getSectionOfGrade(clsObj.grade) : "General";
-      const groupKey = slot.isCombined && slot.combinedWithClasses 
-        ? [slot.classId, ...slot.combinedWithClasses].sort().join('+') + `-P${slot.period}` 
-        : `${slot.classId}-P${slot.period}`;
 
-      // A. සාමාන්‍ය පන්තියක් නම්
-      if (!slot.isBasket && slot.teacherId) {
-        const tidKey = String(slot.teacherId).trim().toLowerCase();
+      // Combined පන්ති එකම නමකට ගොනු කිරීම
+      let combinedClassDisplay = slot.classId;
+      let groupKey = `${slot.classId}-P${slot.period}`;
+
+      if (slot.isCombined && slot.combinedSubjectId) {
+        groupKey = `comb_${slot.combinedSubjectId}-P${slot.period}`;
+        const siblingClasses = allSlots
+          .filter(s => normalizeDayNumber(s.day) === targetDayNum && Number(s.period) === Number(slot.period) && s.combinedSubjectId === slot.combinedSubjectId)
+          .map(s => s.classId);
+        const uniqueClasses = [...new Set(siblingClasses)].sort();
+        if (uniqueClasses.length > 0) {
+          combinedClassDisplay = uniqueClasses.join('+');
+        }
+      } else if (slot.isCombined && Array.isArray(slot.combinedWithClasses)) {
+        const uniqueClasses = [...new Set([slot.classId, ...slot.combinedWithClasses])].sort();
+        groupKey = `${uniqueClasses.join('+')}-P${slot.period}`;
+        combinedClassDisplay = uniqueClasses.join('+');
+      }
+
+      const entries = extractSlotTeachers(slot);
+
+      entries.forEach(entry => {
+        const tidKey = String(entry.teacherId).trim().toLowerCase();
         const t = loadMap[tidKey];
-        const absence = getPeriodAbsenceInfo(slot.teacherId, slot.period);
+        const absence = getPeriodAbsenceInfo(entry.teacherId, slot.period);
 
         if (absence.isAbsent) {
           const uniqueId = `${groupKey}-${tidKey}`;
@@ -16252,48 +16285,21 @@ function runAutoReliefEngine() {
             handledKeys.add(uniqueId);
             reliefUnits.push({
               period: Number(slot.period),
-              classId: slot.isCombined ? [slot.classId, ...slot.combinedWithClasses].join('+') : slot.classId,
+              classId: combinedClassDisplay,
               section: clsSection,
-              subject: slot.subject || 'විෂයය',
-              absentTeacherId: slot.teacherId,
-              absentTeacherName: t ? t.name : slot.teacherId,
+              subject: entry.subject,
+              absentTeacherId: entry.teacherId,
+              absentTeacherName: t ? t.name : entry.teacherId,
               reason: absence.reason
             });
           }
         }
-      }
-      // B. Basket පන්තියක් නම්
-      else if (slot.isBasket && slot.basketItems) {
-        slot.basketItems.forEach(b => {
-          if (b.teacherId) {
-            const bKey = String(b.teacherId).trim().toLowerCase();
-            const t = loadMap[bKey];
-            const absence = getPeriodAbsenceInfo(b.teacherId, slot.period);
-
-            if (absence.isAbsent) {
-              const uniqueId = `${groupKey}-${bKey}`;
-              if (!handledKeys.has(uniqueId)) {
-                handledKeys.add(uniqueId);
-                reliefUnits.push({
-                  period: Number(slot.period),
-                  classId: slot.isCombined ? [slot.classId, ...slot.combinedWithClasses].join('+') : slot.classId,
-                  section: clsSection,
-                  subject: `${b.subject} (Basket)`,
-                  absentTeacherId: b.teacherId,
-                  absentTeacherName: t ? t.name : b.teacherId,
-                  reason: absence.reason
-                });
-              }
-            }
-          }
-        });
-      }
+      });
     }
   });
 
   console.log(`✅ හඳුනාගත් මුළු සහන පන්ති ගණන: ${reliefUnits.length}`);
 
-  // සහන අවශ්‍ය පන්ති නොමැති නම්
   if (reliefUnits.length === 0) {
     const tbody = document.getElementById("reliefResultsTableBody") || document.getElementById("reliefTableBody");
     if (tbody) {
@@ -16301,13 +16307,13 @@ function runAutoReliefEngine() {
     }
     const unassignedBox = document.getElementById("unassignedReliefContainer");
     if (unassignedBox) unassignedBox.classList.add("hidden");
-    alert(`🎉 අද දින හිස් වූ කාලච්ඡේද 0 ම සාර්ථකව පවරන ලදී.`);
+    alert("ℹ️ අද දින හිස් වූ කාලච්ඡේද 0 කි.");
     return;
   }
 
   reliefUnits.sort((a, b) => a.period - b.period);
 
-  // 4. සහන ගුරුවරුන් තේරීම
+  // 4. සුදුසුම සහන ගුරුවරුන් තේරීම
   reliefUnits.forEach(unit => {
     let assignedId = null, note = "", badge = "";
     const cleanSub = unit.subject.replace(" (Basket)", "").trim().toLowerCase();
@@ -16380,11 +16386,10 @@ function runAutoReliefEngine() {
     }
   });
 
-  // Global Sync
+  // 5. Global State යාවත්කාලීන කර වගුව ඇඳීම
   window.dailyReliefAssignments = window.generatedReliefResults.filter(r => r.assignedId !== null);
   window.unassignedReliefSessions = unassignedList;
 
-  // Unhide Table Box
   const containers = [
     document.getElementById("reliefResultsContainer"),
     document.getElementById("reliefTableContainer"),
@@ -16392,7 +16397,6 @@ function runAutoReliefEngine() {
   ];
   containers.forEach(box => { if (box) box.classList.remove("hidden"); });
 
-  // 5. Render
   if (typeof renderReliefTable === 'function') renderReliefTable();
   if (typeof renderDailyReliefResults === 'function') renderDailyReliefResults();
   if (typeof renderUnassignedReliefTable === 'function') renderUnassignedReliefTable(unassignedList);
@@ -16403,13 +16407,11 @@ function runAutoReliefEngine() {
     alert(`🎉 සාර්ථකයි! අද දින හිස් වූ කාලච්ඡේද ${reliefUnits.length} ම 100% ක් සාර්ථකව පවරන ලදී.`);
   }
 }
-    //================================================================
-// 🚀 දෛනික සහන කළමනාකරණ ප්‍රධාන එන්ජිම (AUTO RELIEF ENGINE)
-// =========================================================================
 
-// සහායක නම් (Backwards compatibility)
 window.runSmartReliefGenerator = runAutoReliefEngine;
 window.runAutoReliefEngine = runAutoReliefEngine;
+
+
 
 // -------------------------------------------------------------------------
 // 🔴 ප්‍රධාන RELIEF වගු RENDER කිරීම
