@@ -79,7 +79,7 @@
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
       <div>
         <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">
-          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය F999958
+          <i class="fa-solid fa-school text-amber-400"></i> ගිංතොට මහා විද්‍යාලීය පාසල් කාලසටහන & සහන කළමනාකරණය
         </h1>
         <div class="flex items-center gap-2 mt-0.5">
           <p class="text-xs text-indigo-200">Firebase Realtime Sync | Multi-Day Swap | A4 Slips 16</p>
@@ -3609,131 +3609,248 @@ window.renderReliefAttendance = renderReliefAttendance;
       if (t) { t.isExempt = isExempt; saveAllToStorage(); renderReliefAttendance(); }
     }
 
-    function runAutoReliefEngine() {
-      generatedReliefResults = [];
-      const unassignedList = [];
-      const loadMap = {};
+// =========================================================================
+// 🚀 දෛනික සහන කළමනාකරණ ප්‍රධාන එන්ජිම (AUTO RELIEF ENGINE)
+// =========================================================================
 
-      teachers.forEach(t => {
-        loadMap[t.id] = {
-          name: t.name, phone: t.phone, subject: t.subject, sections: t.sections || ["All"],
-          leaveStatus: t.leaveStatus || "present", isExempt: t.isExempt,
-          currentDayLoad: calculateTeacherDailyWorkload(t.id, activeDay),
-          occupiedPeriods: new Set()
-        };
-      });
+// ගුරුවරයෙකු නිශ්චිත කාලච්ඡේදයක නිවාඩුදැයි බැලීමේ සහායක ශ්‍රිතය
+function getPeriodAbsenceInfo(teacherId, periodNum) {
+  const tid = String(teacherId || '').trim().toLowerCase();
+  const targetPeriod = parseInt(String(periodNum).replace(/\D/g, ''), 10);
+  const todayStr = typeof getTodayDateString === 'function' ? getTodayDateString() : new Date().toISOString().split('T')[0];
+  const ctx = window.dailyReliefContext || {};
 
-      masterSchedule.forEach(slot => {
-        if (slot.day === activeDay) {
-          if (!slot.isBasket && slot.teacherId) {
-            const t = loadMap[slot.teacherId];
-            if (t && !isTeacherAbsentDuringPeriod(t, slot.period)) t.occupiedPeriods.add(slot.period);
-          } else if (slot.isBasket && slot.basketItems) {
-            slot.basketItems.forEach(b => {
-              if (b.teacherId) {
-                const t = loadMap[b.teacherId];
-                if (t && !isTeacherAbsentDuringPeriod(t, slot.period)) t.occupiedPeriods.add(slot.period);
-              }
+  // 1. දීර්ඝකාලීන නිවාඩු
+  const isLongTerm = (window.longTermAbsences || []).some(l => {
+    const s = String(l.startDate || l.fromDate || '').trim();
+    const e = String(l.endDate || l.toDate || '').trim();
+    return String(l.teacherId).trim().toLowerCase() === tid && (!s || todayStr >= s) && (!e || todayStr <= e);
+  });
+  if (isLongTerm) return { isAbsent: true, type: 'LONG', reason: 'දීර්ඝකාලීන නිවාඩු' };
+
+  // 2. සම්පූර්ණ දින නිවාඩු
+  const isFull = (ctx.fullDayAbsent || []).some(id => String(id).trim().toLowerCase() === tid);
+  if (isFull) return { isAbsent: true, type: 'FULL', reason: 'සම්පූර්ණ නිවාඩු' };
+
+  // 3. කෙටි නිවාඩු (අදාළ කාලච්ඡේදයට පමණක්)
+  const shortRecord = (ctx.partialAbsent || []).find(p => String(p.teacherId).trim().toLowerCase() === tid);
+  if (shortRecord && Array.isArray(shortRecord.absentPeriods)) {
+    const hit = shortRecord.absentPeriods.some(p => parseInt(String(p).replace(/\D/g, ''), 10) === targetPeriod);
+    if (hit) return { isAbsent: true, type: 'SHORT', reason: `කෙටි නිවාඩු (${shortRecord.reason || 'Short Leave'})` };
+  }
+
+  // 4. විශේෂ රාජකාරි (අදාළ කාලච්ඡේදයට පමණක්)
+  const dutyRecord = (ctx.specialDuty || []).find(d => String(d.teacherId).trim().toLowerCase() === tid);
+  if (dutyRecord && Array.isArray(dutyRecord.dutyPeriods)) {
+    const hit = dutyRecord.dutyPeriods.some(p => parseInt(String(p).replace(/\D/g, ''), 10) === targetPeriod);
+    if (hit) return { isAbsent: true, type: 'DUTY', reason: `රාජකාරි: ${dutyRecord.dutyName || 'Special Duty'}` };
+  }
+
+  return { isAbsent: false, type: 'PRESENT', reason: 'පැමිණ ඇත' };
+}
+
+
+function runAutoReliefEngine() {
+  generatedReliefResults = [];
+  const unassignedList = [];
+  const loadMap = {};
+
+  // 1. සියලු ගුරුවරුන්ගේ ආරම්භක දෛනික කාර්යභාරය සිතියම්ගත කිරීම
+  teachers.forEach(t => {
+    loadMap[t.id] = {
+      name: t.name,
+      phone: t.phone,
+      subject: t.subject || "සාමාන්‍ය",
+      sections: t.sections || ["All"],
+      isExempt: !!t.isExempt,
+      currentDayLoad: typeof calculateTeacherDailyWorkload === 'function' ? calculateTeacherDailyWorkload(t.id, activeDay) : 0,
+      occupiedPeriods: new Set()
+    };
+  });
+
+  // 2. පාසලේ සිටින ගුරුවරුන්ගේ නියමිත පන්ති occupiedPeriods වලට ඇතුළත් කිරීම
+  masterSchedule.forEach(slot => {
+    if (slot.day === activeDay) {
+      if (!slot.isBasket && slot.teacherId) {
+        const t = loadMap[slot.teacherId];
+        const absence = getPeriodAbsenceInfo(slot.teacherId, slot.period);
+        // ගුරුවරයා එම කාලච්ඡේදයේ නිවාඩු නොවේ නම් පමණක් ඔහු පන්තියේ කාර්යබහුල වේ
+        if (t && !absence.isAbsent) {
+          t.occupiedPeriods.add(slot.period);
+        }
+      } else if (slot.isBasket && slot.basketItems) {
+        slot.basketItems.forEach(b => {
+          if (b.teacherId) {
+            const t = loadMap[b.teacherId];
+            const absence = getPeriodAbsenceInfo(b.teacherId, slot.period);
+            if (t && !absence.isAbsent) {
+              t.occupiedPeriods.add(slot.period);
+            }
+          }
+        });
+      }
+    }
+  });
+
+  // 3. සහන අවශ්‍ය වන පන්ති (Relief Units) හඳුනා ගැනීම
+  const reliefUnits = [];
+  const handledKeys = new Set();
+
+  masterSchedule.forEach(slot => {
+    if (slot.day === activeDay) {
+      const clsObj = (typeof schoolClasses !== 'undefined') ? schoolClasses.find(c => c.id === slot.classId) : null;
+      const clsSection = clsObj && typeof getSectionOfGrade === 'function' ? getSectionOfGrade(clsObj.grade) : "General";
+      const groupKey = slot.isCombined && slot.combinedWithClasses 
+        ? [slot.classId, ...slot.combinedWithClasses].sort().join('+') + `-P${slot.period}` 
+        : `${slot.classId}-P${slot.period}`;
+
+      // සාමාන්‍ය පන්ති සඳහා
+      if (!slot.isBasket && slot.teacherId) {
+        const t = loadMap[slot.teacherId];
+        const absence = getPeriodAbsenceInfo(slot.teacherId, slot.period);
+
+        if (t && absence.isAbsent) {
+          const uniqueId = `${groupKey}-${slot.teacherId}`;
+          if (!handledKeys.has(uniqueId)) {
+            handledKeys.add(uniqueId);
+            reliefUnits.push({
+              period: slot.period,
+              classId: slot.isCombined ? [slot.classId, ...slot.combinedWithClasses].join('+') : slot.classId,
+              section: clsSection,
+              subject: slot.subject || 'විෂයය',
+              absentTeacherId: slot.teacherId,
+              absentTeacherName: t.name,
+              reason: absence.reason // Modal එකෙන් දැමූ නිවැරදි හේතුව
             });
           }
         }
-      });
+      } 
+      // Basket (කාණ්ඩ) විෂයයන් සඳහා
+      else if (slot.isBasket && slot.basketItems) {
+        slot.basketItems.forEach(b => {
+          if (b.teacherId) {
+            const t = loadMap[b.teacherId];
+            const absence = getPeriodAbsenceInfo(b.teacherId, slot.period);
 
-      const reliefUnits = [];
-      const handledKeys = new Set();
-
-      masterSchedule.forEach(slot => {
-        if (slot.day === activeDay) {
-          const clsObj = schoolClasses.find(c => c.id === slot.classId);
-          const clsSection = clsObj ? getSectionOfGrade(clsObj.grade) : "General";
-          const groupKey = slot.isCombined && slot.combinedWithClasses ? [slot.classId, ...slot.combinedWithClasses].sort().join('+') + `-P${slot.period}` : `${slot.classId}-P${slot.period}`;
-
-          if (!slot.isBasket && slot.teacherId) {
-            const t = loadMap[slot.teacherId];
-            if (t && isTeacherAbsentDuringPeriod(t, slot.period)) {
-              const uniqueId = `${groupKey}-${slot.teacherId}`;
+            if (t && absence.isAbsent) {
+              const uniqueId = `${groupKey}-${b.teacherId}`;
               if (!handledKeys.has(uniqueId)) {
                 handledKeys.add(uniqueId);
                 reliefUnits.push({
-                  period: slot.period, classId: slot.isCombined ? [slot.classId, ...slot.combinedWithClasses].join('+') : slot.classId,
-                  section: clsSection, subject: slot.subject, absentTeacherId: slot.teacherId, absentTeacherName: t.name,
-                  reason: t.leaveStatus === 'absent' ? 'නොපැමිණි' : (t.leaveStatus.includes('half') ? 'Half Day' : 'Short Leave')
+                  period: slot.period,
+                  classId: slot.isCombined ? [slot.classId, ...slot.combinedWithClasses].join('+') : slot.classId,
+                  section: clsSection,
+                  subject: `${b.subject} (Basket)`,
+                  absentTeacherId: b.teacherId,
+                  absentTeacherName: t.name,
+                  reason: absence.reason
                 });
               }
             }
-          } else if (slot.isBasket && slot.basketItems) {
-            slot.basketItems.forEach(b => {
-              if (b.teacherId) {
-                const t = loadMap[b.teacherId];
-                if (t && isTeacherAbsentDuringPeriod(t, slot.period)) {
-                  const uniqueId = `${groupKey}-${b.teacherId}`;
-                  if (!handledKeys.has(uniqueId)) {
-                    handledKeys.add(uniqueId);
-                    reliefUnits.push({
-                      period: slot.period, classId: slot.isCombined ? [slot.classId, ...slot.combinedWithClasses].join('+') : slot.classId,
-                      section: clsSection, subject: `${b.subject} (Basket)`, absentTeacherId: b.teacherId, absentTeacherName: t.name,
-                      reason: t.leaveStatus === 'absent' ? 'නොපැමිණි' : (t.leaveStatus.includes('half') ? 'Half Day' : 'Short Leave')
-                    });
-                  }
-                }
-              }
-            });
           }
-        }
-      });
-
-      if (reliefUnits.length === 0) {
-        document.getElementById("reliefResultsTableBody").innerHTML = `<tr><td colspan="7" class="p-6 text-center text-green-600 font-bold"><i class="fa-solid fa-circle-check"></i> අද දින සහන අවශ්‍ය වන පන්ති නොමැත. සියල්ල සාමාන්‍ය පරිදි පැවැත්වේ!</td></tr>`;
-        document.getElementById("unassignedReliefContainer").classList.add("hidden");
-        return;
-      }
-
-      reliefUnits.sort((a, b) => a.period - b.period);
-
-      reliefUnits.forEach(unit => {
-        let assignedId = null, note = "", badge = "";
-        const cleanSub = unit.subject.replace(" (Basket)", "").trim().toLowerCase();
-
-        let candidates = Object.keys(loadMap).filter(tId => {
-          const c = loadMap[tId];
-          return !isTeacherAbsentDuringPeriod(c, unit.period) && !c.isExempt && !c.occupiedPeriods.has(unit.period) && c.currentDayLoad < 7;
         });
-
-        let sameSectionCand = candidates.filter(tId => isTeacherInTargetSection(loadMap[tId], unit.section));
-        let otherSectionCand = candidates.filter(tId => !isTeacherInTargetSection(loadMap[tId], unit.section));
-
-        let tier1 = sameSectionCand.filter(tId => loadMap[tId].subject.trim().toLowerCase() === cleanSub);
-        let tier2 = sameSectionCand.filter(tId => loadMap[tId].subject.trim().toLowerCase() !== cleanSub);
-        let tier3 = otherSectionCand.filter(tId => loadMap[tId].subject.trim().toLowerCase() === cleanSub);
-        let tier4 = otherSectionCand.filter(tId => loadMap[tId].subject.trim().toLowerCase() !== cleanSub);
-
-        if (tier1.length > 0) { tier1.sort((a, b) => loadMap[a].currentDayLoad - loadMap[b].currentDayLoad); assignedId = tier1[0]; note = "1. එම අංශය - එම විෂය"; badge = "bg-green-100 text-green-800"; }
-        else if (tier2.length > 0) { tier2.sort((a, b) => loadMap[a].currentDayLoad - loadMap[b].currentDayLoad); assignedId = tier2[0]; note = "2. එම අංශය - වෙනත් විෂය"; badge = "bg-emerald-100 text-emerald-800"; }
-        else if (tier3.length > 0) { tier3.sort((a, b) => loadMap[a].currentDayLoad - loadMap[b].currentDayLoad); assignedId = tier3[0]; note = "3. වෙනත් අංශය - එම විෂය"; badge = "bg-amber-100 text-amber-800"; }
-        else if (tier4.length > 0) { tier4.sort((a, b) => loadMap[a].currentDayLoad - loadMap[b].currentDayLoad); assignedId = tier4[0]; note = "4. වෙනත් අංශය - වෙනත් විෂය"; badge = "bg-orange-100 text-orange-800"; }
-
-        if (assignedId) {
-          loadMap[assignedId].currentDayLoad += 1;
-          loadMap[assignedId].occupiedPeriods.add(unit.period);
-          generatedReliefResults.push({
-            period: unit.period, classId: unit.classId, section: unit.section, subject: unit.subject,
-            absentTeacherName: `${unit.absentTeacherName} (${unit.reason})`,
-            assignedId: assignedId, assignedName: loadMap[assignedId].name, assignedSubject: loadMap[assignedId].subject,
-            assignedSections: (loadMap[assignedId].sections || []).join(', '), status: note, badge: badge, isManual: false
-          });
-        } else {
-          unassignedList.push({ period: unit.period, classId: unit.classId, section: unit.section, subject: unit.subject, absentTeacherName: `${unit.absentTeacherName} (${unit.reason})`, reason: "ගුරුවරුන් කාර්යබහුලයි / සීමාව ඉක්මවා ඇත" });
-          generatedReliefResults.push({
-            period: unit.period, classId: unit.classId, section: unit.section, subject: unit.subject,
-            absentTeacherName: `${unit.absentTeacherName} (${unit.reason})`,
-            assignedId: null, assignedName: "කිසිවෙකු නැත", assignedSubject: "-", assignedSections: "-", status: "නිදහස් නැත", badge: "bg-red-100 text-red-800", isManual: false
-          });
-        }
-      });
-
-      renderReliefTable();
-      renderUnassignedReliefTable(unassignedList);
+      }
     }
+  });
+
+  // සහන අවශ්‍ය පන්ති නොමැති නම්
+  if (reliefUnits.length === 0) {
+    const tbody = document.getElementById("reliefResultsTableBody");
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-emerald-600 font-bold"><i class="fa-solid fa-circle-check"></i> අද දින සහන අවශ්‍ය වන පන්ති නොමැත. සියල්ල සාමාන්‍ය පරිදි පැවැත්වේ!</td></tr>`;
+    }
+    const unassignedBox = document.getElementById("unassignedReliefContainer");
+    if (unassignedBox) unassignedBox.classList.add("hidden");
+    return;
+  }
+
+  // කාලච්ඡේද අංක පිළිවෙළට පෙළගැස්වීම (P1 සිට P8)
+  reliefUnits.sort((a, b) => a.period - b.period);
+
+  // 4. සුදුසුම සහන ගුරුවරයා තේරීම (Tier 1 සිට Tier 4 දක්වා)
+  reliefUnits.forEach(unit => {
+    let assignedId = null, note = "", badge = "";
+    const cleanSub = unit.subject.replace(" (Basket)", "").trim().toLowerCase();
+
+    // සහන ලබාදීමට හැකි අපේක්ෂක ගුරුවරුන් පෙරීම
+    let candidates = Object.keys(loadMap).filter(tId => {
+      const c = loadMap[tId];
+      // තමන්ගේම පන්තියට තමන්ව සහන ගුරුවරයා ලෙස නොයෙදීම
+      if (String(tId) === String(unit.absentTeacherId)) return false;
+
+      const absence = getPeriodAbsenceInfo(tId, unit.period);
+      // ගුරුවරයා එම කාලච්ඡේදයේ නිවාඩු හෝ රාජකාරි නොවිය යුතුය
+      if (absence.isAbsent) return false;
+
+      // නිදහස් කර ඇති (Exempt), දැනටමත් පන්තියක් ඇති (Occupied), හෝ දෛනික සීමාව (Load >= 7) ඉක්මවා ඇත්නම් ඉවත් කෙරේ
+      return !c.isExempt && !c.occupiedPeriods.has(unit.period) && c.currentDayLoad < 7;
+    });
+
+    const isTargetSec = (c, sec) => typeof isTeacherInTargetSection === 'function' ? isTeacherInTargetSection(c, sec) : true;
+
+    let sameSectionCand = candidates.filter(tId => isTargetSec(loadMap[tId], unit.section));
+    let otherSectionCand = candidates.filter(tId => !isTargetSec(loadMap[tId], unit.section));
+
+    let tier1 = sameSectionCand.filter(tId => (loadMap[tId].subject || '').trim().toLowerCase() === cleanSub);
+    let tier2 = sameSectionCand.filter(tId => (loadMap[tId].subject || '').trim().toLowerCase() !== cleanSub);
+    let tier3 = otherSectionCand.filter(tId => (loadMap[tId].subject || '').trim().toLowerCase() === cleanSub);
+    let tier4 = otherSectionCand.filter(tId => (loadMap[tId].subject || '').trim().toLowerCase() !== cleanSub);
+
+    // අඩුම වැඩ ප්‍රමාණයක් (Lowest Load) ඇති ගුරුවරයාට ප්‍රමුඛතාව ලබා දීම
+    const sortByLoad = (arr) => arr.sort((a, b) => loadMap[a].currentDayLoad - loadMap[b].currentDayLoad);
+
+    if (tier1.length > 0) { sortByLoad(tier1); assignedId = tier1[0]; note = "1. එම අංශය - එම විෂය"; badge = "bg-green-100 text-green-800"; }
+    else if (tier2.length > 0) { sortByLoad(tier2); assignedId = tier2[0]; note = "2. එම අංශය - වෙනත් විෂය"; badge = "bg-emerald-100 text-emerald-800"; }
+    else if (tier3.length > 0) { sortByLoad(tier3); assignedId = tier3[0]; note = "3. වෙනත් අංශය - එම විෂය"; badge = "bg-amber-100 text-amber-800"; }
+    else if (tier4.length > 0) { sortByLoad(tier4); assignedId = tier4[0]; note = "4. වෙනත් අංශය - වෙනත් විෂය"; badge = "bg-orange-100 text-orange-800"; }
+
+    if (assignedId) {
+      loadMap[assignedId].currentDayLoad += 1;
+      loadMap[assignedId].occupiedPeriods.add(unit.period);
+      generatedReliefResults.push({
+        period: unit.period,
+        classId: unit.classId,
+        section: unit.section,
+        subject: unit.subject,
+        absentTeacherName: `${unit.absentTeacherName} (${unit.reason})`,
+        assignedId: assignedId,
+        assignedName: loadMap[assignedId].name,
+        assignedSubject: loadMap[assignedId].subject,
+        assignedSections: (loadMap[assignedId].sections || []).join(', '),
+        status: note,
+        badge: badge,
+        isManual: false
+      });
+    } else {
+      unassignedList.push({
+        period: unit.period,
+        classId: unit.classId,
+        section: unit.section,
+        subject: unit.subject,
+        absentTeacherName: `${unit.absentTeacherName} (${unit.reason})`,
+        reason: "ගුරුවරුන් කාර්යබහුලයි / සීමාව ඉක්මවා ඇත"
+      });
+      generatedReliefResults.push({
+        period: unit.period,
+        classId: unit.classId,
+        section: unit.section,
+        subject: unit.subject,
+        absentTeacherName: `${unit.absentTeacherName} (${unit.reason})`,
+        assignedId: null,
+        assignedName: "කිසිවෙකු නැත",
+        assignedSubject: "-",
+        assignedSections: "-",
+        status: "නිදහස් නැත",
+        badge: "bg-red-100 text-red-800",
+        isManual: false
+      });
+    }
+  });
+
+  // 5. ප්‍රතිඵල තිරයේ ඇඳීම
+  if (typeof renderReliefTable === 'function') renderReliefTable();
+  if (typeof renderUnassignedReliefTable === 'function') renderUnassignedReliefTable(unassignedList);
+}
 
     function renderUnassignedReliefTable(unassignedList) {
       const container = document.getElementById("unassignedReliefContainer");
