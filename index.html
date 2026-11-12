@@ -16304,20 +16304,69 @@ function findBestReliefTeacher(day, period, targetClassId, targetSubject, curren
   return candidates[0];
 }
 
+
+    // =========================================================================
+// 🗓️ දිනයන් (1-5, English, සිංහල) ඒකාකාරී අංකයක් බවට පත් කිරීම
+// =========================================================================
+function normalizeDayToNumber(dayVal) {
+  if (typeof dayVal === 'number') return dayVal;
+  const s = String(dayVal || '').trim().toLowerCase();
+
+  if (s === '1' || s === 'mon' || s === 'monday' || s === 'සඳුදා') return 1;
+  if (s === '2' || s === 'tue' || s === 'tuesday' || s === 'අඟහරුවාදා') return 2;
+  if (s === '3' || s === 'wed' || s === 'wednesday' || s === 'බදාදා') return 3;
+  if (s === '4' || s === 'thu' || s === 'thursday' || s === 'බ්‍රහස්පතින්දා') return 4;
+  if (s === '5' || s === 'fri' || s === 'friday' || s === 'සිකුරාදා') return 5;
+
+  return parseInt(s, 10) || null;
+}
+
+   function syncActiveDayWithToday() {
+  const dayIndex = new Date().getDay(); // 0 = Sunday, 1 = Monday, ..., 4 = Thursday, 5 = Friday
+  if (dayIndex >= 1 && dayIndex <= 5) {
+    window.activeDay = dayIndex; // masterSchedule එකේ 1, 2, 3, 4, 5 සමඟ 100% ක් ගැළපේ
+  } else {
+    window.activeDay = 1; // සති අන්තයක නම් Default එක සඳුදා (1) ලෙස තබයි
+  }
+}
+syncActiveDayWithToday();
+    
 // -------------------------------------------------------------------------
 // 🔴 ප්‍රධාන එන්ජිම ධාවනය කිරීම (runAutoReliefEngine)
 // -------------------------------------------------------------------------
+// =========================================================================
+// 🚀 දෛනික සහන කළමනාකරණ ප්‍රධාන එන්ජිම (AUTO RELIEF ENGINE)
+// =========================================================================
 function runAutoReliefEngine() {
   const schedule = window.masterSchedule || [];
   const ctx = window.dailyReliefContext || {};
-  const dateCtx = getSystemDateContext();
-  const day = dateCtx.timetableDayIndex;
-  const todayStr = ctx.date || dateCtx.dateString;
+  const dateCtx = typeof getSystemDateContext === 'function' ? getSystemDateContext() : {};
+  
+  // 1. දින අංකය (1-5) ආරක්ෂිතව තහවුරු කරගැනීම
+  let rawDay = (window.activeDay !== undefined && window.activeDay !== null) 
+    ? window.activeDay 
+    : (dateCtx.timetableDayIndex || 1);
 
+  let day = Number(rawDay);
+  if (isNaN(day)) {
+    const s = String(rawDay || '').toLowerCase();
+    if (s.includes('mon') || s.includes('සඳුදා')) day = 1;
+    else if (s.includes('tue') || s.includes('අඟහ')) day = 2;
+    else if (s.includes('wed') || s.includes('බදා')) day = 3;
+    else if (s.includes('thu') || s.includes('බ්‍රහස්')) day = 4;
+    else if (s.includes('fri') || s.includes('සිකු')) day = 5;
+    else day = 1;
+  }
+
+  const todayStr = ctx.date || dateCtx.dateString || new Date().toISOString().split('T')[0];
+
+  // 2. නිවාඩු සහ රාජකාරි ගුරුවරුන් හඳුනාගැනීම
   const absentTeacherMap = new Map();
 
   (window.longTermAbsences || []).forEach(l => {
-    if (todayStr >= l.startDate && todayStr <= l.endDate) {
+    const s = String(l.startDate || l.fromDate || '').trim();
+    const e = String(l.endDate || l.toDate || '').trim();
+    if ((!s || todayStr >= s) && (!e || todayStr <= e)) {
       absentTeacherMap.set(String(l.teacherId).trim().toLowerCase(), l.reason || "දීර්ඝකාලීන නිවාඩු");
     }
   });
@@ -16339,6 +16388,15 @@ function runAutoReliefEngine() {
     return;
   }
 
+  // ගුරු නම ලබා ගැනීමේ සහායක ශ්‍රිතය
+  const getTeacherDisplayName = (tid) => {
+    if (!tid) return "-";
+    const teachersList = window.teachers || teachers || [];
+    const t = teachersList.find(x => String(x.id).trim().toLowerCase() === String(tid).trim().toLowerCase());
+    return t ? t.name : tid;
+  };
+
+  // 3. සහන අවශ්‍ය පන්ති (Slots) පෙරීම
   const slotsToRelieve = [];
 
   schedule.forEach(slot => {
@@ -16358,7 +16416,7 @@ function runAutoReliefEngine() {
         (d.dutyPeriods || []).map(Number).includes(Number(slot.period))
       );
       const isFullDay = (ctx.fullDayAbsent || []).some(id => String(id).trim().toLowerCase() === tid) || 
-        (window.longTermAbsences || []).some(l => String(l.teacherId).trim().toLowerCase() === tid && todayStr >= l.startDate && todayStr <= l.endDate);
+        (window.longTermAbsences || []).some(l => String(l.teacherId).trim().toLowerCase() === tid && todayStr >= (l.startDate || l.fromDate) && todayStr <= (l.endDate || l.toDate));
 
       if (isFullDay || isShortLeave || isDutyPeriod) {
         slotsToRelieve.push({
@@ -16367,6 +16425,7 @@ function runAutoReliefEngine() {
           classId: slot.classId,
           subject: slot.subject,
           absentTeacherId: slot.teacherId,
+          absentTeacherName: getTeacherDisplayName(slot.teacherId), // 🟢 නම එක් කරන ලදී
           reason: reason
         });
       }
@@ -16375,41 +16434,76 @@ function runAutoReliefEngine() {
 
   slotsToRelieve.sort((a, b) => a.period - b.period);
 
+  // 4. සහන ගුරුවරුන් පැවරීම
   const assignments = [];
   const unassigned = [];
 
   slotsToRelieve.forEach(slot => {
-    const match = findBestReliefTeacher(day, slot.period, slot.classId, slot.subject, assignments);
+    const match = typeof findBestReliefTeacher === 'function' 
+      ? findBestReliefTeacher(day, slot.period, slot.classId, slot.subject, assignments)
+      : null;
 
     if (match) {
-      assignments.push({
+      const assignedObj = {
         ...slot,
+        // UI සහ Table ශ්‍රිත දෙකටම ගැළපෙන පරිදි සියලු Keys ලබා දීම
         reliefTeacherId: match.teacherId,
         reliefTeacherName: match.teacherName,
+        assignedId: match.teacherId,
+        assignedName: match.teacherName,
+        assignedSubject: match.subject || "-",
+        status: match.status || "පවරන ලදී",
+        badge: match.badge || "bg-emerald-100 text-emerald-800",
         isManualOverride: false
-      });
+      };
+      assignments.push(assignedObj);
     } else {
-      unassigned.push({
+      const unassignedObj = {
         ...slot,
         reliefTeacherId: null,
         reliefTeacherName: "පවරා නැත (ගුරු හිඟය / 7 සීමාව)",
+        assignedId: null,
+        assignedName: "කිසිවෙකු නැත",
+        assignedSubject: "-",
+        status: "නිදහස් නැත",
+        badge: "bg-rose-100 text-rose-800",
         isManualOverride: false
-      });
+      };
+      unassigned.push(unassignedObj);
     }
   });
 
+  // 5. Global State සියල්ල එකවර යාවත්කාලීන කිරීම
   window.dailyReliefAssignments = assignments;
   window.unassignedReliefSessions = unassigned;
+  window.generatedReliefResults = [...assignments, ...unassigned]; // 🟢 generatedReliefResults සක්‍රිය කරන ලදී
 
-  renderDailyReliefResults();
+  // 6. වගුව අඩංගු Box සැඟවී (hidden) ඇත්නම් එය පෙන්වීම
+  const containers = [
+    document.getElementById("reliefResultsContainer"),
+    document.getElementById("reliefTableContainer"),
+    document.getElementById("reliefTableWrapper"),
+    document.getElementById("dailyReliefContainer")
+  ];
+  containers.forEach(el => {
+    if (el) el.classList.remove("hidden");
+  });
 
+  // 7. වගුව අඳින ශ්‍රිත කැඳවීම
+  if (typeof renderDailyReliefResults === 'function') {
+    renderDailyReliefResults();
+  }
+  if (typeof renderReliefTable === 'function') {
+    renderReliefTable();
+  }
+
+  // 8. පණිවිඩය පෙන්වීම
   if (unassigned.length > 0) {
     alert(`⚠️ ආදේශන ජනනය අවසන්! කාලච්ඡේද ${assignments.length} ක් සාර්ථකව පවරන ලදී. කාලච්ඡේද ${unassigned.length} ක් උපරිම 7 සීමාව නිසා පිරවීමට නොහැකි විය. කරුණාකර Manual Override මඟින් සකසන්න.`);
   } else {
     alert(`🎉 සාර්ථකයි! අද දින හිස් වූ කාලච්ඡේද ${assignments.length} ම 100% ක් සාර්ථකව පවරන ලදී.`);
   }
 }
-
 // සහායක නම් (Backwards compatibility)
 window.runSmartReliefGenerator = runAutoReliefEngine;
 window.runAutoReliefEngine = runAutoReliefEngine;
