@@ -17444,6 +17444,75 @@ function getTeacherDisplayNumber(tid) {
   return t ? extractTeacherSchoolNumber(t) : tid;
 }
 }
+    
+// =========================================================================
+// 🛡️ MISSING HELPER FUNCTIONS (GLOBAL SAFE FALLBACKS)
+// =========================================================================
+if (typeof window.extractTeacherSchoolNumber !== 'function') {
+  window.extractTeacherSchoolNumber = function(t) {
+    if (!t) return 9999;
+    const raw = t.schoolNo ?? t.number ?? t.no ?? t.empNo ?? '';
+    const num = parseInt(String(raw).replace(/\D/g, ''), 10);
+    return isNaN(num) ? 9999 : num;
+  };
+}
+
+if (typeof window.getTeacherDisplayNumber !== 'function') {
+  window.getTeacherDisplayNumber = function(teacherId) {
+    const tid = String(teacherId || '').trim().toLowerCase();
+    const list = (window.schoolTeachers && window.schoolTeachers.length > 0)
+      ? window.schoolTeachers
+      : (window.teachers || []);
+    const found = list.find(t => String(t.id || t.teacherId || '').trim().toLowerCase() === tid);
+    if (found) {
+      const num = window.extractTeacherSchoolNumber(found);
+      if (num !== 9999) return num;
+    }
+    return teacherId || '-';
+  };
+}
+
+if (typeof window.getTeacherName !== 'function') {
+  window.getTeacherName = function(teacherId) {
+    const tid = String(teacherId || '').trim().toLowerCase();
+    const list = (window.schoolTeachers && window.schoolTeachers.length > 0)
+      ? window.schoolTeachers
+      : (window.teachers || []);
+    const found = list.find(t => String(t.id || t.teacherId || '').trim().toLowerCase() === tid);
+    return found ? (found.name || found.teacherName || teacherId) : (teacherId || 'නමක් නැත');
+  };
+}
+
+if (typeof window.getAlreadySelectedTeacherIds !== 'function') {
+  window.getAlreadySelectedTeacherIds = function() {
+    const selected = new Set();
+    const todayStr = typeof getTodayDateString === 'function'
+      ? getTodayDateString()
+      : new Date().toISOString().split('T')[0];
+
+    const ctx = window.dailyReliefContext || {};
+    (ctx.fullDayAbsent || []).forEach(id => selected.add(String(id).trim().toLowerCase()));
+    (ctx.partialAbsent || []).forEach(p => { if (p && p.teacherId) selected.add(String(p.teacherId).trim().toLowerCase()); });
+    (ctx.specialDuty || []).forEach(d => { if (d && d.teacherId) selected.add(String(d.teacherId).trim().toLowerCase()); });
+
+    (window.longTermAbsences || []).forEach(l => {
+      if (l && l.teacherId && (!l.startDate || todayStr >= l.startDate) && (!l.endDate || todayStr <= l.endDate)) {
+        selected.add(String(l.teacherId).trim().toLowerCase());
+      }
+    });
+
+    return selected;
+  };
+}
+
+if (typeof window.renderDailyReliefResults !== 'function') {
+  window.renderDailyReliefResults = function() {
+    if (typeof renderReliefTable === 'function') {
+      renderReliefTable();
+    }
+  };
+}
+    
 function renderLongTermEntriesList() {
   const el = document.getElementById("longTermEntriesList");
   if (!el) return;
