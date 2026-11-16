@@ -17512,6 +17512,37 @@ if (typeof window.renderDailyReliefResults !== 'function') {
     }
   };
 }
+
+    if (typeof window.updateLiveAttendanceBadges !== 'function') {
+  window.updateLiveAttendanceBadges = function() {
+    const todayStr = typeof getTodayDateString === 'function'
+      ? getTodayDateString()
+      : new Date().toISOString().split('T')[0];
+
+    const ctx = window.dailyReliefContext || {};
+    const fullCount = Array.isArray(ctx.fullDayAbsent) ? ctx.fullDayAbsent.length : 0;
+    const partialCount = Array.isArray(ctx.partialAbsent) ? ctx.partialAbsent.length : 0;
+    const dutyCount = Array.isArray(ctx.specialDuty) ? ctx.specialDuty.length : 0;
+    const longTermCount = (window.longTermAbsences || []).filter(l =>
+      l && (!l.startDate || todayStr >= l.startDate) && (!l.endDate || todayStr <= l.endDate)
+    ).length;
+
+    const totalAbsent = fullCount + partialCount + longTermCount;
+
+    const setBadge = (ids, val) => {
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
+      });
+    };
+
+    setBadge(['fullDayAbsentBadge', 'fullAbsentCount', 'badgeFullAbsent'], fullCount);
+    setBadge(['partialAbsentBadge', 'shortLeaveCount', 'badgeShortLeave'], partialCount);
+    setBadge(['specialDutyBadge', 'specialDutyCount', 'badgeSpecialDuty'], dutyCount);
+    setBadge(['longTermAbsentBadge', 'longTermCount', 'badgeLongTerm'], longTermCount);
+    setBadge(['totalAbsentBadge', 'totalAbsentCount'], totalAbsent);
+  };
+}
     
 function renderLongTermEntriesList() {
   const el = document.getElementById("longTermEntriesList");
