@@ -3895,40 +3895,61 @@ function openManualReliefModal(index) {
       currentManualReliefIndex = null;
     }
 
-    function saveManualReliefSelection() {
-      if (currentManualReliefIndex === null) return;
-      const select = document.getElementById("manualModalTeacherSelect");
-      const selectedId = select.value;
-      if (!selectedId) { alert("කරුණාකර ගුරුවරයෙකු තෝරන්න."); return; }
-      const item = generatedReliefResults[currentManualReliefIndex];
-      const teacher = teachers.find(t => t.id === selectedId);
-      if (teacher) {
-        item.assignedId = teacher.id;
-        item.assignedName = teacher.name;
-        item.assignedSubject = teacher.subject;
-        item.assignedSections = (teacher.sections || []).join(', ');
-        item.status = "Manual Override";
-        item.badge = "bg-purple-100 text-purple-800";
-        item.isManual = true;
-        renderReliefTable();
-        closeManualReliefModal();
-      }
+function saveManualReliefSelection() {
+  if (currentManualReliefIndex === null) return;
+  const select = document.getElementById("manualModalTeacherSelect") || document.getElementById("manualTeacherSelect");
+  const selectedId = select ? select.value : "";
+  if (!selectedId) {
+    alert("⚠️ කරුණාකර ආදේශක ගුරුවරයෙකු තෝරන්න.");
+    return;
+  }
+
+  const item = generatedReliefResults[currentManualReliefIndex];
+  const teacherList = window.schoolTeachers || window.teachers || [];
+  const teacher = teacherList.find(t => String(t.id).trim().toLowerCase() === String(selectedId).trim().toLowerCase());
+
+  if (teacher && item) {
+    item.assignedId = teacher.id;
+    item.assignedName = teacher.name;
+    item.assignedSubject = teacher.subject || "සාමාන්‍ය";
+    item.assignedSections = (teacher.sections || []).join(', ');
+    item.status = "Manual Override";
+    item.badge = "bg-purple-100 text-purple-800";
+    item.isManual = true;
+
+    // 🟢 නව සහන ලැයිස්තුව යාවත්කාලීන කර Firebase සහ LocalStorage වෙත සුරැකීම
+    window.dailyReliefAssignments = generatedReliefResults.filter(r => r.assignedId !== null);
+    if (typeof saveReliefStateToStorage === 'function') {
+      saveReliefStateToStorage();
     }
 
-    function clearManualReliefSelection() {
-      if (currentManualReliefIndex === null) return;
-      const item = generatedReliefResults[currentManualReliefIndex];
-      item.assignedId = null;
-      item.assignedName = "කිසිවෙකු නැත";
-      item.assignedSubject = "-";
-      item.assignedSections = "-";
-      item.status = "Cleared";
-      item.badge = "bg-red-100 text-red-800";
-      item.isManual = true;
-      renderReliefTable();
-      closeManualReliefModal();
+    renderReliefTable();
+    closeManualReliefModal();
+  }
+}
+
+function clearManualReliefSelection() {
+  if (currentManualReliefIndex === null) return;
+  const item = generatedReliefResults[currentManualReliefIndex];
+  if (item) {
+    item.assignedId = null;
+    item.assignedName = "කිසිවෙකු නැත";
+    item.assignedSubject = "-";
+    item.assignedSections = "-";
+    item.status = "Cleared";
+    item.badge = "bg-red-100 text-red-800";
+    item.isManual = true;
+
+    // 🟢 වෙනස්කම Firebase සහ LocalStorage වෙත සුරැකීම
+    window.dailyReliefAssignments = generatedReliefResults.filter(r => r.assignedId !== null);
+    if (typeof saveReliefStateToStorage === 'function') {
+      saveReliefStateToStorage();
     }
 
+    renderReliefTable();
+    closeManualReliefModal();
+  }
+}
     // =========================================================================
     // 6. WHATSAPP DISPATCH ENGINE
     // =========================================================================
@@ -16282,22 +16303,6 @@ syncActiveDayWithToday();
 // 🔴 ප්‍රධාන එන්ජිම ධාවනය කිරීම (runAutoReliefEngine)
 // -------------------------------------------------------------------------
     
-// =========// =========================================================================
-// 🗓️ 1. දිනයන් (1-5, English, සිංහල) ඒකාකාරී අංකයක් බවට පත් කිරීම
-// =========================================================================
-function normalizeDayNumber(d) {
- if (d === undefined || d === null || d === '') return null;
-  if (typeof d === 'number') return d;
-
-  const s = String(d).trim().toLowerCase();
-  if (s === '0' || s.includes('mon') || s.includes('සඳු')) return 0;
-  if (s === '1' || s.includes('tue') || s.includes('අඟ')) return 1;
-  if (s === '2' || s.includes('wed') || s.includes('බදා')) return 2;
-  if (s === '3' || s.includes('thu') || s.includes('බ්‍රහ')) return 3;
-  if (s === '4' || s.includes('fri') || s.includes('සිකු')) return 4;
-
-  const parsed = parseInt(s, 10);
-  return isNaN(parsed) ? null : parsed;
 
 // =========================================================================
 // 🔍 2. ගුරුවරයෙකු නිවාඩුදැයි පරීක්ෂා කිරීම (ID හෝ නම දෙකෙන්ම පරීක්ෂා කරයි)
@@ -16604,7 +16609,8 @@ window.runAutoReliefEngine = runAutoReliefEngine;
 // =========================================================================
 // 📋 2. කාලච්ඡේදය අනුව සහන වගුව ජනනය කරන ප්‍රධාන ශ්‍රිතය (REPLACEMENT)
 // =========================================================================
-function renderDailyReliefResults() {
+/*
+    function renderDailyReliefResults() {
   const container = document.getElementById("dailyReliefTableContainer") || 
                     document.getElementById("reliefResultsContainer") || 
                     document.getElementById("reliefTableBody");
@@ -16756,9 +16762,16 @@ function renderDailyReliefResults() {
     saveReliefStateToStorage();
   }
 }
-
-window.checkTeacherPeriodAbsence = checkTeacherPeriodAbsence;
+    */
+    
+function renderDailyReliefResults() {
+  if (typeof renderReliefTable === 'function' && Array.isArray(window.generatedReliefResults) && window.generatedReliefResults.length > 0) {
+    renderReliefTable();
+  }
+}
 window.renderDailyReliefResults = renderDailyReliefResults;
+window.checkTeacherPeriodAbsence = checkTeacherPeriodAbsence;
+
 // -------------------------------------------------------------------------
 // 🔴 MANUAL FORCE ASSIGN (7 සීමාව ඉක්මවා යාමට අවශ්‍ය අවස්ථාවලදී)
 // -------------------------------------------------------------------------
@@ -17853,8 +17866,8 @@ function loadFromLocalFallback(todayStr) {
   }
 }
 
-// ආරම්භක ඇමතුම
-initAndLoadReliefState();
+
+
     
 
 /**
