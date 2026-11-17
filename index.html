@@ -3869,26 +3869,63 @@ function openManualReliefModal(index) {
   document.getElementById("manualReliefModal").classList.remove("hidden");
 }
     
+function populateManualReliefDropdown() {
+  if (currentManualReliefIndex === null) return;
+  const item = generatedReliefResults[currentManualReliefIndex];
+  const select = document.getElementById("manualModalTeacherSelect") || document.getElementById("manualTeacherSelect");
+  if (!select) return;
 
-    function populateManualReliefDropdown() {
-      if (currentManualReliefIndex === null) return;
-      const item = generatedReliefResults[currentManualReliefIndex];
-      const select = document.getElementById("manualModalTeacherSelect");
-      const isForceOverride = document.getElementById("chkForceOverrideTeachers").checked;
-      select.innerHTML = '<option value="">-- ආදේශක ගුරුවරයෙකු තෝරන්න --</option>';
+  const isForceOverride = document.getElementById("chkForceOverrideTeachers")?.checked || false;
+  select.innerHTML = '<option value="">-- ආදේශක ගුරුවරයෙකු තෝරන්න --</option>';
 
-      let eligible = isForceOverride ? teachers : teachers.filter(t => !isTeacherAbsentDuringPeriod(t, item.period) && !isTeacherOccupiedInDayPeriod(t.id, activeDay, item.period, currentManualReliefIndex));
-      
-      if (eligible.length === 0) {
-        select.innerHTML = '<option value="">⚠️ නිදහස් ගුරුවරුන් නැත (Force Override Tick කරන්න)</option>';
-      } else {
-        eligible.forEach(t => {
-          const isSelected = t.id === item.assignedId;
-          const isBusy = isTeacherOccupiedInDayPeriod(t.id, activeDay, item.period, currentManualReliefIndex);
-          select.innerHTML += `<option value="${t.id}" ${isSelected ? 'selected' : ''}>${t.name} (${t.subject}) ${isBusy ? ' - [Busy/නිවාඩු]' : ' - [Free]'}</option>`;
-        });
-      }
+  const teacherList = window.schoolTeachers || window.teachers || [];
+  const targetDayNum = typeof normalizeDayNumber === 'function'
+    ? normalizeDayNumber(window.activeDay ?? 0)
+    : (window.activeDay ?? 0);
+
+  // 1. අදාළ කාලච්ඡේදයේ නිවාඩු (දිනම, කෙටි, රාජකාරි හෝ දීර්ඝකාලීන) ගුරුවරුන් සම්පූර්ණයෙන්ම ඉවත් කිරීම
+  const presentTeachers = teacherList.filter(t => {
+    if (!t || !t.id) return false;
+
+    // සාමාන්‍ය නිවාඩු තත්ත්වය (Legacy check)
+    if (typeof isTeacherAbsentDuringPeriod === 'function' && isTeacherAbsentDuringPeriod(t, item.period)) {
+      return false;
     }
+
+    // සම්පූර්ණ දින, කෙටි නිවාඩු, විශේෂ රාජකාරි සහ දීර්ඝකාලීන නිවාඩු පරීක්ෂාව
+    if (typeof getPeriodAbsenceInfo === 'function') {
+      const absence = getPeriodAbsenceInfo(t.id, item.period);
+      if (absence && absence.isAbsent) return false;
+    }
+
+    return true;
+  });
+
+  // 2. Force Override නොමැති නම්, එම කාලච්ඡේදයේ පන්ති ඇති (Busy) ගුරුවරුන්ද ඉවත් කිරීම
+  const eligible = isForceOverride
+    ? presentTeachers
+    : presentTeachers.filter(t => {
+        if (t.isExempt) return false;
+        const isBusy = typeof isTeacherOccupiedInDayPeriod === 'function'
+          ? isTeacherOccupiedInDayPeriod(t.id, targetDayNum, item.period, currentManualReliefIndex)
+          : false;
+        return !isBusy;
+      });
+
+  if (eligible.length === 0) {
+    select.innerHTML = '<option value="">⚠️ නිදහස් ගුරුවරුන් නැත (Force Override Tick කරන්න)</option>';
+  } else {
+    eligible.forEach(t => {
+      const isSelected = String(t.id).trim().toLowerCase() === String(item.assignedId || '').trim().toLowerCase();
+      const isBusy = typeof isTeacherOccupiedInDayPeriod === 'function'
+        ? isTeacherOccupiedInDayPeriod(t.id, targetDayNum, item.period, currentManualReliefIndex)
+        : false;
+      const tnum = typeof getTeacherDisplayNumber === 'function' ? getTeacherDisplayNumber(t.id) : t.id;
+
+      select.innerHTML += `<option value="${t.id}" ${isSelected ? 'selected' : ''}>[${tnum}] ${t.name} (${t.subject || 'සාමාන්‍ය'}) ${isBusy ? ' - [Busy]' : ' - [Free]'}</option>`;
+    });
+  }
+}
 
     function closeManualReliefModal() {
       document.getElementById("manualReliefModal").classList.add("hidden");
