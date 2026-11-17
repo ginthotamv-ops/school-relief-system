@@ -9135,7 +9135,50 @@ function populateGradeDropdown() {
 
   select.value = currentVal;
 }
+    
+function handleGradeFilterTypeChange() {
+  const typeSelect = document.getElementById("gradeHighlightTypeSelect");
+  const valueSelect = document.getElementById("gradeHighlightValueSelect");
+  const countBadge = document.getElementById("gradeHighlightCountBadge");
+  if (!typeSelect || !valueSelect) return;
 
+  const type = typeSelect.value;
+  window.gradeViewFilterType = type;
+  valueSelect.innerHTML = `<option value="">-- තෝරන්න --</option>`;
+
+  if (type === "SUBJECT") {
+    valueSelect.disabled = false;
+    const subs = new Set();
+    (window.masterSchedule || []).forEach(s => {
+      if (s.subject && String(s.subject).trim() !== "") subs.add(s.subject.trim());
+      if (Array.isArray(s.basketItems)) {
+        s.basketItems.forEach(b => { if (b.subject) subs.add(b.subject.trim()); });
+      }
+    });
+    Array.from(subs).sort().forEach(sub => {
+      valueSelect.innerHTML += `<option value="${sub}">${sub}</option>`;
+    });
+  } else if (type === "TEACHER") {
+    valueSelect.disabled = false;
+    const teacherList = window.schoolTeachers || window.teachers || [];
+    teacherList.forEach(t => {
+      if (!t || !t.id) return;
+      const tnum = typeof getTeacherDisplayNumber === 'function'
+        ? getTeacherDisplayNumber(t)
+        : (t.schoolno ?? t.schoolNo ?? t.id);
+      const no = tnum ? `[${tnum}] ` : "";
+      valueSelect.innerHTML += `<option value="${t.id}">${no}${t.name}</option>`;
+    });
+  } else {
+    valueSelect.disabled = true;
+    window.gradeViewSelectedValue = "";
+    if (countBadge) countBadge.classList.add("hidden");
+  }
+
+  renderGradeTimetableGrid();
+}
+    
+/*
 // 2. Filter Type (Subject / Teacher) වෙනස් වන විට අදාළ Dropdown එක සකස් කිරීම
 function handleGradeFilterTypeChange() {
   const typeSelect = document.getElementById("gradeHighlightTypeSelect");
@@ -9173,7 +9216,7 @@ function handleGradeFilterTypeChange() {
 
   renderGradeTimetableGrid();
 }
-
+*/
 // 3. නිශ්චිත අගයක් (Subject හෝ Teacher) තේරූ විට
 function handleGradeHighlightValueChange() {
   const valueSelect = document.getElementById("gradeHighlightValueSelect");
