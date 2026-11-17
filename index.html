@@ -174,9 +174,21 @@
         <h2 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
           <i class="fa-solid fa-bolt text-amber-500"></i>
           <span>දෛනික සහන කාලසටහන (Relief Manager)</span>
+       
           <span id="reliefDayLabel" class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full font-bold border border-indigo-200">
             <!-- Real Date JS මඟින් වැටේ -->
           </span>
+
+          <!-- 🟢 විශේෂ අවස්ථාවකදී කාලසටහන් දිනය අතින් මාරු කිරීමට (Manual Day Override) -->
+          <select id="manualReliefDaySelect" onchange="handleManualReliefDayChange(this.value)" title="විශේෂ ආවරණ දිනයක් නම් ක්‍රියාත්මක කළ යුතු කාලසටහන් දිනය මෙතැනින් මාරු කරන්න" class="text-xs bg-amber-50 hover:bg-amber-100 text-amber-900 px-2 py-0.5 rounded-lg font-bold border border-amber-300 outline-none cursor-pointer transition">
+            <option value="AUTO">🔄 ස්වයංක්‍රීය දිනය (Auto)</option>
+            <option value="0">සඳුදා කාලසටහන (Monday)</option>
+            <option value="1">අඟහරුවාදා කාලසටහන (Tuesday)</option>
+            <option value="2">බදාදා කාලසටහන (Wednesday)</option>
+            <option value="3">බ්‍රහස්පතින්දා කාලසටහන (Thursday)</option>
+            <option value="4">සිකුරාදා කාලසටහන (Friday)</option>
+          </select>
+          
         </h2>
         <p class="text-xs text-slate-500 mt-0.5">නොපැමිණි, කෙටි නිවාඩු, විශේෂ රාජකාරි සහ දීර්ඝකාලීන නිවාඩු කළමනාකරණය.</p>
       </div>
@@ -16335,6 +16347,29 @@ function syncActiveDayWithToday() {
   }
 }
 syncActiveDayWithToday();
+
+    function handleManualReliefDayChange(selectedVal) {
+  if (selectedVal === "AUTO") {
+    syncActiveDayWithToday();
+  } else {
+    const dayNum = parseInt(selectedVal, 10);
+    window.activeDay = dayNum;
+    if (typeof activeDay !== 'undefined') {
+      activeDay = dayNum;
+    }
+  }
+
+  // දිනය මාරු කළ පසු දැනට තිරයේ ඇති සහන වගුව හිස් කර නව දිනයට සූදානම් කිරීම
+  window.generatedReliefResults = [];
+  window.dailyReliefAssignments = [];
+  const tbody = document.getElementById("reliefResultsTableBody");
+  if (tbody) {
+    const dayNames = ["සඳුදා", "අඟහරුවාදා", "බදාදා", "බ්‍රහස්පතින්දා", "සිකුරාදා"];
+    const selectedDayName = dayNames[window.activeDay] || "";
+    tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-indigo-700 font-bold bg-indigo-50/40">📅 <b>${selectedDayName}</b> කාලසටහන තෝරාගෙන ඇත. දැන් 'සහන කාලසටහන සකසන්න' ඔබන්න.</td></tr>`;
+  }
+}
+window.handleManualReliefDayChange = handleManualReliefDayChange;
     
 // -------------------------------------------------------------------------
 // 🔴 ප්‍රධාන එන්ජිම ධාවනය කිරීම (runAutoReliefEngine)
