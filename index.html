@@ -4378,7 +4378,7 @@ window.print16ReliefCutSlipsA4 = print16ReliefCutSlipsA4;
 
     
     
-    function build16SlipsDOM(assignedReliefs) {
+  /*  function build16SlipsDOM(assignedReliefs) {
       const byTeacher = {};
       assignedReliefs.forEach(r => {
         if (!byTeacher[r.assignedId]) byTeacher[r.assignedId] = { teacherName: r.assignedName, items: [] };
@@ -4411,7 +4411,7 @@ window.print16ReliefCutSlipsA4 = print16ReliefCutSlipsA4;
         `;
         container.appendChild(slip);
       });
-    }
+    }*/
 
     function print16ReliefCutSlipsA4() {
       if (!generatedReliefResults || generatedReliefResults.length === 0) {
