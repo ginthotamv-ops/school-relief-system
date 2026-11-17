@@ -4539,6 +4539,17 @@ async function downloadReliefPDFForStaffGroup() {
 
   // 2. වගුවේ ශීර්ෂය (Header) තීරු 3කට පමණක් සකස් කිරීම
   const area = document.getElementById("printableReliefArea");
+  
+  area.style.fontFamily = "'Noto Sans Sinhala', sans-serif";
+  area.style.letterSpacing = "normal";
+
+  // 🟢 ප්‍රධාන මාතෘකාවේ tracking-wider ඉවත් කර සිංහල අකුරු කැඩීම වැළැක්වීම
+  const mainTitle = area.querySelector("h2");
+  if (mainTitle) {
+    mainTitle.classList.remove("tracking-wider");
+    mainTitle.style.letterSpacing = "normal";
+    mainTitle.style.fontFamily = "'Noto Sans Sinhala', sans-serif";
+  }
   area.style.fontFamily = "'Noto Sans Sinhala', sans-serif";
   area.style.letterSpacing = "normal";
 
