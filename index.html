@@ -23,15 +23,16 @@
       .no-print { display: none !important; }
 
       .slips-16up-container {
-display: grid !important;
+        display: grid !important;
         grid-template-columns: repeat(3, 1fr) !important;
         grid-auto-rows: 33.5mm !important;
+        grid-auto-flow: dense !important;
         gap: 2mm !important;
         width: 100% !important;
         page-break-after: always;
       }
       .relief-cut-slip-16 {
-        border: 1px dashed #475569 !important;
+       border: 1px dashed #475569 !important;
         padding: 1.5mm 2.2mm !important;
         height: 33mm !important;
         box-sizing: border-box !important;
@@ -43,6 +44,11 @@ display: grid !important;
         page-break-inside: avoid !important;
       }
 
+      .relief-cut-slip-span2 {
+        grid-row: span 2 !important;
+        height: 68.5mm !important;
+      }
+      
       .classes-2up-container {
         display: flex !important;
         flex-direction: column !important;
@@ -4169,6 +4175,57 @@ function clearManualReliefSelection() {
   // අද මාසය සහ දිනය "Nov-17" ලෙස සකස් කිරීම
   const now = new Date();
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const slipDateLabel = `${monthNames[now.getMonth()]}-${String(now.getDate()).padStart(2, '0')}`;
+
+  container.innerHTML = "";
+
+  Object.keys(byTeacher).forEach(tId => {
+    const teacherData = byTeacher[tId];
+    const tnum = typeof getTeacherDisplayNumber === 'function' ? getTeacherDisplayNumber(tId) : '';
+    const numPrefix = (tnum && tnum !== tId) ? `[${tnum}] ` : '';
+
+    // 🟢 සහන කාලච්ඡේද 4කට වඩා වැඩි නම් පමණක් කොටු 2ක් ඒකාබද්ධ කිරීම
+    const isLargeSlip = teacherData.items.length > 4;
+
+    let periodsListHtml = "";
+    teacherData.items.forEach(item => {
+      periodsListHtml += `<div style="font-size: 6.8pt; line-height: ${isLargeSlip ? '1.35' : '1.18'}; margin-top: 1px; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">• <b>P${item.period}</b>: <b>${item.classId}</b> (${item.subject})</div>`;
+    });
+
+    const slip = document.createElement("div");
+    slip.className = isLargeSlip ? "relief-cut-slip-16 relief-cut-slip-span2" : "relief-cut-slip-16";
+    slip.innerHTML = `
+      <div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #475569; padding-bottom: 1px; font-weight: bold; font-size: 6.8pt;">
+          <span>සහන පත්‍රිකාව (Relief)</span>
+          <span>${slipDateLabel}</span>
+        </div>
+        <div style="margin-top: 1.5px; font-size: 7.2pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          ගුරු: <b style="color: #1e1b4b;">${numPrefix}${teacherData.teacherName}</b>
+        </div>
+        <div style="margin-top: 1.5px; border-top: 0.5px solid #cbd5e1; padding-top: 1px;">${periodsListHtml}</div>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 6pt; border-top: 1px dashed #94a3b8; padding-top: 1px; color: #475569;">
+        <span>වේලාවට යන්න</span><span>අත්සන: ..............</span>
+      </div>
+    `;
+    container.appendChild(slip);
+  });
+}
+window.build16SlipsDOM = build16SlipsDOM;
+
+    /*
+    function build16SlipsDOM(assignedReliefs) {
+  const { container } = getOrCreateSlipsContainer();
+  const byTeacher = {};
+  assignedReliefs.forEach(r => {
+    if (!byTeacher[r.assignedId]) byTeacher[r.assignedId] = { teacherName: r.assignedName, items: [] };
+    byTeacher[r.assignedId].items.push(r);
+  });
+
+  // අද මාසය සහ දිනය "Nov-17" ලෙස සකස් කිරීම
+  const now = new Date();
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const monthStr = monthNames[now.getMonth()];
   const dateStr = String(now.getDate()).padStart(2, '0');
   const slipDateLabel = `${monthStr}-${dateStr}`;
@@ -4206,7 +4263,7 @@ function clearManualReliefSelection() {
   });
 }
 
- /*
+ 
     function build16SlipsDOM(assignedReliefs) {
   const { container } = getOrCreateSlipsContainer();
   const byTeacher = {};
