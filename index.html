@@ -9159,36 +9159,11 @@ function handleGradeFilterTypeChange() {
       valueSelect.innerHTML += `<option value="${sub}">${sub}</option>`;
     });
 
-    } else if (type === "TEACHER") {
+} else if (type === "TEACHER") {
     valueSelect.disabled = false;
-    const teacherList = (window.schoolTeachers || window.teachers || []).slice();
+    // schoolNo ඇති window.teachers ලැයිස්තුවට ප්‍රමුඛතාව දීම
+    const teacherList = (window.teachers && window.teachers.length > 0 ? window.teachers : (window.schoolTeachers || [])).slice();
 
-    // 🟢 පාසලෙන් ලබා දුන් අංකය (schoolNo) අනුපිළිවෙළට සකස් කිරීම
-    teacherList.sort((a, b) => {
-      const valA = a.schoolNo ?? a.schoolid ?? a.schoolId ?? "";
-      const valB = b.schoolNo ?? b.schoolid ?? b.schoolId ?? "";
-      const numA = parseInt(valA, 10);
-      const numB = parseInt(valB, 10);
-      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-      return String(a.name || "").localeCompare(String(b.name || ""));
-    });
-
-    teacherList.forEach(t => {
-      if (!t || !t.id) return;
-      // 🟢 T අංකය (t.id) වෙනුවට කෙළින්ම schoolNo ලබා ගැනීම
-      const sNo = (t.schoolNo !== undefined && t.schoolNo !== null && String(t.schoolNo).trim() !== "")
-        ? String(t.schoolNo).trim()
-        : (t.schoolid ?? t.schoolId ?? "");
-
-      const no = sNo ? `[${sNo}] ` : "";
-      valueSelect.innerHTML += `<option value="${t.id}">${no}${t.name}</option>`;
-    });
-  }
-/*  } else if (type === "TEACHER") {
-    valueSelect.disabled = false;
-    const teacherList = (window.schoolTeachers || window.teachers || []).slice();
-
-    // 🟢 පාසල් අංකය (1, 2, 3...) අනුපිළිවෙළට සකස් කිරීම
     teacherList.sort((a, b) => {
       const numA = parseInt(getTeacherDisplayNumber(a), 10);
       const numB = parseInt(getTeacherDisplayNumber(b), 10);
@@ -9198,12 +9173,12 @@ function handleGradeFilterTypeChange() {
 
     teacherList.forEach(t => {
       if (!t || !t.id) return;
-      const tnum = getTeacherDisplayNumber(t);
-      const no = tnum ? `[${tnum}] ` : "";
+      const sNo = getTeacherDisplayNumber(t);
+      const no = sNo ? `[${sNo}] ` : "";
       valueSelect.innerHTML += `<option value="${t.id}">${no}${t.name}</option>`;
     });
-  } */
-  
+  }
+
   else {
     valueSelect.disabled = true;
     window.gradeViewSelectedValue = "";
@@ -9212,45 +9187,7 @@ function handleGradeFilterTypeChange() {
 
   renderGradeTimetableGrid();
 }
-/*
-// 2. Filter Type (Subject / Teacher) වෙනස් වන විට අදාළ Dropdown එක සකස් කිරීම
-function handleGradeFilterTypeChange() {
-  const typeSelect = document.getElementById("gradeHighlightTypeSelect");
-  const valueSelect = document.getElementById("gradeHighlightValueSelect");
-  const countBadge = document.getElementById("gradeHighlightCountBadge");
-  if (!typeSelect || !valueSelect) return;
 
-  const type = typeSelect.value;
-  window.gradeViewFilterType = type;
-  valueSelect.innerHTML = `<option value="">-- තෝරන්න --</option>`;
-
-  if (type === "SUBJECT") {
-    valueSelect.disabled = false;
-    const subs = new Set();
-    (window.masterSchedule || []).forEach(s => {
-      if (s.subject && String(s.subject).trim() !== "") subs.add(s.subject.trim());
-      if (Array.isArray(s.basketItems)) {
-        s.basketItems.forEach(b => { if (b.subject) subs.add(b.subject.trim()); });
-      }
-    });
-    Array.from(subs).sort().forEach(sub => {
-      valueSelect.innerHTML += `<option value="${sub}">${sub}</option>`;
-    });
-  } else if (type === "TEACHER") {
-    valueSelect.disabled = false;
-    (window.teachers || []).forEach(t => {
-      const no = t.schoolNo ? `[${t.schoolNo}] ` : "";
-      valueSelect.innerHTML += `<option value="${t.id}">${no}${t.name}</option>`;
-    });
-  } else {
-    valueSelect.disabled = true;
-    window.gradeViewSelectedValue = "";
-    if (countBadge) countBadge.classList.add("hidden");
-  }
-
-  renderGradeTimetableGrid();
-}
-*/
 // 3. නිශ්චිත අගයක් (Subject හෝ Teacher) තේරූ විට
 function handleGradeHighlightValueChange() {
   const valueSelect = document.getElementById("gradeHighlightValueSelect");
@@ -17872,28 +17809,29 @@ function removeLongTermEntry(index) {
  */
 function getTeacherDisplayNumber(teacherOrId) {
   if (!teacherOrId) return "";
-  const teacherList = window.schoolTeachers || window.teachers || (typeof teachers !== 'undefined' ? teachers : []);
+  const idToFind = (typeof teacherOrId === "object") ? teacherOrId.id : teacherOrId;
 
-  const teacherObj = (typeof teacherOrId === "object")
-    ? teacherOrId
-    : teacherList.find(t => String(t.id).trim().toLowerCase() === String(teacherOrId).trim().toLowerCase());
-
-  if (teacherObj && typeof teacherObj === "object") {
-    // පාසල් අංකය ගබඩා වී තිබිය හැකි සියලුම නාමයන් පරීක්ෂා කිරීම
-    const possibleKeys = ["schoolno", "schoolNo", "school_no", "teacherNo", "teacher_no", "empNo", "emp_no", "no", "number", "regNo", "indexNo"];
-    for (const key of possibleKeys) {
-      const val = teacherObj[key];
-      if (val !== undefined && val !== null && String(val).trim() !== "" && typeof val !== "object") {
-        return String(val).trim();
-      }
-    }
-    // පාසල් අංකයක් නොමැති නම් පමණක් id පෙන්වීම (කිසිවිටෙක Object එකක් නොයවයි)
-    return teacherObj.id ? String(teacherObj.id).trim() : "";
+  // 1. පළමුව schoolNo අඩංගු window.teachers තුළින් සෙවීම
+  const tFromMain = (window.teachers || []).find(
+    t => t && String(t.id).trim().toLowerCase() === String(idToFind).trim().toLowerCase()
+  );
+  if (tFromMain && tFromMain.schoolNo !== undefined && tFromMain.schoolNo !== null && String(tFromMain.schoolNo).trim() !== "") {
+    return String(tFromMain.schoolNo).trim();
   }
 
-  return typeof teacherOrId === "string" || typeof teacherOrId === "number" ? String(teacherOrId) : "";
+  // 2. එසේ නොමැති නම් ලබා දුන් වස්තුවෙන් හෝ schoolTeachers තුළින් සෙවීම
+  const tObj = (typeof teacherOrId === "object")
+    ? teacherOrId
+    : (window.schoolTeachers || []).find(t => t && String(t.id).trim().toLowerCase() === String(idToFind).trim().toLowerCase());
+
+  if (tObj && tObj.schoolNo !== undefined && tObj.schoolNo !== null && String(tObj.schoolNo).trim() !== "") {
+    return String(tObj.schoolNo).trim();
+  }
+
+  return idToFind ? String(idToFind).trim() : "";
 }
 window.getTeacherDisplayNumber = getTeacherDisplayNumber;
+
     
 // =========================================================================
 // 🛡️ MISSING HELPER FUNCTIONS (GLOBAL SAFE FALLBACKS)
