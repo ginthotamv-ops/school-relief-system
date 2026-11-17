@@ -9158,7 +9158,33 @@ function handleGradeFilterTypeChange() {
     Array.from(subs).sort().forEach(sub => {
       valueSelect.innerHTML += `<option value="${sub}">${sub}</option>`;
     });
-  } else if (type === "TEACHER") {
+
+    } else if (type === "TEACHER") {
+    valueSelect.disabled = false;
+    const teacherList = (window.schoolTeachers || window.teachers || []).slice();
+
+    // 🟢 පාසලෙන් ලබා දුන් අංකය (schoolNo) අනුපිළිවෙළට සකස් කිරීම
+    teacherList.sort((a, b) => {
+      const valA = a.schoolNo ?? a.schoolid ?? a.schoolId ?? "";
+      const valB = b.schoolNo ?? b.schoolid ?? b.schoolId ?? "";
+      const numA = parseInt(valA, 10);
+      const numB = parseInt(valB, 10);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return String(a.name || "").localeCompare(String(b.name || ""));
+    });
+
+    teacherList.forEach(t => {
+      if (!t || !t.id) return;
+      // 🟢 T අංකය (t.id) වෙනුවට කෙළින්ම schoolNo ලබා ගැනීම
+      const sNo = (t.schoolNo !== undefined && t.schoolNo !== null && String(t.schoolNo).trim() !== "")
+        ? String(t.schoolNo).trim()
+        : (t.schoolid ?? t.schoolId ?? "");
+
+      const no = sNo ? `[${sNo}] ` : "";
+      valueSelect.innerHTML += `<option value="${t.id}">${no}${t.name}</option>`;
+    });
+  }
+/*  } else if (type === "TEACHER") {
     valueSelect.disabled = false;
     const teacherList = (window.schoolTeachers || window.teachers || []).slice();
 
@@ -9176,7 +9202,9 @@ function handleGradeFilterTypeChange() {
       const no = tnum ? `[${tnum}] ` : "";
       valueSelect.innerHTML += `<option value="${t.id}">${no}${t.name}</option>`;
     });
-  } else {
+  } */
+  
+  else {
     valueSelect.disabled = true;
     window.gradeViewSelectedValue = "";
     if (countBadge) countBadge.classList.add("hidden");
