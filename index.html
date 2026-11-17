@@ -23,22 +23,23 @@
       .no-print { display: none !important; }
 
       .slips-16up-container {
-        display: grid !important;
-        grid-template-columns: repeat(2, 1fr) !important;
-        grid-auto-rows: 34mm !important;
-        gap: 2.5mm !important;
+display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        grid-auto-rows: 33.5mm !important;
+        gap: 2mm !important;
         width: 100% !important;
         page-break-after: always;
       }
       .relief-cut-slip-16 {
         border: 1px dashed #475569 !important;
-        padding: 2mm 3mm !important;
+        padding: 1.5mm 2.2mm !important;
         height: 33mm !important;
         box-sizing: border-box !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: space-between !important;
-        font-size: 8pt !important;
+        font-size: 7pt !important;
+        overflow: hidden !important;
         page-break-inside: avoid !important;
       }
 
@@ -273,7 +274,7 @@
         <!-- Print, WhatsApp & PDF Tools -->
         <div class="flex flex-wrap items-center gap-1.5">
           <button type="button" onclick="print16ReliefCutSlipsA4()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer">
-            <i class="fa-solid fa-scissors text-xs"></i> <span>A4 Slips 16ක්</span>
+            <i class="fa-solid fa-scissors text-xs"></i> <span>A4 Slips 24ක්</span>
           </button>
           <button type="button" onclick="adminOpenReliefQueue()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer">
             <i class="fa-brands fa-whatsapp text-xs"></i> <span>WhatsApp Queue</span>
@@ -4158,6 +4159,81 @@ function clearManualReliefSelection() {
     }
 
     function build16SlipsDOM(assignedReliefs) {
+  const { container } = getOrCreateSlipsContainer();
+  const byTeacher = {};
+  assignedReliefs.forEach(r => {
+    if (!byTeacher[r.assignedId]) byTeacher[r.assignedId] = { teacherName: r.assignedName, items: [] };
+    byTeacher[r.assignedId].items.push(r);
+  });
+
+  const dayNames = ["සඳුදා", "අඟහරුවාදා", "බදාදා", "බ්‍රහස්පතින්දා", "සිකුරාදා"];
+  const dayIndex = typeof normalizeDayNumber === 'function' ? normalizeDayNumber(window.activeDay ?? 0) : Number(window.activeDay ?? 0);
+  const currentDayLabel = dayNames[dayIndex] || (typeof DAY_LABELS !== 'undefined' ? DAY_LABELS[activeDay] : "");
+
+  container.innerHTML = "";
+
+  Object.keys(byTeacher).forEach(tId => {
+    const teacherData = byTeacher[tId];
+    const tnum = typeof getTeacherDisplayNumber === 'function' ? getTeacherDisplayNumber(tId) : '';
+    const numPrefix = (tnum && tnum !== tId) ? `[${tnum}] ` : '';
+
+    let periodsListHtml = "";
+    teacherData.items.forEach(item => {
+      periodsListHtml += `<div style="font-size: 6.8pt; line-height: 1.2; margin-top: 1px; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">• <b>P${item.period}</b>: <b>${item.classId}</b> (${item.subject})</div>`;
+    });
+
+    const slip = document.createElement("div");
+    slip.className = "relief-cut-slip-16";
+    slip.innerHTML = `
+      <div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #475569; padding-bottom: 1px; font-weight: bold; font-size: 6.8pt;">
+          <span>සහන පත්‍රිකාව (Relief)</span>
+          <span>${currentDayLabel}</span>
+        </div>
+        <div style="margin-top: 1.5px; font-size: 7.2pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          ගුරු: <b style="color: #1e1b4b;">${numPrefix}${teacherData.teacherName}</b>
+        </div>
+        <div style="margin-top: 1.5px; border-top: 0.5px solid #cbd5e1; padding-top: 1px;">${periodsListHtml}</div>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 6pt; border-top: 1px dashed #94a3b8; padding-top: 1px; color: #475569;">
+        <span>වේලාවට යන්න</span><span>අත්සන: ..............</span>
+      </div>
+    `;
+    container.appendChild(slip);
+  });
+}
+
+function print16ReliefCutSlipsA4() {
+  const results = window.generatedReliefResults || generatedReliefResults || [];
+  if (results.length === 0) {
+    runAutoReliefEngine();
+  }
+  const activeResults = window.generatedReliefResults || generatedReliefResults || [];
+  const assignedReliefs = activeResults.filter(r => r.assignedId !== null);
+
+  if (assignedReliefs.length === 0) {
+    alert("දැනට සහන කාලච්ඡේද කිසිවක් සකසා නොමැත. පළමුව නිවාඩු සටහන් කර 'සහන කාලසටහන සකසන්න' ඔබන්න.");
+    return;
+  }
+
+  build16SlipsDOM(assignedReliefs);
+
+  const { targetArea } = getOrCreateSlipsContainer();
+  document.querySelectorAll(".print-target").forEach(el => el.classList.remove("print-target"));
+  targetArea.classList.remove("hidden");
+  targetArea.classList.add("print-target");
+
+  window.print();
+
+  setTimeout(() => {
+    targetArea.classList.remove("print-target");
+    targetArea.classList.add("hidden");
+  }, 500);
+}
+window.print16ReliefCutSlipsA4 = print16ReliefCutSlipsA4;
+    
+    
+  /*  function build16SlipsDOM(assignedReliefs) {
       const { container } = getOrCreateSlipsContainer();
       const byTeacher = {};
       assignedReliefs.forEach(r => {
@@ -4216,7 +4292,8 @@ function clearManualReliefSelection() {
         targetArea.classList.add("hidden");
       }, 500);
     }
-
+*/
+    
     function download16ReliefCutSlipsPDF() {
       if (!generatedReliefResults || generatedReliefResults.length === 0) {
         runAutoReliefEngine();
