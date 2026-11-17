@@ -7,6 +7,7 @@
   <title>පාසල් පූර්ණ කාලසටහන් හා සහන කළමනාකරණ පද්ධතිය R1</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;600;700;900&display=swap" rel="stylesheet">
   <!-- නිවැරදි කළ html2pdf CDN Script එක -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
@@ -100,15 +101,7 @@
       
       <div class="flex flex-wrap items-center gap-2">
         <div class="bg-indigo-900/80 px-3 py-1.5 rounded-lg border border-indigo-400/40 flex items-center gap-2">
-          <!--i class="fa-regular fa-calendar-check text-amber-300 text-xs"></i -->
-          <!-- span class="text-xs font-bold text-indigo-100">දිනය:</span>
-          <select id="currentDaySelect" onchange="changeActiveDay(this.value)" class="bg-indigo-950 text-white text-xs font-bold px-2 py-1 rounded border border-indigo-400 outline-none cursor-pointer">
-            <option value="Monday">සඳුදා (Monday)</option>
-            <option value="Tuesday">අඟහරුවාදා (Tuesday)</option>
-            <option value="Wednesday">බදාදා (Wednesday)</option>
-            <option value="Thursday">බ්‍රහස්පතින්දා (Thursday)</option>
-            <option value="Friday">සිකුරාදා (Friday)</option>
-          </select -->
+ 
         </div>
         <button type="button" onclick="exportDataBackup()" title="Backup බාගත කරන්න" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-2.5 py-2 rounded-lg shadow transition flex items-center gap-1">
           <i class="fa-solid fa-download"></i> Backup
@@ -117,9 +110,7 @@
           <i class="fa-solid fa-upload"></i> Restore
         </button>
         <input type="file" id="importBackupFileInput" accept=".json" onchange="handleImportBackup(event)" class="hidden">
-        <!--button type="button" onclick="resetSystemData()" title="පෙරනිමි තත්ත්වයට පත් කරන්න" class="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold text-xs px-2.5 py-2 rounded-lg shadow transition flex items-center gap-1">
-          <i class="fa-solid fa-rotate-left"></i> Reset
-      </button -->
+
       </div>
 
               
@@ -127,7 +118,7 @@
     </div>
   </header>
 
-  <!-- Navigation Bar -->
+
  <!-- Navigation Bar -->
   <nav class="bg-white border-b border-slate-200 shadow-xs sticky top-0 z-20 no-print">
     <div class="max-w-7xl mx-auto px-4 flex space-x-1 sm:space-x-2 overflow-x-auto">
@@ -4528,7 +4519,7 @@ window.print16ReliefCutSlipsA4 = print16ReliefCutSlipsA4;
     }
 
 
-    function downloadReliefPDFForStaffGroup() {
+async function downloadReliefPDFForStaffGroup() {
   const results = window.generatedReliefResults || generatedReliefResults || [];
   if (results.length === 0) {
     alert("PDF සෑදීමට සහන කාලසටහනක් නොමැත. පළමුව 'සහන කාලසටහන සකසන්න' ඔබන්න.");
@@ -4548,13 +4539,16 @@ window.print16ReliefCutSlipsA4 = print16ReliefCutSlipsA4;
 
   // 2. වගුවේ ශීර්ෂය (Header) තීරු 3කට පමණක් සකස් කිරීම
   const area = document.getElementById("printableReliefArea");
+  area.style.fontFamily = "'Noto Sans Sinhala', sans-serif";
+  area.style.letterSpacing = "normal";
+
   const thead = area.querySelector("thead");
   if (thead) {
     thead.innerHTML = `
-      <tr class="bg-slate-200 text-slate-900 font-black border-b border-slate-400">
-        <th class="p-2 border border-slate-400 w-1/3">පන්තිය (අංශය)</th>
-        <th class="p-2 border border-slate-400 w-1/3">විෂය</th>
-        <th class="p-2 border border-slate-400 w-1/3 font-black">පැවරූ සහන ගුරුභවතා</th>
+      <tr class="bg-slate-200 text-slate-900 font-bold border-b border-slate-400">
+        <th class="p-2 border border-slate-400 w-1/3" style="font-family: 'Noto Sans Sinhala', sans-serif;">පන්තිය (අංශය)</th>
+        <th class="p-2 border border-slate-400 w-1/3" style="font-family: 'Noto Sans Sinhala', sans-serif;">විෂය</th>
+        <th class="p-2 border border-slate-400 w-1/3" style="font-family: 'Noto Sans Sinhala', sans-serif;">පැවරූ සහන ගුරුභවතා</th>
       </tr>
     `;
   }
@@ -4564,11 +4558,10 @@ window.print16ReliefCutSlipsA4 = print16ReliefCutSlipsA4;
   tbody.innerHTML = "";
 
   for (let p = 1; p <= 8; p++) {
-    // කාලච්ඡේද මාතෘකා පේළිය (Period 1 - Period 8)
     tbody.innerHTML += `
-      <tr class="bg-indigo-100 text-indigo-950 font-black">
-        <td colspan="3" class="p-1.5 px-2.5 border border-slate-400 text-xs uppercase tracking-wide">
-          🕒 කාලච්ඡේදය ${p} (Period ${p})
+      <tr class="bg-indigo-100 text-indigo-950 font-bold">
+        <td colspan="3" class="p-1.5 px-2.5 border border-slate-400 text-xs" style="font-family: 'Noto Sans Sinhala', sans-serif;">
+          කාලච්ඡේදය ${p} (Period ${p})
         </td>
       </tr>
     `;
@@ -4578,7 +4571,7 @@ window.print16ReliefCutSlipsA4 = print16ReliefCutSlipsA4;
     if (periodItems.length === 0) {
       tbody.innerHTML += `
         <tr>
-          <td colspan="3" class="p-1.5 px-3 border border-slate-300 text-slate-400 italic text-[11px]">
+          <td colspan="3" class="p-1.5 px-3 border border-slate-300 text-slate-400 italic text-[11px]" style="font-family: 'Noto Sans Sinhala', sans-serif;">
             මෙම කාලච්ඡේදය සඳහා සහන පන්ති නොමැත.
           </td>
         </tr>
@@ -4590,9 +4583,9 @@ window.print16ReliefCutSlipsA4 = print16ReliefCutSlipsA4;
 
         tbody.innerHTML += `
           <tr class="border-b border-slate-300">
-            <td class="p-1.5 px-2.5 border border-slate-400 font-bold text-slate-800">${r.classId} (${r.section})</td>
-            <td class="p-1.5 px-2.5 border border-slate-400 font-semibold text-slate-700">${r.subject}</td>
-            <td class="p-1.5 px-2.5 border border-slate-400 font-black ${r.assignedId ? 'text-slate-900' : 'text-rose-600'}">
+            <td class="p-1.5 px-2.5 border border-slate-400 font-bold text-slate-800" style="font-family: 'Noto Sans Sinhala', sans-serif;">${r.classId} (${r.section})</td>
+            <td class="p-1.5 px-2.5 border border-slate-400 font-semibold text-slate-700" style="font-family: 'Noto Sans Sinhala', sans-serif;">${r.subject}</td>
+            <td class="p-1.5 px-2.5 border border-slate-400 font-bold ${r.assignedId ? 'text-slate-900' : 'text-rose-600'}" style="font-family: 'Noto Sans Sinhala', sans-serif;">
               ${numPrefix}${r.assignedName}
             </td>
           </tr>
@@ -4601,13 +4594,17 @@ window.print16ReliefCutSlipsA4 = print16ReliefCutSlipsA4;
     }
   }
 
-  // 4. PDF ගොනුව බාගත කිරීම
+  // 4. සිංහල Font එක සම්පූර්ණයෙන්ම Load වන තෙක් රැඳී සිට PDF සෑදීම
   area.classList.remove("hidden");
+  if (document.fonts && document.fonts.ready) {
+    await document.fonts.ready;
+  }
+
   const opt = {
     margin: 8,
     filename: `Staff_Relief_${formattedDate}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2 },
+    html2canvas: { scale: 2, useCORS: true, letterRendering: false },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
 
@@ -4620,45 +4617,10 @@ window.print16ReliefCutSlipsA4 = print16ReliefCutSlipsA4;
     alert("PDF සෑදීමේ දෝෂයක්. Print බොත්තම භාවිත කරන්න.");
   });
 }
+
 window.downloadReliefPDFForStaffGroup = downloadReliefPDFForStaffGroup;
     
-/*
-    function downloadReliefPDFForStaffGroup() {
-      if (generatedReliefResults.length === 0) {
-        alert("PDF සෑදීමට සහන කාලසටහනක් නොමැත. පළමුව 'සහන කාලසටහන සකසන්න' ඔබන්න.");
-        return;
-      }
-      document.getElementById("printReliefSlipDay").innerText = DAY_LABELS[activeDay];
-      document.getElementById("printReliefSlipTotalCount").innerText = generatedReliefResults.length;
 
-      const sortedReliefs = generatedReliefResults.slice().sort((a, b) => a.period - b.period);
-      const tbody = document.getElementById("printableReliefSlipTableBody");
-      tbody.innerHTML = "";
-
-      sortedReliefs.forEach(r => {
-        tbody.innerHTML += `
-          <tr class="border-b border-slate-300">
-            <td class="p-2 border border-slate-400 font-bold text-indigo-950">Period ${r.period}</td>
-            <td class="p-2 border border-slate-400 font-bold">${r.classId} (${r.section})</td>
-            <td class="p-2 border border-slate-400 font-semibold">${r.subject}</td>
-            <td class="p-2 border border-slate-400 font-black text-slate-900">${r.assignedName}</td>
-            <td class="p-2 border border-slate-400 text-[10px]">${r.status}</td>
-          </tr>
-        `;
-      });
-
-      const element = document.getElementById("printableReliefArea");
-      element.classList.remove("hidden");
-      const opt = { margin: 10, filename: `Staff_Relief_${activeDay}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-      html2pdf().set(opt).from(element).save().then(() => {
-        element.classList.add("hidden");
-        alert("Staff Group සඳහා වූ Relief PDF ගොනුව සාර්ථකව බාගත විය!");
-      }).catch(err => {
-        element.classList.add("hidden");
-        alert("PDF සෑදීමේ දෝෂයක්. Print බොත්තම භාවිත කරන්න.");
-      });
-    }
-*/
     function printReliefSlip() {
       if (generatedReliefResults.length === 0) { alert("ප්‍රින්ට් කිරීමට සහන කාලසටහනක් නැත."); return; }
       document.getElementById("printReliefSlipDay").innerText = DAY_LABELS[activeDay];
