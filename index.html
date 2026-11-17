@@ -4518,7 +4518,6 @@ window.print16ReliefCutSlipsA4 = print16ReliefCutSlipsA4;
       });
     }
 
-
 async function downloadReliefPDFForStaffGroup() {
   const results = window.generatedReliefResults || generatedReliefResults || [];
   if (results.length === 0) {
@@ -4537,22 +4536,21 @@ async function downloadReliefPDFForStaffGroup() {
   document.getElementById("printReliefSlipDay").innerText = formattedDate;
   document.getElementById("printReliefSlipTotalCount").innerText = results.length;
 
-  // 2. වගුවේ ශීර්ෂය (Header) තීරු 3කට පමණක් සකස් කිරීම
+  // 2. සිංහල අකුරු කැඩීම වැළැක්වීම සහ ප්‍රධාන ශීර්ෂය සැකසීම
   const area = document.getElementById("printableReliefArea");
-  
   area.style.fontFamily = "'Noto Sans Sinhala', sans-serif";
   area.style.letterSpacing = "normal";
+  area.style.padding = "4mm 6mm";
+  area.style.backgroundColor = "#ffffff";
 
-  // 🟢 ප්‍රධාන මාතෘකාවේ tracking-wider ඉවත් කර සිංහල අකුරු කැඩීම වැළැක්වීම
   const mainTitle = area.querySelector("h2");
   if (mainTitle) {
     mainTitle.classList.remove("tracking-wider");
     mainTitle.style.letterSpacing = "normal";
     mainTitle.style.fontFamily = "'Noto Sans Sinhala', sans-serif";
   }
-  area.style.fontFamily = "'Noto Sans Sinhala', sans-serif";
-  area.style.letterSpacing = "normal";
 
+  // 3. වගුවේ තීරු 3 පමණක් සැකසීම (පන්තිය, විෂය, සහන ගුරුභවතා)
   const thead = area.querySelector("thead");
   if (thead) {
     thead.innerHTML = `
@@ -4564,7 +4562,7 @@ async function downloadReliefPDFForStaffGroup() {
     `;
   }
 
-  // 3. කාලච්ඡේද 1 සිට 8 දක්වා වෙන වෙනම පේළි සකස් කිරීම
+  // 4. කාලච්ඡේද 1 සිට 8 දක්වා වෙන වෙනම කොටස් ලෙස පේළි සකස් කිරීම
   const tbody = document.getElementById("printableReliefSlipTableBody");
   tbody.innerHTML = "";
 
@@ -4605,17 +4603,36 @@ async function downloadReliefPDFForStaffGroup() {
     }
   }
 
-  // 4. සිංහල Font එක සම්පූර්ණයෙන්ම Load වන තෙක් රැඳී සිට PDF සෑදීම
+  // 5. පිටු 1කට හෝ පිටු කිහිපයකට පිළිවෙළට බෙදී යන සේ Padding සහ Page Break සැකසීම
+  area.querySelectorAll("th, td").forEach(cell => {
+    cell.style.padding = "3px 6px";
+    cell.style.fontSize = "10.5px";
+  });
+
+  area.querySelectorAll("tr").forEach(tr => {
+    tr.style.pageBreakInside = "avoid";
+    tr.style.breakInside = "avoid";
+  });
+
   area.classList.remove("hidden");
+
   if (document.fonts && document.fonts.ready) {
     await document.fonts.ready;
   }
 
+  // 6. PDF ගොනුව බාගත කිරීම (Scroll Offset 0 සහ Multi-page Support)
   const opt = {
-    margin: 8,
+    margin: [6, 6, 8, 6],
     filename: `Staff_Relief_${formattedDate}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, letterRendering: false },
+    html2canvas: {
+      scale: 2,
+      useCORS: true,
+      letterRendering: false,
+      scrollY: 0,
+      scrollX: 0
+    },
+    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
 
@@ -4628,8 +4645,9 @@ async function downloadReliefPDFForStaffGroup() {
     alert("PDF සෑදීමේ දෝෂයක්. Print බොත්තම භාවිත කරන්න.");
   });
 }
-
 window.downloadReliefPDFForStaffGroup = downloadReliefPDFForStaffGroup;
+
+
     
 
     function printReliefSlip() {
