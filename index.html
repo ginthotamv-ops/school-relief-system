@@ -9160,12 +9160,19 @@ function handleGradeFilterTypeChange() {
     });
   } else if (type === "TEACHER") {
     valueSelect.disabled = false;
-    const teacherList = window.schoolTeachers || window.teachers || [];
+    const teacherList = (window.schoolTeachers || window.teachers || []).slice();
+
+    // 🟢 පාසල් අංකය (1, 2, 3...) අනුපිළිවෙළට සකස් කිරීම
+    teacherList.sort((a, b) => {
+      const numA = parseInt(getTeacherDisplayNumber(a), 10);
+      const numB = parseInt(getTeacherDisplayNumber(b), 10);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return String(a.name || "").localeCompare(String(b.name || ""));
+    });
+
     teacherList.forEach(t => {
       if (!t || !t.id) return;
-      const tnum = typeof getTeacherDisplayNumber === 'function'
-        ? getTeacherDisplayNumber(t)
-        : (t.schoolno ?? t.schoolNo ?? t.id);
+      const tnum = getTeacherDisplayNumber(t);
       const no = tnum ? `[${tnum}] ` : "";
       valueSelect.innerHTML += `<option value="${t.id}">${no}${t.name}</option>`;
     });
@@ -9177,7 +9184,6 @@ function handleGradeFilterTypeChange() {
 
   renderGradeTimetableGrid();
 }
-    
 /*
 // 2. Filter Type (Subject / Teacher) වෙනස් වන විට අදාළ Dropdown එක සකස් කිරීම
 function handleGradeFilterTypeChange() {
@@ -17836,12 +17842,30 @@ function removeLongTermEntry(index) {
   /**
  * අංකය ලබාගැනීමේ සහායක ශ්‍රිතය
  */
-function getTeacherDisplayNumber(tid) {
-  const list = window.schoolTeachers || window.teachers || [];
-  const t = list.find(x => String(x.id).trim().toLowerCase() === String(tid).trim().toLowerCase());
-  return t ? extractTeacherSchoolNumber(t) : tid;
-}
+function getTeacherDisplayNumber(teacherOrId) {
+  if (!teacherOrId) return "";
+  const teacherList = window.schoolTeachers || window.teachers || (typeof teachers !== 'undefined' ? teachers : []);
 
+  const teacherObj = (typeof teacherOrId === "object")
+    ? teacherOrId
+    : teacherList.find(t => String(t.id).trim().toLowerCase() === String(teacherOrId).trim().toLowerCase());
+
+  if (teacherObj && typeof teacherObj === "object") {
+    // පාසල් අංකය ගබඩා වී තිබිය හැකි සියලුම නාමයන් පරීක්ෂා කිරීම
+    const possibleKeys = ["schoolno", "schoolNo", "school_no", "teacherNo", "teacher_no", "empNo", "emp_no", "no", "number", "regNo", "indexNo"];
+    for (const key of possibleKeys) {
+      const val = teacherObj[key];
+      if (val !== undefined && val !== null && String(val).trim() !== "" && typeof val !== "object") {
+        return String(val).trim();
+      }
+    }
+    // පාසල් අංකයක් නොමැති නම් පමණක් id පෙන්වීම (කිසිවිටෙක Object එකක් නොයවයි)
+    return teacherObj.id ? String(teacherObj.id).trim() : "";
+  }
+
+  return typeof teacherOrId === "string" || typeof teacherOrId === "number" ? String(teacherOrId) : "";
+}
+window.getTeacherDisplayNumber = getTeacherDisplayNumber;
     
 // =========================================================================
 // 🛡️ MISSING HELPER FUNCTIONS (GLOBAL SAFE FALLBACKS)
