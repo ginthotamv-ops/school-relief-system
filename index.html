@@ -11597,21 +11597,36 @@ window.removeTimetableSlot = removeTimetableSlot;
     }
 
     function populateClassTeacherSelect(editClassId = null) {
-      const sel = document.getElementById("newClassTeacherSelect");
-      if (!sel) return;
-      const curVal = sel.value;
-      sel.innerHTML = '<option value="">-- පන්තිභාර ගුරුතුමා තෝරන්න --</option>';
+  const sel = document.getElementById("newClassTeacherSelect");
+  if (!sel) return;
+  const curVal = sel.value;
+  sel.innerHTML = '<option value="">-- පන්තිභාර ගුරුතුමා තෝරන්න --</option>';
 
-      teachers.forEach(t => {
-        const assignedCount = schoolClasses.filter(c => c.classTeacherId === t.id && c.id !== editClassId).length;
-        if (assignedCount === 0) {
-          sel.innerHTML += `<option value="${t.id}">${t.name} (${t.subject})</option>`;
-        } else if (schoolClasses.some(c => c.classTeacherId === t.id && c.allowSecondClass) && assignedCount < 2) {
-          sel.innerHTML += `<option value="${t.id}">${t.name} (${t.subject}) [2 වන පන්තිය]</option>`;
-        }
-      });
-      if (curVal) sel.value = curVal;
+  const teacherList = (window.teachers && window.teachers.length > 0 ? window.teachers : (typeof teachers !== 'undefined' ? teachers : [])).slice();
+
+  // පාසල් අංකය (1, 2, 3...) අනුපිළිවෙළට සකස් කිරීම
+  teacherList.sort((a, b) => {
+    const numA = parseInt(getTeacherDisplayNumber(a), 10);
+    const numB = parseInt(getTeacherDisplayNumber(b), 10);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  });
+
+  teacherList.forEach(t => {
+    if (!t || !t.id) return;
+    const tnum = getTeacherDisplayNumber(t);
+    const noPrefix = tnum ? `[${tnum}] ` : "";
+
+    const assignedCount = schoolClasses.filter(c => c.classTeacherId === t.id && c.id !== editClassId).length;
+    if (assignedCount === 0) {
+      sel.innerHTML += `<option value="${t.id}">${noPrefix}${t.name} (${t.subject})</option>`;
+    } else if (schoolClasses.some(c => c.classTeacherId === t.id && c.allowSecondClass) && assignedCount < 2) {
+      sel.innerHTML += `<option value="${t.id}">${noPrefix}${t.name} (${t.subject}) [2 වන පන්තිය]</option>`;
     }
+  });
+
+  if (curVal) sel.value = curVal;
+}
 
     function renderClassesList() {
       const tbody = document.getElementById("classesListTableBody");
