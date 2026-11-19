@@ -4205,101 +4205,8 @@ function clearManualReliefSelection() {
 }
 window.build16SlipsDOM = build16SlipsDOM;
 
-    /*
-    function build16SlipsDOM(assignedReliefs) {
-  const { container } = getOrCreateSlipsContainer();
-  const byTeacher = {};
-  assignedReliefs.forEach(r => {
-    if (!byTeacher[r.assignedId]) byTeacher[r.assignedId] = { teacherName: r.assignedName, items: [] };
-    byTeacher[r.assignedId].items.push(r);
-  });
 
-  // අද මාසය සහ දිනය "Nov-17" ලෙස සකස් කිරීම
-  const now = new Date();
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const monthStr = monthNames[now.getMonth()];
-  const dateStr = String(now.getDate()).padStart(2, '0');
-  const slipDateLabel = `${monthStr}-${dateStr}`;
-
-  container.innerHTML = "";
-
-  Object.keys(byTeacher).forEach(tId => {
-    const teacherData = byTeacher[tId];
-    const tnum = typeof getTeacherDisplayNumber === 'function' ? getTeacherDisplayNumber(tId) : '';
-    const numPrefix = (tnum && tnum !== tId) ? `[${tnum}] ` : '';
-
-    let periodsListHtml = "";
-    teacherData.items.forEach(item => {
-      periodsListHtml += `<div style="font-size: 6.8pt; line-height: 1.2; margin-top: 1px; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">• <b>P${item.period}</b>: <b>${item.classId}</b> (${item.subject})</div>`;
-    });
-
-    const slip = document.createElement("div");
-    slip.className = "relief-cut-slip-16";
-    slip.innerHTML = `
-      <div>
-        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #475569; padding-bottom: 1px; font-weight: bold; font-size: 6.8pt;">
-          <span>සහන පත්‍රිකාව (Relief)</span>
-          <span>${slipDateLabel}</span>
-        </div>
-        <div style="margin-top: 1.5px; font-size: 7.2pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-          ගුරු: <b style="color: #1e1b4b;">${numPrefix}${teacherData.teacherName}</b>
-        </div>
-        <div style="margin-top: 1.5px; border-top: 0.5px solid #cbd5e1; padding-top: 1px;">${periodsListHtml}</div>
-      </div>
-      <div style="display: flex; justify-content: space-between; font-size: 6pt; border-top: 1px dashed #94a3b8; padding-top: 1px; color: #475569;">
-        <span>වේලාවට යන්න</span><span>අත්සන: ..............</span>
-      </div>
-    `;
-    container.appendChild(slip);
-  });
-}
-
- 
-    function build16SlipsDOM(assignedReliefs) {
-  const { container } = getOrCreateSlipsContainer();
-  const byTeacher = {};
-  assignedReliefs.forEach(r => {
-    if (!byTeacher[r.assignedId]) byTeacher[r.assignedId] = { teacherName: r.assignedName, items: [] };
-    byTeacher[r.assignedId].items.push(r);
-  });
-
-  const dayNames = ["සඳුදා", "අඟහරුවාදා", "බදාදා", "බ්‍රහස්පතින්දා", "සිකුරාදා"];
-  const dayIndex = typeof normalizeDayNumber === 'function' ? normalizeDayNumber(window.activeDay ?? 0) : Number(window.activeDay ?? 0);
-  const currentDayLabel = dayNames[dayIndex] || (typeof DAY_LABELS !== 'undefined' ? DAY_LABELS[activeDay] : "");
-
-  container.innerHTML = "";
-
-  Object.keys(byTeacher).forEach(tId => {
-    const teacherData = byTeacher[tId];
-    const tnum = typeof getTeacherDisplayNumber === 'function' ? getTeacherDisplayNumber(tId) : '';
-    const numPrefix = (tnum && tnum !== tId) ? `[${tnum}] ` : '';
-
-    let periodsListHtml = "";
-    teacherData.items.forEach(item => {
-      periodsListHtml += `<div style="font-size: 6.8pt; line-height: 1.2; margin-top: 1px; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">• <b>P${item.period}</b>: <b>${item.classId}</b> (${item.subject})</div>`;
-    });
-
-    const slip = document.createElement("div");
-    slip.className = "relief-cut-slip-16";
-    slip.innerHTML = `
-      <div>
-        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #475569; padding-bottom: 1px; font-weight: bold; font-size: 6.8pt;">
-          <span>සහන පත්‍රිකාව (Relief)</span>
-          <span>${currentDayLabel}</span>
-        </div>
-        <div style="margin-top: 1.5px; font-size: 7.2pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-          ගුරු: <b style="color: #1e1b4b;">${numPrefix}${teacherData.teacherName}</b>
-        </div>
-        <div style="margin-top: 1.5px; border-top: 0.5px solid #cbd5e1; padding-top: 1px;">${periodsListHtml}</div>
-      </div>
-      <div style="display: flex; justify-content: space-between; font-size: 6pt; border-top: 1px dashed #94a3b8; padding-top: 1px; color: #475569;">
-        <span>වේලාවට යන්න</span><span>අත්සන: ..............</span>
-      </div>
-    `;
-    container.appendChild(slip);
-  });
-}
-*/
+    
 function print16ReliefCutSlipsA4() {
   const results = window.generatedReliefResults || generatedReliefResults || [];
   if (results.length === 0) {
@@ -17822,30 +17729,60 @@ function removeLongTermEntry(index) {
   /**
  * අංකය ලබාගැනීමේ සහායක ශ්‍රිතය
  */
+    function findTeacherObject(teacherOrId) {
+  if (!teacherOrId) return null;
+  const rawId = (typeof teacherOrId === "object") ? (teacherOrId.id ?? teacherOrId.tid) : teacherOrId;
+  if (!rawId) return (typeof teacherOrId === "object") ? teacherOrId : null;
+
+  const cleanTarget = String(rawId).trim().toUpperCase();
+  const numOnlyTarget = cleanTarget.replace(/^T/, ""); // "T14" -> "14"
+
+  const mainList = window.teachers || [];
+  const subList = window.schoolTeachers || [];
+
+  const matcher = (t) => {
+    if (!t || !t.id) return false;
+    const tId = String(t.id).trim().toUpperCase();
+    const tNumOnly = tId.replace(/^T/, "");
+    return tId === cleanTarget || tNumOnly === numOnlyTarget;
+  };
+
+  // පළමුව schoolNo සහිත window.teachers තුළින් සෙවීම
+  return mainList.find(matcher) || subList.find(matcher) || (typeof teacherOrId === "object" ? teacherOrId : null);
+}
+
+// 1. පාසලෙන් ලබා දුන් ගුරු අංකය (schoolNo) පමණක් ලබා ගැනීම
 function getTeacherDisplayNumber(teacherOrId) {
-  if (!teacherOrId) return "";
-  const idToFind = (typeof teacherOrId === "object") ? teacherOrId.id : teacherOrId;
-
-  // 1. පළමුව schoolNo අඩංගු window.teachers තුළින් සෙවීම
-  const tFromMain = (window.teachers || []).find(
-    t => t && String(t.id).trim().toLowerCase() === String(idToFind).trim().toLowerCase()
-  );
-  if (tFromMain && tFromMain.schoolNo !== undefined && tFromMain.schoolNo !== null && String(tFromMain.schoolNo).trim() !== "") {
-    return String(tFromMain.schoolNo).trim();
-  }
-
-  // 2. එසේ නොමැති නම් ලබා දුන් වස්තුවෙන් හෝ schoolTeachers තුළින් සෙවීම
-  const tObj = (typeof teacherOrId === "object")
-    ? teacherOrId
-    : (window.schoolTeachers || []).find(t => t && String(t.id).trim().toLowerCase() === String(idToFind).trim().toLowerCase());
-
+  const tObj = findTeacherObject(teacherOrId);
   if (tObj && tObj.schoolNo !== undefined && tObj.schoolNo !== null && String(tObj.schoolNo).trim() !== "") {
     return String(tObj.schoolNo).trim();
   }
-
-  return idToFind ? String(idToFind).trim() : "";
+  return ""; // පාසල් අංකයක් නොමැති නම් T අංකය නොපෙන්වා හිස්ව තබයි
 }
+
+// 2. ගුරුවරයාගේ නිවැරදි නම ලබා ගැනීම
+function getTeacherDisplayName(teacherOrId) {
+  const tObj = findTeacherObject(teacherOrId);
+  if (tObj && tObj.name) {
+    return String(tObj.name).trim();
+  }
+  return "";
+}
+
+// 3. "[පාසල් අංකය] ගුරුවරයාගේ නම" ලෙස එකට ලබා ගැනීම
+function formatTeacherLabel(teacherOrId) {
+  const sNo = getTeacherDisplayNumber(teacherOrId);
+  const name = getTeacherDisplayName(teacherOrId);
+  if (!name) return "";
+  return sNo ? `[${sNo}] ${name}` : name;
+}
+
+window.findTeacherObject = findTeacherObject;
 window.getTeacherDisplayNumber = getTeacherDisplayNumber;
+window.getTeacherDisplayName = getTeacherDisplayName;
+window.formatTeacherLabel = formatTeacherLabel;
+
+//window.getTeacherDisplayNumber = getTeacherDisplayNumber;
 
     
 // =========================================================================
