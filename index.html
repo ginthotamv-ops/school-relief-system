@@ -3878,7 +3878,141 @@ function openManualReliefModal(index) {
   // 3. Modal එක තිරයේ පෙන්වීම
   document.getElementById("manualReliefModal").classList.remove("hidden");
 }
+
+// 1. ශ්‍රේණි (Grade) ටැබ් එකේ ගුරු Dropdown එක
+function handleGradeFilterTypeChange() {
+  const typeSelect = document.getElementById("gradeHighlightTypeSelect");
+  const valueSelect = document.getElementById("gradeHighlightValueSelect");
+  const countBadge = document.getElementById("gradeHighlightCountBadge");
+  if (!typeSelect || !valueSelect) return;
+
+  const type = typeSelect.value;
+  window.gradeViewFilterType = type;
+  valueSelect.innerHTML = `<option value="">-- තෝරන්න --</option>`;
+
+  if (type === "SUBJECT") {
+    valueSelect.disabled = false;
+    const subs = new Set();
+    (window.masterSchedule || []).forEach(s => {
+      if (s.subject && String(s.subject).trim() !== "") subs.add(s.subject.trim());
+      if (Array.isArray(s.basketItems)) {
+        s.basketItems.forEach(b => { if (b.subject) subs.add(b.subject.trim()); });
+      }
+    });
+    Array.from(subs).sort().forEach(sub => {
+      valueSelect.innerHTML += `<option value="${sub}">${sub}</option>`;
+    });
+  } else if (type === "TEACHER") {
+    valueSelect.disabled = false;
+    const teacherList = (window.teachers && window.teachers.length > 0 ? window.teachers : (window.schoolTeachers || [])).slice();
+
+    teacherList.sort((a, b) => {
+      const numA = parseInt(getTeacherDisplayNumber(a), 10);
+      const numB = parseInt(getTeacherDisplayNumber(b), 10);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return String(a.name || "").localeCompare(String(b.name || ""));
+    });
+
+    teacherList.forEach(t => {
+      if (!t || !t.id) return;
+      valueSelect.innerHTML += `<option value="${t.id}">${formatTeacherLabel(t)}</option>`;
+    });
+  } else {
+    valueSelect.disabled = true;
+    window.gradeViewSelectedValue = "";
+    if (countBadge) countBadge.classList.add("hidden");
+  }
+
+  renderGradeTimetableGrid();
+}
+
+// 2. පන්තිභාර ගුරුභවතා තෝරන Dropdown එක
+function populateClassTeacherSelect(editClassId = null) {
+  const sel = document.getElementById("newClassTeacherSelect");
+  if (!sel) return;
+  const curVal = sel.value;
+  sel.innerHTML = '<option value="">-- පන්තිභාර ගුරුතුමා තෝරන්න --</option>';
+
+  const teacherList = (window.teachers && window.teachers.length > 0 ? window.teachers : (typeof teachers !== 'undefined' ? teachers : [])).slice();
+
+  teacherList.sort((a, b) => {
+    const numA = parseInt(getTeacherDisplayNumber(a), 10);
+    const numB = parseInt(getTeacherDisplayNumber(b), 10);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  });
+
+  teacherList.forEach(t => {
+    if (!t || !t.id) return;
+    const label = formatTeacherLabel(t);
+    const assignedCount = schoolClasses.filter(c => c.classTeacherId === t.id && c.id !== editClassId).length;
+    if (assignedCount === 0) {
+      sel.innerHTML += `<option value="${t.id}">${label} (${t.subject})</option>`;
+    } else if (schoolClasses.some(c => c.classTeacherId === t.id && c.allowSecondClass) && assignedCount < 2) {
+      sel.innerHTML += `<option value="${t.id}">${label} (${t.subject}) [2 වන පන්තිය]</option>`;
+    }
+  });
+
+  if (curVal) sel.value = curVal;
+}
+
+// 3. Manual Relief Edit Dropdown එක
+function populateManualReliefDropdown() {
+  if (currentManualReliefIndex === null) return;
+  const item = generatedReliefResults[currentManualReliefIndex];
+  const select = document.getElementById("manualModalTeacherSelect") || document.getElementById("manualTeacherSelect");
+  if (!select) return;
+
+  const isForceOverride = document.getElementById("chkForceOverrideTeachers")?.checked || false;
+  select.innerHTML = '<option value="">-- ආදේශක ගුරුවරයෙකු තෝරන්න --</option>';
+
+  const teacherList = (window.teachers && window.teachers.length > 0 ? window.teachers : (window.schoolTeachers || []));
+  const targetDayNum = typeof normalizeDayNumber === 'function'
+    ? normalizeDayNumber(window.activeDay ?? 0)
+    : (window.activeDay ?? 0);
+
+  const presentTeachers = teacherList.filter(t => {
+    if (!t || !t.id) return false;
+    if (typeof isTeacherAbsentDuringPeriod === 'function' && isTeacherAbsentDuringPeriod(t, item.period)) return false;
+    if (typeof getPeriodAbsenceInfo === 'function') {
+      const absence = getPeriodAbsenceInfo(t.id, item.period);
+      if (absence && absence.isAbsent) return false;
+    }
+    return true;
+  });
+
+  const eligible = (isForceOverride
+    ? presentTeachers
+    : presentTeachers.filter(t => {
+        if (t.isExempt) return false;
+        const isBusy = typeof isTeacherOccupiedInDayPeriod === 'function'
+          ? isTeacherOccupiedInDayPeriod(t.id, targetDayNum, item.period, currentManualReliefIndex)
+          : false;
+        return !isBusy;
+      })).slice();
+
+  eligible.sort((a, b) => {
+    const numA = parseInt(getTeacherDisplayNumber(a), 10);
+    const numB = parseInt(getTeacherDisplayNumber(b), 10);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  });
+
+  if (eligible.length === 0) {
+    select.innerHTML = '<option value="">⚠️ නිදහස් ගුරුවරුන් නැත (Force Override Tick කරන්න)</option>';
+  } else {
+    eligible.forEach(t => {
+      const isSelected = String(t.id).trim().toLowerCase() === String(item.assignedId || '').trim().toLowerCase();
+      const isBusy = typeof isTeacherOccupiedInDayPeriod === 'function'
+        ? isTeacherOccupiedInDayPeriod(t.id, targetDayNum, item.period, currentManualReliefIndex)
+        : false;
+
+      select.innerHTML += `<option value="${t.id}" ${isSelected ? 'selected' : ''}>${formatTeacherLabel(t)} (${t.subject || 'සාමාන්‍ය'}) ${isBusy ? ' - [Busy]' : ' - [Free]'}</option>`;
+    });
+  }
+}
     
+    /*
 function populateManualReliefDropdown() {
   if (currentManualReliefIndex === null) return;
   const item = generatedReliefResults[currentManualReliefIndex];
@@ -3945,7 +4079,7 @@ function populateManualReliefDropdown() {
       select.innerHTML += `<option value="${t.id}" ${isSelected ? 'selected' : ''}>${numPrefix}${t.name} (${t.subject || 'සාමාන්‍ය'}) ${isBusy ? ' - [Busy]' : ' - [Free]'}</option>`;
     });
   }
-}
+}*/
 
     function closeManualReliefModal() {
       document.getElementById("manualReliefModal").classList.add("hidden");
@@ -9053,7 +9187,7 @@ function populateGradeDropdown() {
   select.value = currentVal;
 }
     
-function handleGradeFilterTypeChange() {
+/*function handleGradeFilterTypeChange() {
   const typeSelect = document.getElementById("gradeHighlightTypeSelect");
   const valueSelect = document.getElementById("gradeHighlightValueSelect");
   const countBadge = document.getElementById("gradeHighlightCountBadge");
@@ -9104,7 +9238,7 @@ function handleGradeFilterTypeChange() {
 
   renderGradeTimetableGrid();
 }
-
+*/
 // 3. නිශ්චිත අගයක් (Subject හෝ Teacher) තේරූ විට
 function handleGradeHighlightValueChange() {
   const valueSelect = document.getElementById("gradeHighlightValueSelect");
@@ -11513,7 +11647,7 @@ window.removeTimetableSlot = removeTimetableSlot;
       }
     }
 
-    function populateClassTeacherSelect(editClassId = null) {
+  /*  function populateClassTeacherSelect(editClassId = null) {
   const sel = document.getElementById("newClassTeacherSelect");
   if (!sel) return;
   const curVal = sel.value;
@@ -11543,7 +11677,7 @@ window.removeTimetableSlot = removeTimetableSlot;
   });
 
   if (curVal) sel.value = curVal;
-}
+}*/
 
     function renderClassesList() {
       const tbody = document.getElementById("classesListTableBody");
@@ -11585,6 +11719,9 @@ window.removeTimetableSlot = removeTimetableSlot;
       }
     }
 
+
+/*
+    
 function handleSaveTeacher(e) {
       if (e) e.preventDefault();
       const editId = document.getElementById("editTeacherId").value;
@@ -11646,7 +11783,82 @@ function handleSaveTeacher(e) {
       renderReliefAttendance();
       alert("ගුරු විස්තර සාර්ථකව සුරකින ලදි!");
     }
+*/
 
+function handleSaveTeacher(e) {
+  if (e) e.preventDefault();
+  const editId = document.getElementById("editTeacherId").value;
+  const schoolNo = document.getElementById("newTeacherSchoolNo").value.trim();
+  const name = document.getElementById("newTeacherName").value.trim();
+  const phone = document.getElementById("newTeacherPhone").value.trim();
+  const subject = document.getElementById("newTeacherSubjectSelect").value;
+  const isAll = document.querySelector(".tch-sec-chk-all").checked;
+
+  let sections = [];
+  if (isAll) sections = ["All"];
+  else document.querySelectorAll(".tch-sec-chk:checked").forEach(chk => { sections.push(chk.value); });
+
+  if (!schoolNo) { alert("කරුණාකර පාසල් ගුරු අංකය ඇතුළත් කරන්න."); return; }
+  if (!name) { alert("කරුණාකර ගුරු නම ඇතුළත් කරන්න."); return; }
+  if (sections.length === 0) { alert("අංශයක් තෝරන්න."); return; }
+  if (!subject) { alert("ප්‍රධාන විෂය තෝරන්න."); return; }
+
+  // 🟢 එකම පාසල් ගුරු අංකය වෙනත් ගුරුවරයෙකුට ලබා දී ඇත්නම් නැවැත්වීම
+  const duplicateSchoolNo = teachers.find(
+    t => t.schoolNo && String(t.schoolNo).trim().toLowerCase() === schoolNo.toLowerCase() && t.id !== editId
+  );
+  if (duplicateSchoolNo) {
+    alert(`⚠️ දෝෂයකි: '${schoolNo}' පාසල් ගුරු අංකය දැනටමත් '${duplicateSchoolNo.name}' සඳහා ලබා දී ඇත. කරුණාකර වෙනත් අංකයක් ඇතුළත් කරන්න.`);
+    return;
+  }
+
+  if (editId) {
+    const t = teachers.find(x => x.id === editId);
+    if (t) {
+      t.schoolNo = schoolNo;
+      t.name = name;
+      t.phone = phone;
+      t.subject = subject;
+      t.sections = sections;
+    }
+    if (Array.isArray(window.schoolTeachers)) {
+      const st = window.schoolTeachers.find(x => x.id === editId);
+      if (st) st.schoolNo = schoolNo;
+    }
+    cancelTeacherEdit();
+  } else {
+    // 🟢 නොගැටෙන අලුත් ID එකක් සෑදීම
+    const id = generateNextTeacherId();
+    const newTeacherObj = {
+      id,
+      schoolNo,
+      name,
+      phone,
+      subject,
+      sections,
+      leaveStatus: "present",
+      isExempt: false,
+      allowOver35: false
+    };
+    teachers.push(newTeacherObj);
+    if (Array.isArray(window.schoolTeachers) && window.schoolTeachers !== teachers) {
+      window.schoolTeachers.push({ ...newTeacherObj, subjects: [subject] });
+    }
+    document.getElementById("newTeacherSchoolNo").value = "";
+    document.getElementById("newTeacherName").value = "";
+    document.getElementById("newTeacherPhone").value = "";
+  }
+
+  window.teachers = teachers;
+  if (typeof saveAllToStorage === "function") saveAllToStorage();
+  if (typeof renderTeachersMasterList === "function") renderTeachersMasterList();
+  if (typeof renderGradeToggles === "function") renderGradeToggles();
+  if (typeof populateClassTeacherSelect === "function") populateClassTeacherSelect();
+  if (typeof renderReliefAttendance === "function") renderReliefAttendance();
+  alert("ගුරු විස්තර සාර්ථකව සුරකින ලදි!");
+}
+    
+    
     function editTeacher(id) {
       const t = teachers.find(x => String(x.id) === String(id));
       if (!t) return;
@@ -11976,6 +12188,103 @@ function openSchoolNoManagerModal() {
     return;
   }
 
+  teachers.forEach((t) => {
+    const currentVal = t.schoolNo || "";
+    tbody.innerHTML += `
+      <tr class="border-b hover:bg-slate-50 transition">
+        <td class="p-2.5 text-center font-bold text-slate-400">${t.id}</td>
+        <td class="p-2.5 font-bold text-slate-800">${t.name}</td>
+        <td class="p-2.5 text-slate-600">${t.subject}</td>
+        <td class="p-2 text-center">
+          <input type="text" data-teacher-id="${t.id}" value="${currentVal}" placeholder="අංකය"
+            oninput="validateDuplicateSchoolNumbers()"
+            class="bulk-school-no-input w-28 p-1.5 border border-slate-300 rounded-lg text-xs font-black text-center text-indigo-950 focus:border-indigo-600 focus:bg-indigo-50/30 outline-none">
+        </td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("schoolNoManagerModal").classList.remove("hidden");
+  validateDuplicateSchoolNumbers();
+}
+
+function validateDuplicateSchoolNumbers() {
+  const inputs = Array.from(document.querySelectorAll(".bulk-school-no-input"));
+  const counts = {};
+
+  inputs.forEach(inp => {
+    const val = inp.value.trim().toLowerCase();
+    if (val !== "") counts[val] = (counts[val] || 0) + 1;
+  });
+
+  let hasDuplicates = false;
+  inputs.forEach(inp => {
+    const val = inp.value.trim().toLowerCase();
+    if (val !== "" && counts[val] > 1) {
+      hasDuplicates = true;
+      inp.classList.add("border-red-500", "bg-red-100", "text-red-700");
+      inp.classList.remove("border-slate-300", "text-indigo-950");
+      inp.title = "⚠️ මෙම අංකය වෙනත් ගුරුවරයෙකුටත් ඇතුළත් කර ඇත!";
+    } else {
+      inp.classList.remove("border-red-500", "bg-red-100", "text-red-700");
+      inp.classList.add("border-slate-300", "text-indigo-950");
+      inp.title = "";
+    }
+  });
+
+  return !hasDuplicates;
+}
+
+function saveAllSchoolNumbersBulk() {
+  if (!validateDuplicateSchoolNumbers()) {
+    alert("⚠️ එකම පාසල් අංකය ගුරුවරුන් කිහිප දෙනෙකුට ලබා දී ඇත. රතු පැහැයෙන් සලකුණු කර ඇති අංක නිවැරදි කර නැවත උත්සාහ කරන්න.");
+    return;
+  }
+
+  const inputs = document.querySelectorAll(".bulk-school-no-input");
+  const updatedMap = {};
+  let updatedCount = 0;
+
+  inputs.forEach(input => {
+    const tId = String(input.getAttribute("data-teacher-id") || "").trim();
+    if (tId) updatedMap[tId] = input.value.trim();
+  });
+
+  teachers.forEach(t => {
+    if (t && updatedMap.hasOwnProperty(t.id)) {
+      t.schoolNo = updatedMap[t.id];
+      updatedCount++;
+    }
+  });
+
+  window.teachers = teachers;
+  if (Array.isArray(window.schoolTeachers)) {
+    window.schoolTeachers.forEach(st => {
+      if (st && updatedMap.hasOwnProperty(st.id)) st.schoolNo = updatedMap[st.id];
+    });
+  }
+
+  if (typeof saveAllToStorage === "function") saveAllToStorage();
+  if (typeof saveToFirebase === "function") saveToFirebase();
+  if (typeof renderTeachersMasterList === "function") renderTeachersMasterList();
+  if (typeof populateClassTeacherSelect === "function") populateClassTeacherSelect();
+  if (typeof handleGradeFilterTypeChange === "function") handleGradeFilterTypeChange();
+
+  closeSchoolNoManagerModal();
+  alert(`සාර්ථකයි! ගුරුවරුන් ${updatedCount} දෙනෙකුගේ පාසල් අංක යාවත්කාලීන කරන ලදි.`);
+}
+
+    
+/* function openSchoolNoManagerModal() {
+  const tbody = document.getElementById("schoolNoManagerTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  if (!teachers || teachers.length === 0) {
+    alert("පද්ධතියේ ලියාපදිංචි ගුරුවරුන් නොමැත.");
+    return;
+  }
+
   teachers.forEach((t, idx) => {
     const currentVal = t.schoolNo || "";
     tbody.innerHTML += `
@@ -12026,7 +12335,7 @@ function validateDuplicateSchoolNumbers() {
   });
 
   return !hasDuplicates; // Duplicate නොමැති නම් true ලබා දෙයි
-}
+}*/
     
 
     function closeSchoolNoManagerModal() {
@@ -12051,7 +12360,7 @@ function validateDuplicateSchoolNumbers() {
     }
 
     // වෙනස් කළ සියලුම අංක එකවර පද්ධතියට සහ Firebase වෙත සුරැකීම
-
+/*
 function saveAllSchoolNumbersBulk() {
   if (typeof validateDuplicateSchoolNumbers === "function" && !validateDuplicateSchoolNumbers()) {
     alert("⚠️ එකම පාසල් අංකය ගුරුවරුන් කිහිප දෙනෙකුට ලබා දී ඇත. රතු පැහැයෙන් සලකුණු කර ඇති අංක නිවැරදි කර නැවත උත්සාහ කරන්න.");
@@ -12114,6 +12423,7 @@ function saveAllSchoolNumbersBulk() {
   closeSchoolNoManagerModal();
   alert(`සාර්ථකයි! ගුරුවරුන් ${updatedCount} දෙනෙකුගේ පාසල් අංක යාවත්කාලීන කරන ලදි.`);
 }
+    */
     // =========================================================================
     // TEACHERS BULK UPLOAD & CSV TEMPLATE ENGINE
     // =========================================================================
@@ -17813,9 +18123,73 @@ function removeLongTermEntry(index) {
   updateLiveAttendanceBadges();
 }
 
+
+// 1. අලුත් ගුරුවරයෙකු සඳහා කිසිදා නොගැටෙන (Unique) T අංකයක් සෑදීම
+function generateNextTeacherId() {
+  let maxNum = 0;
+  (window.teachers || teachers || []).forEach(t => {
+    if (t && t.id) {
+      const num = parseInt(String(t.id).replace(/\D/g, ""), 10);
+      if (!isNaN(num) && num > maxNum) maxNum = num;
+    }
+  });
+  return "T" + String(maxNum + 1).padStart(2, '0');
+}
+
+// 2. ගුරුවරයාගේ සම්පූර්ණ දත්ත වස්තුව (Object) නිවැරදිව සොයා ගැනීම
+function findTeacherObject(teacherOrId) {
+  if (!teacherOrId) return null;
+  const rawId = (typeof teacherOrId === "object") ? (teacherOrId.id ?? teacherOrId.tid) : teacherOrId;
+  if (!rawId) return (typeof teacherOrId === "object") ? teacherOrId : null;
+
+  const cleanTarget = String(rawId).trim().toUpperCase();
+  const numOnlyTarget = cleanTarget.replace(/^T/, "");
+
+  const mainList = window.teachers || (typeof teachers !== 'undefined' ? teachers : []) || [];
+  const subList = window.schoolTeachers || [];
+
+  const matcher = (t) => {
+    if (!t || !t.id) return false;
+    const tId = String(t.id).trim().toUpperCase();
+    const tNumOnly = tId.replace(/^T/, "");
+    return tId === cleanTarget || tNumOnly === numOnlyTarget;
+  };
+
+  return mainList.find(matcher) || subList.find(matcher) || (typeof teacherOrId === "object" ? teacherOrId : null);
+}
+
+// 3. පාසලෙන් ලබා දුන් ගුරු අංකය (schoolNo) පමණක් ලබා ගැනීම (T අංකය නොපෙන්වයි)
+function getTeacherDisplayNumber(teacherOrId) {
+  const tObj = findTeacherObject(teacherOrId);
+  if (tObj && tObj.schoolNo !== undefined && tObj.schoolNo !== null && String(tObj.schoolNo).trim() !== "") {
+    return String(tObj.schoolNo).trim();
+  }
+  return "";
+}
+
+// 4. ගුරුවරයාගේ නිවැරදි නම ලබා ගැනීම
+function getTeacherDisplayName(teacherOrId) {
+  const tObj = findTeacherObject(teacherOrId);
+  return (tObj && tObj.name) ? String(tObj.name).trim() : "";
+}
+
+// 5. "[පාසල් අංකය] ගුරුවරයාගේ නම" ලෙස එකට ලබා ගැනීම
+function formatTeacherLabel(teacherOrId) {
+  const sNo = getTeacherDisplayNumber(teacherOrId);
+  const name = getTeacherDisplayName(teacherOrId);
+  if (!name) return "";
+  return sNo ? `[${sNo}] ${name}` : name;
+}
+
+window.generateNextTeacherId = generateNextTeacherId;
+window.findTeacherObject = findTeacherObject;
+window.getTeacherDisplayNumber = getTeacherDisplayNumber;
+window.getTeacherDisplayName = getTeacherDisplayName;
+window.formatTeacherLabel = formatTeacherLabel;
+    
   /**
  * අංකය ලබාගැනීමේ සහායක ශ්‍රිතය
- */
+
     function findTeacherObject(teacherOrId) {
   if (!teacherOrId) return null;
   const rawId = (typeof teacherOrId === "object") ? (teacherOrId.id ?? teacherOrId.tid) : teacherOrId;
@@ -17838,6 +18212,7 @@ function removeLongTermEntry(index) {
   return mainList.find(matcher) || subList.find(matcher) || (typeof teacherOrId === "object" ? teacherOrId : null);
 }
 
+    
 // 1. පාසලෙන් ලබා දුන් ගුරු අංකය (schoolNo) පමණක් ලබා ගැනීම
 function getTeacherDisplayNumber(teacherOrId) {
   const tObj = findTeacherObject(teacherOrId);
@@ -17868,7 +18243,7 @@ window.findTeacherObject = findTeacherObject;
 window.getTeacherDisplayNumber = getTeacherDisplayNumber;
 window.getTeacherDisplayName = getTeacherDisplayName;
 window.formatTeacherLabel = formatTeacherLabel;
-
+*/
 //window.getTeacherDisplayNumber = getTeacherDisplayNumber;
 
     
