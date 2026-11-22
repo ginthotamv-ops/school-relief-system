@@ -12051,8 +12051,8 @@ function validateDuplicateSchoolNumbers() {
     }
 
     // වෙනස් කළ සියලුම අංක එකවර පද්ධතියට සහ Firebase වෙත සුරැකීම
+
 function saveAllSchoolNumbersBulk() {
-  // 🟢 1. එකම පාසල් අංකය නැවත ඇතුළත් කර ඇත්දැයි පරීක්ෂා කිරීම
   if (typeof validateDuplicateSchoolNumbers === "function" && !validateDuplicateSchoolNumbers()) {
     alert("⚠️ එකම පාසල් අංකය ගුරුවරුන් කිහිප දෙනෙකුට ලබා දී ඇත. රතු පැහැයෙන් සලකුණු කර ඇති අංක නිවැරදි කර නැවත උත්සාහ කරන්න.");
     return;
@@ -12061,30 +12061,59 @@ function saveAllSchoolNumbersBulk() {
   const inputs = document.querySelectorAll(".bulk-school-no-input");
   let updatedCount = 0;
 
+  // යාවත්කාලීන කරන ලද අංක සිතියමක් (Map) ලෙස තබා ගැනීම
+  const updatedMap = {};
   inputs.forEach(input => {
-    const tId = input.getAttribute("data-teacher-id");
+    const tId = String(input.getAttribute("data-teacher-id") || "").trim();
     const newVal = input.value.trim();
-    const teacher = teachers.find(t => t.id === tId);
-    if (teacher) {
-      teacher.schoolNo = newVal;
-      updatedCount++;
+    if (tId) {
+      updatedMap[tId] = newVal;
     }
   });
 
-  // 🟢 2. window.schoolTeachers තිබේ නම් එයටද නව අංක යාවත්කාලීන කිරීම (සියලු තැන්වල නිවැරදිව පෙන්වීමට)
-  if (Array.isArray(window.schoolTeachers)) {
-    window.schoolTeachers.forEach(st => {
-      const matched = teachers.find(t => t.id === st.id);
-      if (matched) st.schoolNo = matched.schoolNo;
+  // 1. ප්‍රධාන teachers විචල්‍යය යාවත්කාලීන කිරීම
+  if (typeof teachers !== "undefined" && Array.isArray(teachers)) {
+    teachers.forEach(t => {
+      if (t && updatedMap.hasOwnProperty(t.id)) {
+        t.schoolNo = updatedMap[t.id];
+        updatedCount++;
+      }
     });
   }
 
-  saveAllToStorage();
-  renderTeachersMasterList();
+  // 2. window.teachers යාවත්කාලීන කිරීම (වෙනම පිටපතක් නම්)
+  if (Array.isArray(window.teachers) && window.teachers !== teachers) {
+    window.teachers.forEach(t => {
+      if (t && updatedMap.hasOwnProperty(t.id)) {
+        t.schoolNo = updatedMap[t.id];
+      }
+    });
+  } else if (typeof teachers !== "undefined") {
+    window.teachers = teachers;
+  }
+
+  // 3. window.schoolTeachers යාවත්කාලීන කිරීම
+  if (Array.isArray(window.schoolTeachers)) {
+    window.schoolTeachers.forEach(t => {
+      if (t && updatedMap.hasOwnProperty(t.id)) {
+        t.schoolNo = updatedMap[t.id];
+      }
+    });
+  }
+
+  // 4. LocalStorage සහ Cloud (ඇත්නම්) වෙත සුරැකීම
+  if (typeof saveAllToStorage === "function") saveAllToStorage();
+  if (typeof saveToFirebase === "function") saveToFirebase();
+  if (typeof syncDataToCloud === "function") syncDataToCloud();
+
+  // 5. තිරයේ ඇති සියලුම වගු සහ Dropdowns නැවත පූරණය (Refresh) කිරීම
+  if (typeof renderTeachersMasterList === "function") renderTeachersMasterList();
+  if (typeof populateClassTeacherSelect === "function") populateClassTeacherSelect();
+  if (typeof handleGradeFilterTypeChange === "function") handleGradeFilterTypeChange();
+
   closeSchoolNoManagerModal();
   alert(`සාර්ථකයි! ගුරුවරුන් ${updatedCount} දෙනෙකුගේ පාසල් අංක යාවත්කාලීන කරන ලදි.`);
 }
-
     // =========================================================================
     // TEACHERS BULK UPLOAD & CSV TEMPLATE ENGINE
     // =========================================================================
