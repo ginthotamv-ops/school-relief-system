@@ -18364,7 +18364,7 @@ function renderLongTermEntriesList() {
   }).join("") || `<div class="text-xs text-slate-400 p-2 text-center">දීර්ඝකාලීන නිවාඩු කිසිවක් සටහන්ව නොමැත.</div>`;
 }
 
-function populateTeacherSelects() {
+/*function populateTeacherSelects() {
   const teachers = (window.schoolTeachers && window.schoolTeachers.length > 0)
     ? window.schoolTeachers
     : (window.teachers || []);
@@ -18403,7 +18403,44 @@ function populateTeacherSelects() {
   if (s1) s1.innerHTML = defaultOption + opts;
   if (s2) s2.innerHTML = defaultOption + opts;
 }
+*/
+function populateTeacherSelects() {
+  const teacherList = (window.teachers && window.teachers.length > 0)
+    ? window.teachers
+    : (window.schoolTeachers || []);
 
+  if (!teacherList || teacherList.length === 0) return;
+
+  const alreadySelected = typeof getAlreadySelectedTeacherIds === 'function'
+    ? getAlreadySelectedTeacherIds()
+    : new Set();
+
+  const availableTeachers = teacherList.filter(t => {
+    const tid = String(t.id || t.teacherId || "").trim().toLowerCase();
+    return !alreadySelected.has(tid);
+  });
+
+  availableTeachers.sort((a, b) => {
+    const numA = parseInt(getTeacherDisplayNumber(a), 10);
+    const numB = parseInt(getTeacherDisplayNumber(b), 10);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  });
+
+  const defaultOption = `<option value="">-- ගුරුවරයා තෝරන්න (අංකය හෝ නම) --</option>`;
+  const opts = availableTeachers.map(t => {
+    const tid = t.id || t.teacherId || "";
+    const label = typeof formatTeacherLabel === 'function' ? formatTeacherLabel(t) : t.name;
+    return `<option value="${tid}">${label}</option>`;
+  }).join("");
+
+  const s1 = document.getElementById("modalTeacherSelect");
+  const s2 = document.getElementById("longTermTeacherSelect");
+
+  if (s1) s1.innerHTML = defaultOption + opts;
+  if (s2) s2.innerHTML = defaultOption + opts;
+}
+    
 // -------------------------------------------------------------------------
 // 🔴 PRINT & EXPORT HANDLERS
 // -------------------------------------------------------------------------
