@@ -3430,6 +3430,8 @@ function switchTab(tabId) {
     if (typeof renderTeachersMasterList === 'function') renderTeachersMasterList();
     if (typeof onTeacherSectionCheckboxesChange === 'function') onTeacherSectionCheckboxesChange();
   }
+
+  if (typeof populatePriorityTrays === "function") populatePriorityTrays();
 }
 
 // =========================================================================
@@ -10723,9 +10725,58 @@ function closeAutoFillModal() {
 function togglePrioritySection() {
   const chk = document.getElementById("chkEnablePriority");
   const box = document.getElementById("priorityOptionsContainer");
-  if (box) box.style.display = chk.checked ? "block" : "none";
+  if (box) {
+    box.style.display = chk.checked ? "block" : "none";
+    if (chk.checked && typeof populatePriorityTrays === "function") {
+      populatePriorityTrays();
+    }
+  }
 }
+    
+    function populatePriorityTrays() {
+  // 1. Teachers (පාසල් අංකය අනුපිළිවෙළට සකසා [අංකය] නම ලෙස පෙන්වීම)
+  const tTray = document.getElementById("priorityTeachersTray");
+  if (tTray) {
+    const teacherList = (window.teachers && window.teachers.length > 0 ? window.teachers : (teachers || [])).slice();
+    teacherList.sort((a, b) => {
+      const numA = typeof getTeacherDisplayNumber === "function" ? parseInt(getTeacherDisplayNumber(a), 10) : NaN;
+      const numB = typeof getTeacherDisplayNumber === "function" ? parseInt(getTeacherDisplayNumber(b), 10) : NaN;
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return String(a.name || "").localeCompare(String(b.name || ""));
+    });
 
+    tTray.innerHTML = teacherList.map(t => {
+      const label = typeof formatTeacherLabel === "function" ? formatTeacherLabel(t) : t.name;
+      return `
+        <label class="inline-flex items-center gap-1 text-[11px] bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded cursor-pointer">
+          <input type="checkbox" value="${t.id}" class="pri-teacher-chk accent-indigo-600"> ${label}
+        </label>
+      `;
+    }).join("");
+  }
+
+  // 2. Subjects
+  const sTray = document.getElementById("prioritySubjectsTray");
+  if (sTray) {
+    const uniqueSubs = [...new Set((typeof curriculumSubjects !== "undefined" ? curriculumSubjects : []).map(cs => cs.subject))].filter(Boolean);
+    sTray.innerHTML = uniqueSubs.map(sub => `
+      <label class="inline-flex items-center gap-1 text-[11px] bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded cursor-pointer">
+        <input type="checkbox" value="${sub}" class="pri-subject-chk accent-indigo-600"> ${sub}
+      </label>
+    `).join("");
+  }
+
+  // 3. Classes
+  const cTray = document.getElementById("priorityClassesTray");
+  if (cTray) {
+    cTray.innerHTML = (typeof schoolClasses !== "undefined" ? schoolClasses : []).map(c => `
+      <label class="inline-flex items-center gap-1 text-[11px] bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded cursor-pointer">
+        <input type="checkbox" value="${c.id}" class="pri-class-chk accent-indigo-600"> ${c.name}
+      </label>
+    `).join("");
+  }
+}
+ /* 
 function populatePriorityTrays() {
   // 1. Teachers
   const tTray = document.getElementById("priorityTeachersTray");
@@ -10758,7 +10809,7 @@ function populatePriorityTrays() {
     `).join("");
   }
 }
-
+*/
 /**
  * ප්‍රධාන Auto-Fill ක්‍රියාවලිය ක්‍රියාත්මක කිරීම
  */
@@ -11902,37 +11953,51 @@ function handleSaveTeacher(e) {
       populateTeacherSubjectDropdown();
     }
 
-    function renderTeachersMasterList() {
-      const tbody = document.getElementById("teachersMasterTableBody");
-      if (!tbody) return;
-      tbody.innerHTML = "";
-      teachers.forEach(t => {
-        const load = calculateTeacherWeeklyWorkload(t.id);
-        const isCapped = load >= 35;
-        const sectionsBadges = (t.sections || []).map(s => `<span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 mr-1">${s}</span>`).join('');
-        
-        // පාසල් ගුරු අංකය විශේෂයෙන් පෙන්වීම
-        const displaySchoolNo = t.schoolNo ? `<span class="font-black text-indigo-900 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">${t.schoolNo}</span>` : `<span class="text-slate-400 italic">${t.id}</span>`;
+function renderTeachersMasterList() {
+  const tbody = document.getElementById("teachersMasterTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
 
-        tbody.innerHTML += `
-          <tr class="border-b hover:bg-slate-50">
-            <td class="p-2.5 text-center">${displaySchoolNo}</td>
-            <td class="p-2.5 font-bold text-slate-800">${t.name}</td>
-            <td class="p-2.5 text-slate-600 font-semibold">${t.phone || '-'}</td>
-            <td class="p-2.5">${t.subject}</td>
-            <td class="p-2.5">${sectionsBadges}</td>
-            <td class="p-2.5 font-black ${isCapped ? 'text-amber-600' : 'text-slate-800'}">${load} / 35</td>
-            <td class="p-2.5"><label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" ${t.allowOver35 ? 'checked' : ''} onchange="toggleOver35Allowance('${t.id}', this.checked)" class="w-4 h-4 text-indigo-600 rounded"><span class="text-[11px] font-semibold">Over 35 Allow</span></label></td>
-            <td class="p-2.5"><span class="px-2 py-0.5 text-[10px] font-semibold rounded-full border ${t.isExempt ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}">${t.isExempt ? 'Exempt' : 'Active'}</span></td>
-            <td class="p-2.5 text-center flex justify-center gap-2">
-              <button type="button" onclick="editTeacher('${t.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-[11px]">Edit</button>
-              <button type="button" onclick="handleDeleteTeacher('${t.id}')" class="text-red-600 hover:text-red-800 font-bold text-[11px]">මකන්න</button>
-            </td>
-          </tr>
-        `;
-      });
-    }
+  // 🟢 1. පාසල් අංකය (1, 2, 3...) අනුපිළිවෙළට ලැයිස්තුව සකස් කිරීම
+  const sortedTeachers = (window.teachers && window.teachers.length > 0 ? window.teachers : (teachers || [])).slice();
+  sortedTeachers.sort((a, b) => {
+    const numA = typeof getTeacherDisplayNumber === "function" ? parseInt(getTeacherDisplayNumber(a), 10) : parseInt(a.schoolNo, 10);
+    const numB = typeof getTeacherDisplayNumber === "function" ? parseInt(getTeacherDisplayNumber(b), 10) : parseInt(b.schoolNo, 10);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    if (!isNaN(numA)) return -1;
+    if (!isNaN(numB)) return 1;
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  });
 
+  sortedTeachers.forEach(t => {
+    const load = calculateTeacherWeeklyWorkload(t.id);
+    const isCapped = load >= 35;
+    const sectionsBadges = (t.sections || []).map(s => `<span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 mr-1">${s}</span>`).join('');
+    
+    // 🟢 2. පාසල් ගුරු අංකය පමණක් පෙන්වීම (නොමැති නම් '-' ලෙස පෙන්වයි)
+    const sNo = typeof getTeacherDisplayNumber === "function" ? getTeacherDisplayNumber(t) : (t.schoolNo || "");
+    const displaySchoolNo = sNo
+      ? `<span class="font-black text-indigo-900 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">${sNo}</span>`
+      : `<span class="text-slate-400 italic text-xs">-</span>`;
+
+    tbody.innerHTML += `
+      <tr class="border-b hover:bg-slate-50">
+        <td class="p-2.5 text-center">${displaySchoolNo}</td>
+        <td class="p-2.5 font-bold text-slate-800">${t.name}</td>
+        <td class="p-2.5 text-slate-600 font-semibold">${t.phone || '-'}</td>
+        <td class="p-2.5">${t.subject}</td>
+        <td class="p-2.5">${sectionsBadges}</td>
+        <td class="p-2.5 font-black ${isCapped ? 'text-amber-600' : 'text-slate-800'}">${load} / 35</td>
+        <td class="p-2.5"><label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" ${t.allowOver35 ? 'checked' : ''} onchange="toggleOver35Allowance('${t.id}', this.checked)" class="w-4 h-4 text-indigo-600 rounded"><span class="text-[11px] font-semibold">Over 35 Allow</span></label></td>
+        <td class="p-2.5"><span class="px-2 py-0.5 text-[10px] font-semibold rounded-full border ${t.isExempt ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}">${t.isExempt ? 'Exempt' : 'Active'}</span></td>
+        <td class="p-2.5 text-center flex justify-center gap-2">
+          <button type="button" onclick="editTeacher('${t.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-[11px]">Edit</button>
+          <button type="button" onclick="handleDeleteTeacher('${t.id}')" class="text-red-600 hover:text-red-800 font-bold text-[11px]">මකන්න</button>
+        </td>
+      </tr>
+    `;
+  });
+}
 
 
     
