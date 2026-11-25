@@ -15088,6 +15088,33 @@ function getBestLabForClassSubject(classId, subjectName, scheduleList, day, targ
     window.saveSubjectTeachersAssignment = saveSubjectTeachersAssignment;
     window.renderCurriculumTable = renderCurriculumTable;
     
+
+function handleDeleteCurriculum(id) {
+  if (!confirm("මෙම විෂය සැකසුම මකා දැමීමට අවශ්‍ය බව විශ්වාසද?")) return;
+
+  // 1. classSubjects හෝ curriculum Array එකෙන් අදාළ අයිතමය ඉවත් කිරීම
+  if (typeof classSubjects !== "undefined" && Array.isArray(classSubjects)) {
+    const idx = classSubjects.findIndex(cs => String(cs.id) === String(id));
+    if (idx !== -1) classSubjects.splice(idx, 1);
+  }
+  if (typeof curriculum !== "undefined" && Array.isArray(curriculum)) {
+    const idx = curriculum.findIndex(cs => String(cs.id) === String(id));
+    if (idx !== -1) curriculum.splice(idx, 1);
+  }
+
+  // 2. වගුව නැවත පෙන්වීම (UI Refresh)
+  if (typeof renderCurriculumTable === "function") renderCurriculumTable();
+  if (typeof renderCurriculumList === "function") renderCurriculumList();
+  if (typeof renderClassSubjectsTable === "function") renderClassSubjectsTable();
+  if (typeof renderClassSubjects === "function") renderClassSubjects();
+
+  // 3. Firebase සහ LocalStorage වෙත යාවත්කාලීන දත්ත සුරැකීම
+  if (typeof saveAllData === "function") saveAllData();
+  if (typeof saveDataToFirebase === "function") saveDataToFirebase();
+  if (typeof saveToFirebase === "function") saveToFirebase();
+}
+
+    
 // 1. කාලච්ඡේද Modal එකේ Dropdown එකට එම ශ්‍රේණියේ විෂයන් පමණක් පිරවීම
     function populateSlotSubjectOptions(classId, currentSubject) {
       const selectSub = document.getElementById("slotSubjectSelect");
