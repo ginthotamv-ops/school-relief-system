@@ -3065,7 +3065,295 @@ window.getSlotBackgroundStyle = getSlotBackgroundStyle;
       }).filter(Boolean);
     }
 
+    
+    function initFirebaseCloud() {
+  const badge = document.getElementById("cloudStatusBadge");
 
+  // Firebase වෙත Save කිරීමේදී භාවිත කරන
+  // encodeFirebaseKey() ක්‍රමයට අනුකූල Decoder.
+  const KEY_PREFIX = "__fbkey__";
+
+  function decodeCloudData(value) {
+    if (Array.isArray(value)) {
+      return value.map(decodeCloudData);
+    }
+
+    if (value !== null && typeof value === "object") {
+      const result = {};
+
+      for (const [key, child] of Object.entries(value)) {
+        let originalKey = key;
+
+        if (key.startsWith(KEY_PREFIX)) {
+          const encoded = key.slice(KEY_PREFIX.length);
+
+          if (/^[0-9a-f]+(?:_[0-9a-f]+)*$/i.test(encoded)) {
+            try {
+              const points = encoded
+                .split("_")
+                .map(h => parseInt(h, 16));
+
+              if (points.every(
+                n => n >= 0 && n <= 0x10FFFF
+              )) {
+                originalKey = String.fromCodePoint(...points);
+              }
+            } catch (error) {
+              console.warn("Key Decode Error:", key, error);
+            }
+          }
+        }
+
+        if (Object.prototype.hasOwnProperty.call(result, originalKey)) {
+          throw new Error(
+            "Firebase key collision after decoding: " + originalKey
+          );
+        }
+
+        result[originalKey] = decodeCloudData(child);
+      }
+
+      return result;
+    }
+
+    return value;
+  }
+
+  function saveLocalBackup(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.warn("LocalStorage Backup Error:", key, error);
+    }
+  }
+
+  try {
+    if (
+      typeof firebase === "undefined" ||
+      typeof firebaseConfig === "undefined" ||
+      !firebaseConfig ||
+      !firebaseConfig.apiKey
+    ) {
+      console.warn("Firebase configuration unavailable.");
+
+      isFirebaseActive = false;
+
+      if (typeof markLocalStorageMode === "function") {
+        markLocalStorageMode();
+      }
+
+      return;
+    }
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+
+    firebaseDb = firebase.database();
+    isFirebaseActive = true;
+
+    // Firebase Live Synchronization
+    firebaseDb.ref("timetable_system").on(
+      "value",
+
+      function(snapshot) {
+        try {
+          const rawData = snapshot.val();
+
+          // Firebase Keys මුල් ආකාරයට පරිවර්තනය කිරීම
+          const data = rawData
+            ? decodeCloudData(rawData)
+            : null;
+
+          // Cloud හි දත්ත නොමැති නම් පවතින
+          // LocalStorage දත්ත Cloud වෙත ස්වයංක්‍රීයව
+          // ලිවීමෙන් වළකින්න.
+          if (!data) {
+            console.warn(
+              "Firebase timetable data not found. " +
+              "Automatic overwrite skipped."
+            );
+
+            if (badge) {
+              badge.textContent = "Cloud Empty";
+            }
+
+            if (typeof refreshAllUI === "function") {
+              refreshAllUI();
+            }
+
+            return;
+          }
+
+          // 1. Grade Settings
+          if (data.grades != null) {
+            gradeSettings = data.grades;
+          }
+
+          // 2. School Classes
+          // subjectTeachers සහ EXCLUDED අගයන්
+          // වෙනස් නොකර පවත්වාගැනීම
+          if (data.classes != null) {
+            schoolClasses = Array.isArray(data.classes)
+              ? data.classes
+              : Object.values(data.classes);
+          }
+
+          // 3. Curriculum Subjects
+          if (data.curriculum != null) {
+            curriculumSubjects = Array.isArray(data.curriculum)
+              ? data.curriculum
+              : Object.values(data.curriculum);
+
+            curriculumSubjects.forEach(cs => {
+              if (
+                cs &&
+                typeof getNormalizedTeacherIds === "function"
+              ) {
+                cs.teacherIds = getNormalizedTeacherIds(
+                  cs.teacherIds
+                );
+              }
+            });
+          }
+
+          // 4. Grade Master Schedule
+          if (data.gradeMaster != null) {
+            gradeMasterSchedule = data.gradeMaster;
+          }
+
+          // 5. Teachers
+          if (data.teachers != null) {
+            teachers = Array.isArray(data.teachers)
+              ? data.teachers
+              : Object.values(data.teachers);
+          }
+
+          // 6. Master Timetable
+          if (
+            data.schedule != null &&
+            typeof data.schedule === "object"
+          ) {
+            masterSchedule = Array.isArray(data.schedule)
+              ? data.schedule
+              : Object.values(data.schedule);
+          } else {
+            masterSchedule = [];
+          }
+
+          // 7. Class Subject Allocations
+          if (data.classSubjectAllocations != null) {
+            window.classSubjectAllocations =
+              data.classSubjectAllocations;
+
+            saveLocalBackup(
+              "sch_permanent_allocations_v1",
+              window.classSubjectAllocations
+            );
+          }
+
+          // 8. Combined Curriculum Subjects
+          if (data.combinedCurriculumSubjects != null) {
+            window.combinedCurriculumSubjects =
+              Array.isArray(data.combinedCurriculumSubjects)
+                ? data.combinedCurriculumSubjects
+                : Object.values(data.combinedCurriculumSubjects);
+
+            saveLocalBackup(
+              "sch_combined_subjects_v1",
+              window.combinedCurriculumSubjects
+            );
+          } else {
+            window.combinedCurriculumSubjects = [];
+          }
+
+          // 9. Cluster Groups
+          if (data.clusterGroups != null) {
+            saveLocalBackup(
+              "sch_cluster_groups_v1",
+              data.clusterGroups
+            );
+          }
+
+          // 10. Full LocalStorage Backup
+          // Encode නොකළ මුල් Keys සහිත දත්ත
+          saveLocalBackup(
+            "sch_app_data_v2026_final",
+            data
+          );
+
+          // 11. Firebase Status Badge
+          if (badge) {
+            badge.className =
+              "bg-emerald-500 text-white text-[10px] " +
+              "font-black px-2.5 py-0.5 rounded-full " +
+              "flex items-center gap-1 shadow-sm";
+
+            badge.innerHTML =
+              '<span class="w-2 h-2 rounded-full ' +
+              'bg-white"></span> ' +
+              'Live Cloud (Firebase)';
+          }
+
+          console.log(
+            "Firebase data loaded and keys decoded successfully."
+          );
+
+          // 12. Refresh Entire UI
+          if (typeof refreshAllUI === "function") {
+            refreshAllUI();
+          }
+
+          // 13. Update Subject Quota / Drag Tray
+          const activeClassId =
+            window.currentSelectedClassId ||
+            (
+              schoolClasses && schoolClasses[0]
+                ? schoolClasses[0].id
+                : null
+            );
+
+          if (
+            activeClassId &&
+            typeof renderSubjectQuotaTray === "function"
+          ) {
+            renderSubjectQuotaTray(activeClassId);
+          }
+
+        } catch (error) {
+          console.error(
+            "Firebase Data Processing Error:",
+            error
+          );
+
+          if (badge) {
+            badge.textContent = "Cloud Data Error";
+          }
+        }
+      },
+
+      function(error) {
+        console.warn("Firebase Read Error:", error);
+
+        isFirebaseActive = false;
+
+        if (typeof markLocalStorageMode === "function") {
+          markLocalStorageMode();
+        }
+      }
+    );
+
+  } catch (error) {
+    console.warn("Firebase Init Error:", error);
+
+    isFirebaseActive = false;
+
+    if (typeof markLocalStorageMode === "function") {
+      markLocalStorageMode();
+    }
+  }
+}
+/*
 function initFirebaseCloud() {
       const badge = document.getElementById("cloudStatusBadge");
       try {
@@ -3075,7 +3363,9 @@ function initFirebaseCloud() {
           isFirebaseActive = true;
 
           firebaseDb.ref("timetable_system").on("value", (snapshot) => {
-            const data = snapshot.val();
+             const rawData = snapshot.val();
+              const data = rawData ? decodeFirebaseData(rawData) : null;
+            
             if (data && data.teachers && data.teachers.length > 0) {
               if (data.grades) gradeSettings = data.grades;
               if (data.classes) schoolClasses = data.classes;
@@ -3149,7 +3439,7 @@ function initFirebaseCloud() {
       }
     }
 
-
+*/
     // =========================================================================
 // 🔗 TEACHERS DATA BRIDGE & RELIEF INITIALIZER (FIX FOR window.teachers)
 // =========================================================================
@@ -15569,7 +15859,72 @@ function renderCombinedSubjectsTable() {
 // =========================================================================
 // ONE-BY-ONE COMBINED SUBJECT BUILDER CONTROLLER
 // =========================================================================
+const FIREBASE_KEY_PREFIX = "__fbkey__";
 
+function encodeFirebaseKey(key) {
+  if (!key) {
+    throw new Error("Empty Firebase key");
+  }
+
+  if (
+    !/[.#$/\[\]\x00-\x1F\x7F]/.test(key) &&
+    !key.startsWith(FIREBASE_KEY_PREFIX)
+  ) {
+    return key;
+  }
+
+  const hex = Array.from(key)
+    .map(ch => ch.codePointAt(0).toString(16))
+    .join("_");
+
+  return FIREBASE_KEY_PREFIX + hex;
+}
+
+function encodeFirebaseData(obj) {
+  if (Array.isArray(obj)) {
+    return obj.map(encodeFirebaseData);
+  }
+
+  if (obj !== null && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.entries(obj).map(([key, value]) => [
+        encodeFirebaseKey(key),
+        encodeFirebaseData(value)
+      ])
+    );
+  }
+
+  return obj;
+}
+
+function decodeFirebaseData(obj) {
+  if (Array.isArray(obj)) {
+    return obj.map(decodeFirebaseData);
+  }
+
+  if (obj !== null && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.entries(obj).map(([key, value]) => {
+        let originalKey = key;
+
+        if (key.startsWith(FIREBASE_KEY_PREFIX)) {
+          const hex = key.slice(FIREBASE_KEY_PREFIX.length);
+          originalKey = String.fromCodePoint(
+            ...hex.split("_").map(h => parseInt(h, 16))
+          );
+        }
+
+        return [originalKey, decodeFirebaseData(value)];
+      })
+    );
+  }
+
+  return obj;
+}
+    
+    // =========================================================================
+// ONE-BY-ONE COMBINED SUBJECT BUILDER CONTROLLER
+// =========================================================================
 function saveAllToStorage() {
   // 1. විෂය නිර්දේශ දත්ත පිරිසිදු කිරීම (applicableClassIds සහ periodType ඇතුළත්ව)
   const cleanCurriculum = (Array.isArray(curriculumSubjects) ? curriculumSubjects : Object.values(curriculumSubjects || {})).map((cs, idx) => ({
@@ -15644,15 +15999,17 @@ function saveAllToStorage() {
   }
 
   // Firebase Realtime Database වෙත යැවීම
-  if (isFirebaseActive && firebaseDb) {
-    firebaseDb.ref("timetable_system").set(cleanPayload, (error) => {
-      if (error) {
-        console.error("❌ Firebase Sync Error:", error);
-      } else {
-        console.log("✅ Firebase Synchronized (Combined Subjects සහ Excluded Classes ඇතුළුව දත්ත සුරකින ලදි)!");
-      }
-    });
-  }
+if (isFirebaseActive && firebaseDb) {
+  const firebasePayload = encodeFirebaseData(cleanPayload);
+
+  firebaseDb.ref("timetable_system").set(firebasePayload, (error) => {
+    if (error) {
+      console.error("Firebase Sync Error:", error);
+    } else {
+      console.log("Firebase Saved Successfully!");
+    }
+  });
+}
 }
 
 window.saveAllToStorage = saveAllToStorage;
