@@ -82,6 +82,82 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-sans">
 
+<!-- 1. පද්ධති පිවිසුම් තිරය (Firebase Role-Based Login) -->
+<div id="appLoginOverlay" class="fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+    <div class="bg-indigo-900 p-5 text-center text-white">
+      <div class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-2">
+        <i class="fa-solid fa-shield-halved text-2xl text-amber-400"></i>
+      </div>
+      <h2 class="font-bold text-base">පාසල් කාලසටහන් සහ Relief පද්ධතිය</h2>
+      <p class="text-[11px] text-indigo-200 mt-0.5">ඔබගේ තනතුර තෝරා Firebase මුරපදය ඇතුළත් කරන්න</p>
+    </div>
+
+    <form onsubmit="handleFirebaseRoleLogin(event)" class="p-5 space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">පරිශීලක තනතුර (Role):</label>
+        <select id="loginRoleSelect" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 bg-slate-50 outline-none focus:border-indigo-600">
+          <option value="RELIEF_OFFICER">කාර්යාල සහායක (Relief කටයුතු පමණි)</option>
+          <option value="ADMIN">නියෝජ්‍ය විදුහල්පති (පූර්ණ පාලනය)</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">මුරපදය (Password):</label>
+        <input type="password" id="loginPasswordInput" required placeholder="මුරපදය ඇතුළත් කරන්න..."
+          class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-600">
+      </div>
+
+      <p id="loginErrorMsg" class="hidden text-[11px] font-bold text-red-600 bg-red-50 p-2 rounded-lg border border-red-200 text-center"></p>
+
+      <button type="submit" id="btnSystemLoginSubmit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer">
+        <i class="fa-solid fa-right-to-bracket mr-1"></i> පද්ධතියට පිවිසෙන්න
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- 2. මුරපදය වෙනස් කිරීමේ කවුළුව (Change Password Modal) -->
+<div id="changePasswordModal" class="hidden fixed inset-0 z-[9998] bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+  <div class="bg-white w-full max-w-sm rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+    <div class="bg-slate-800 px-4 py-3 text-white flex items-center justify-between">
+      <h3 class="font-bold text-xs flex items-center gap-1.5">
+        <i class="fa-solid fa-key text-amber-400"></i> මුරපදය වෙනස් කිරීම (Change Password)
+      </h3>
+      <button type="button" onclick="closeChangePasswordModal()" class="text-slate-300 hover:text-white text-sm font-bold cursor-pointer">&times;</button>
+    </div>
+
+    <form onsubmit="handleChangeRolePassword(event)" class="p-4 space-y-3">
+      <div class="text-[11px] bg-indigo-50 text-indigo-900 p-2 rounded-lg font-bold border border-indigo-200">
+        වෙනස් කරන ගිණුම: <span id="cpTargetRoleLabel" class="underline"></span>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">වර්තමාන මුරපදය (Current Password):</label>
+        <input type="password" id="cpCurrentPass" required class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none focus:border-indigo-600">
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">නව මුරපදය (New Password):</label>
+        <input type="password" id="cpNewPass" required minlength="4" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none focus:border-indigo-600">
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">නව මුරපදය තහවුරු කරන්න (Confirm New Password):</label>
+        <input type="password" id="cpConfirmPass" required minlength="4" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold outline-none focus:border-indigo-600">
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeChangePasswordModal()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold cursor-pointer">අවලංගු කරන්න</button>
+        <button type="submit" id="btnSaveNewPass" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold cursor-pointer">
+          <i class="fa-solid fa-floppy-disk mr-1"></i> සුරකින්න
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+  
   <!-- Header -->
   <header class="bg-indigo-800 text-white py-4 px-6 shadow-md no-print">
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
@@ -113,7 +189,14 @@
 
       </div>
 
-              
+         <div class="flex items-center gap-1.5 ml-auto">
+  <button type="button" onclick="openChangePasswordModal()" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold cursor-pointer" title="මුරපදය වෙනස් කරන්න">
+    <i class="fa-solid fa-key mr-1"></i> මුරපදය
+  </button>
+  <button type="button" onclick="handleSystemLogout()" class="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-bold cursor-pointer">
+    <i class="fa-solid fa-lock mr-1"></i> Logout
+  </button>
+</div>     
       
     </div>
   </header>
@@ -18814,6 +18897,200 @@ function saveReliefStateToStorage() {
 // පිටුව මුලින් Load වන විටම මෙය ක්‍රියාත්මක වීම
 initAndLoadReliefState();
 
+
+
+// ආරම්භක මුරපද (Firebase හි තවමත් සකසා නොමැති නම් පමණක් භාවිත වේ)
+const DEFAULT_FB_PASSWORDS = {
+  ADMIN: "dp@2026",
+  RELIEF_OFFICER: "rel@123"
+};
+
+// 1. Firebase වෙතින් මුරපද ලබා ගැනීම (Firestore සහ Realtime DB යන දෙකටම ගැළපේ)
+async function fetchPasswordsFromFirebase() {
+  try {
+    // A. Firebase Firestore (db) භාවිත කරන්නේ නම්:
+    if (typeof db !== "undefined" && db && typeof db.collection === "function") {
+      const docRef = db.collection("systemSettings").doc("rolePasswords");
+      const snap = await docRef.get();
+      if (snap.exists && snap.data()) {
+        return { ...DEFAULT_FB_PASSWORDS, ...snap.data() };
+      } else {
+        await docRef.set(DEFAULT_FB_PASSWORDS);
+        return { ...DEFAULT_FB_PASSWORDS };
+      }
+    }
+
+    // B. Firebase Realtime Database භාවිත කරන්නේ නම්:
+    if (typeof firebase !== "undefined" && firebase.database) {
+      const ref = firebase.database().ref("systemSettings/rolePasswords");
+      const snap = await ref.once("value");
+      if (snap.exists() && snap.val()) {
+        return { ...DEFAULT_FB_PASSWORDS, ...snap.val() };
+      } else {
+        await ref.set(DEFAULT_FB_PASSWORDS);
+        return { ...DEFAULT_FB_PASSWORDS };
+      }
+    }
+  } catch (err) {
+    console.error("Firebase Password Fetch Error:", err);
+  }
+  return { ...DEFAULT_FB_PASSWORDS };
+}
+
+// 2. නව මුරපදය Firebase වෙත සුරැකීම
+async function savePasswordToFirebase(role, newPassword) {
+  // A. Firestore
+  if (typeof db !== "undefined" && db && typeof db.collection === "function") {
+    await db.collection("systemSettings").doc("rolePasswords").set(
+      { [role]: newPassword },
+      { merge: true }
+    );
+    return true;
+  }
+
+  // B. Realtime Database
+  if (typeof firebase !== "undefined" && firebase.database) {
+    await firebase.database().ref("systemSettings/rolePasswords").update({
+      [role]: newPassword
+    });
+    return true;
+  }
+
+  throw new Error("Firebase සම්බන්ධතාවය හමු නොවීය.");
+}
+
+// 3. Login පරීක්ෂා කිරීම
+async function handleFirebaseRoleLogin(e) {
+  if (e) e.preventDefault();
+  const role = document.getElementById("loginRoleSelect").value;
+  const pass = document.getElementById("loginPasswordInput").value.trim();
+  const errBox = document.getElementById("loginErrorMsg");
+  const btn = document.getElementById("btnSystemLoginSubmit");
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> පරීක්ෂා කරමින්...';
+  }
+
+  try {
+    const passwords = await fetchPasswordsFromFirebase();
+    if (passwords[role] && String(passwords[role]) === pass) {
+      sessionStorage.setItem("activeSystemRole", role);
+      if (errBox) errBox.classList.add("hidden");
+      document.getElementById("loginPasswordInput").value = "";
+      applyRolePermissions(role);
+    } else {
+      if (errBox) {
+        errBox.textContent = "⚠️ ඇතුළත් කළ මුරපදය වැරදිය! නැවත උත්සාහ කරන්න.";
+        errBox.classList.remove("hidden");
+      }
+    }
+  } catch (err) {
+    if (errBox) {
+      errBox.textContent = "⚠️ Firebase සම්බන්ධතා දෝෂයකි. අන්තර්ජාල සබඳතාව පරීක්ෂා කරන්න.";
+      errBox.classList.remove("hidden");
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-1"></i> පද්ධතියට පිවිසෙන්න';
+    }
+  }
+}
+
+// 4. තනතුර අනුව ටැබ් පාලනය කිරීම
+function applyRolePermissions(role) {
+  const overlay = document.getElementById("appLoginOverlay");
+  if (overlay) overlay.classList.add("hidden");
+
+  const navButtons = document.querySelectorAll("nav button");
+
+  if (role === "RELIEF_OFFICER") {
+    navButtons.forEach(btn => {
+      const id = (btn.id || "").toLowerCase();
+      const onclickAttr = (btn.getAttribute("onclick") || "").toLowerCase();
+      const isReliefBtn = id.includes("relief") || onclickAttr.includes("relief");
+      btn.style.display = isReliefBtn ? "" : "none";
+    });
+    if (typeof switchTab === "function") switchTab("reliefTab");
+  } else if (role === "ADMIN") {
+    navButtons.forEach(btn => { btn.style.display = ""; });
+  }
+}
+
+// 5. මුරපදය වෙනස් කිරීමේ Modal පාලනය
+function openChangePasswordModal() {
+  const role = sessionStorage.getItem("activeSystemRole");
+  if (!role) return;
+
+  const labelEl = document.getElementById("cpTargetRoleLabel");
+  if (labelEl) {
+    labelEl.textContent = role === "ADMIN"
+      ? "නියෝජ්‍ය විදුහල්පති (Admin)"
+      : "කාර්යාල සහායක (Relief Officer)";
+  }
+
+  document.getElementById("cpCurrentPass").value = "";
+  document.getElementById("cpNewPass").value = "";
+  document.getElementById("cpConfirmPass").value = "";
+  document.getElementById("changePasswordModal").classList.remove("hidden");
+}
+
+function closeChangePasswordModal() {
+  document.getElementById("changePasswordModal").classList.add("hidden");
+}
+
+async function handleChangeRolePassword(e) {
+  if (e) e.preventDefault();
+  const role = sessionStorage.getItem("activeSystemRole");
+  if (!role) return;
+
+  const curPass = document.getElementById("cpCurrentPass").value.trim();
+  const newPass = document.getElementById("cpNewPass").value.trim();
+  const confirmPass = document.getElementById("cpConfirmPass").value.trim();
+  const btn = document.getElementById("btnSaveNewPass");
+
+  if (newPass !== confirmPass) {
+    alert("⚠️ නව මුරපදය සහ තහවුරු කිරීමේ මුරපදය සමාන නොවේ!");
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "සුරකිමින්...";
+  }
+
+  try {
+    const passwords = await fetchPasswordsFromFirebase();
+    if (String(passwords[role]) !== curPass) {
+      alert("⚠️ ඔබ ඇතුළත් කළ වර්තමාන මුරපදය (Current Password) වැරදිය!");
+      return;
+    }
+
+    await savePasswordToFirebase(role, newPass);
+    closeChangePasswordModal();
+    alert("✅ සාර්ථකයි! ඔබගේ නව මුරපදය Firebase වෙත සුරකින ලදි.");
+  } catch (err) {
+    alert("⚠️ දෝෂයකි: මුරපදය සුරැකීමට නොහැකි විය. (" + err.message + ")");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i> සුරකින්න';
+    }
+  }
+}
+
+function handleSystemLogout() {
+  sessionStorage.removeItem("activeSystemRole");
+  const overlay = document.getElementById("appLoginOverlay");
+  if (overlay) overlay.classList.remove("hidden");
+}
+
+// පිටුව Refresh කළ විට පෙර Login වී සිටි තනතුර නැවත යෙදීම
+document.addEventListener("DOMContentLoaded", () => {
+  const savedRole = sessionStorage.getItem("activeSystemRole");
+  if (savedRole) applyRolePermissions(savedRole);
+});
     
     
     
